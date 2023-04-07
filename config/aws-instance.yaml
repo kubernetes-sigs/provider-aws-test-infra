@@ -1,0 +1,9 @@
+images:
+  eks-ami-124:
+    ssm_path: /aws/service/eks/optimized-ami/1.24/amazon-linux-2/recommended/image_id
+    instance_type: m6a.large
+    user_data_file: userdata.sh
+  eks-ami-125:
+    ssm_path: /aws/service/eks/optimized-ami/1.25/amazon-linux-2/recommended/image_id
+    instance_type: m6a.large
+    user_data_file: userdata.sh
