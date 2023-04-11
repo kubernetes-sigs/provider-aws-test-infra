@@ -1,5 +1,8 @@
 #cloud-config
 # This bootstraps a public ubuntu 2204 image from scratch.
+system_info:
+  default_user:
+    name: ec2-user
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
