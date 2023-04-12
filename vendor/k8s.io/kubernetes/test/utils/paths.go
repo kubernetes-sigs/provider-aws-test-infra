@@ -31,6 +31,7 @@ func GetK8sRootDir() (string, error) {
 	if len(dir) > 0 {
 		return dir, nil
 	}
+
 	dir, err := RootDir()
 	if err != nil {
 		return "", err
