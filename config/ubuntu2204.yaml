@@ -3,6 +3,7 @@
 system_info:
   default_user:
     name: ec2-user
+    groups: root
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
