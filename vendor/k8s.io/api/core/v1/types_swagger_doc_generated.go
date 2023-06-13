@@ -2134,7 +2134,7 @@ func (ScopedResourceSelectorRequirement) SwaggerDoc() map[string]string {
 var map_SeccompProfile = map[string]string{
 	"":                 "SeccompProfile defines a pod/container's seccomp profile settings. Only one profile source may be set.",
 	"type":             "type indicates which kind of seccomp profile will be applied. Valid options are:\n\nLocalhost - a profile defined in a file on the node should be used. RuntimeDefault - the container runtime default profile should be used. Unconfined - no profile should be applied.",
-	"localhostProfile": "localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if type is \"Localhost\".",
+	"localhostProfile": "localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must be set if type is \"Localhost\". Must NOT be set for any other type.",
 }
 
 func (SeccompProfile) SwaggerDoc() map[string]string {
@@ -2612,7 +2612,7 @@ var map_WindowsSecurityContextOptions = map[string]string{
 	"gmsaCredentialSpecName": "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
 	"gmsaCredentialSpec":     "GMSACredentialSpec is where the GMSA admission webhook (https://github.com/kubernetes-sigs/windows-gmsa) inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field.",
 	"runAsUserName":          "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
-	"hostProcess":            "HostProcess determines if a container should be run as a 'Host Process' container. This field is alpha-level and will only be honored by components that enable the WindowsHostProcessContainers feature flag. Setting this field without the feature flag will result in errors when validating the Pod. All of a Pod's containers must have the same effective HostProcess value (it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).  In addition, if HostProcess is true then HostNetwork must also be set to true.",
+	"hostProcess":            "HostProcess determines if a container should be run as a 'Host Process' container. All of a Pod's containers must have the same effective HostProcess value (it is not allowed to have a mix of HostProcess containers and non-HostProcess containers). In addition, if HostProcess is true then HostNetwork must also be set to true.",
 }
 
 func (WindowsSecurityContextOptions) SwaggerDoc() map[string]string {

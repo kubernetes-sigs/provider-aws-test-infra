@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export KUBE_ROOT="$(go env GOPATH)/src/k8s.io/kubernetes"
+KUBE_ROOT="${KUBE_ROOT:-"$(go env GOPATH)/src/k8s.io/kubernetes"}"
+export KUBE_ROOT
 
 # start the cache mutation detector by default so that cache mutators will be found
 KUBE_CACHE_MUTATION_DETECTOR="${KUBE_CACHE_MUTATION_DETECTOR:-true}"
@@ -61,8 +62,8 @@ if [[ ${skip} != "" ]]; then
   ginkgoflags="${ginkgoflags} -skip=\"${skip}\" "
 fi
 
-if [[ ${run_until_failure} != "" ]]; then
-  ginkgoflags="${ginkgoflags} -untilItFails=${run_until_failure} "
+if [[ ${run_until_failure} == "true" ]]; then
+  ginkgoflags="${ginkgoflags} --until-it-fails=true "
 fi
 
 # Setup the directory to copy test artifacts (logs, junit.xml, etc) from remote host to local host
@@ -79,13 +80,10 @@ if [[ -n ${image_service_endpoint} ]] ; then
   test_args="--image-service-endpoint=${image_service_endpoint} ${test_args}"
 fi
 
-metadata=${INSTANCE_METADATA:-""}
 hosts=${HOSTS:-""}
-images=${IMAGES:-""}
-image_config_file=${IMAGE_CONFIG_FILE:-""}
-image_config_dir=${IMAGE_CONFIG_DIR:-""}
+image_config_file=${IMAGE_CONFIG_FILE:-"aws-instance.yaml"}
+image_config_dir=${IMAGE_CONFIG_DIR:-"config"}
 runtime_config=${RUNTIME_CONFIG:-""}
-gubernator=${GUBERNATOR:-"false"}
 instance_prefix=${INSTANCE_PREFIX:-"test"}
 cleanup=${CLEANUP:-"true"}
 delete_instances=${DELETE_INSTANCES:-"false"}
@@ -116,14 +114,18 @@ fi
 echo "Running tests remotely using"
 echo "Account: ${account}"
 echo "Region: ${region}"
-echo "Images: ${images}"
-echo "Hosts: ${hosts}"
+if [[ -n ${hosts} ]]; then
+  echo "Hosts: ${hosts}"
+fi
 echo "SSH User: ${ssh_user}"
-echo "SSH Key: ${ssh_key}"
-echo "SSH Options: ${ssh_options}"
+if [[ -n ${ssh_key} ]]; then
+  echo "SSH Key: ${ssh_key}"
+fi
+if [[ -n ${ssh_options} ]]; then
+  echo "SSH Options: ${ssh_options}"
+fi
 echo "Ginkgo Flags: ${ginkgoflags}"
-echo "Instance Metadata: ${metadata}"
-echo "Image Config File: ${image_config_file}"
+echo "Image Config File: ${image_config_dir}/${image_config_file}"
 echo "Kubelet Config File: ${kubelet_config_file}"
 echo "Kubernetes directory: ${KUBE_ROOT}"
 
@@ -133,14 +135,13 @@ aws ec2 authorize-security-group-ingress --group-name default --protocol tcp --p
 # Invoke the runner
 go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --ssh-env="aws" --ssh-key="${ssh_key}" --ssh-options="${ssh_options}" --ssh-user="${ssh_user}" \
-  --gubernator="${gubernator}" --instance-profile="${instance_profile}" \
-  --hosts="${hosts}" --images="${images}" --cleanup="${cleanup}" \
+  --instance-profile="${instance_profile}" --hosts="${hosts}" --cleanup="${cleanup}" \
   --results-dir="${artifacts}" --ginkgo-flags="${ginkgoflags}" --runtime-config="${runtime_config}" \
   --instance-name-prefix="${instance_prefix}" --user-data-file="${user_data_file}" \
   --delete-instances="${delete_instances}" --test_args="${test_args}" \
   --image-config-file="${image_config_file}" --system-spec-name="${system_spec_name}" \
-  --runtime-config="${runtime_config}" \
-  --image-config-dir="${image_config_dir}" --region="${region}" \
-  --extra-envs="${extra_envs}" --kubelet-config-file="${kubelet_config_file}"  --test-suite="${test_suite}" \
+  --runtime-config="${runtime_config}" --image-config-dir="${image_config_dir}" --region="${region}" \
+  --extra-envs="${extra_envs}" --kubelet-config-file="${kubelet_config_file}" --test-suite="${test_suite}" \
   "${timeout_arg}" \
   2>&1 | tee -i "${artifacts}/build-log.txt"
+exit $?

@@ -1,0 +1,1 @@
+This is a copy of the upstream [test-e2e-node.sh](https://github.com/kubernetes/kubernetes/blob/master/hack/make-rules/test-e2e-node.sh) script with EC2 only specific logic. Please keep it updated with changes in that file.
