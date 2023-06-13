@@ -24,13 +24,10 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"k8s.io/kubernetes/test/e2e_node/remote"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -39,6 +36,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh"
+	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/test/e2e_node/remote"
 	"sigs.k8s.io/yaml"
 )
 
@@ -287,7 +286,7 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 			return nil, err
 		}
 		instance = newInstance
-		klog.Infof("launched new instance %s", *instance.InstanceId)
+		klog.Infof("launched new instance %s with ami-id: %s", *instance.InstanceId, *instance.ImageId)
 	}
 
 	testInstance := &awsInstance{
