@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-KUBE_ROOT="${KUBE_ROOT:-"$(go env GOPATH)/src/github.com/kubernetes/kubernetes"}"
-export KUBE_ROOT
+export KUBE_ROOT="$(go env GOPATH)/src/k8s.io/kubernetes"
 
 # start the cache mutation detector by default so that cache mutators will be found
 KUBE_CACHE_MUTATION_DETECTOR="${KUBE_CACHE_MUTATION_DETECTOR:-true}"
