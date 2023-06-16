@@ -7,6 +7,10 @@ images:
     ssm_path: /aws/service/eks/optimized-ami/1.27/amazon-linux-2/recommended/image_id
     instance_type: m6a.large
     user_data_file: userdata.sh
+  al2023-6-1:
+    ssm_path: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+    instance_type: m6a.large
+    user_data_file: al2023-6.1.yaml
   ubuntu-2204:
     ssm_path: /aws/service/canonical/ubuntu/server/focal/stable/current/amd64/hvm/ebs-gp2/ami-id
     instance_type: m6a.large
