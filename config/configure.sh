@@ -55,9 +55,15 @@ fetch_metadata() {
   fi
 }
 
+case $(uname -m) in
+	aarch64)	ARCH="arm64";;
+	x86_64)		ARCH="amd64";;
+	*)		ARCH="$(uname -m)";;
+esac
+
 # Install yq to parse some yaml
-curl -fsSL https://github.com/mikefarah/yq/releases/download/v4.31.1/yq_linux_amd64.tar.gz |\
-  tar xz && mv yq_linux_amd64 /usr/local/bin/yq
+curl -fsSL https://github.com/mikefarah/yq/releases/download/v4.31.1/yq_linux_${ARCH}.tar.gz |\
+  tar xz && mv yq_linux_${ARCH} /usr/local/bin/yq
 
 # fetch_env fetches environment variables from GCE metadata server
 # and generate a env file under ${CONTAINERD_HOME}. It assumes that
@@ -126,7 +132,7 @@ else
 
   # TODO(random-liu): Put version into the metadata instead of
   # deciding it in cloud init. This may cause issue to reboot test.
-  if [ $(uname -m) == "aarch64" ]; then
+  if [ ${ARCH} == "arm64" ]; then
     version=$(curl -f --ipv4 --retry 6 --retry-delay 3 --silent --show-error \
       -H "Accept: application/vnd.github.v3+json" \
       "https://api.github.com/repos/containerd/containerd/releases/latest" \
@@ -138,7 +144,7 @@ else
   fi
 fi
 
-TARBALL_GCS_NAME="${pkg_prefix}-${version}.linux-amd64.tar.gz"
+TARBALL_GCS_NAME="${pkg_prefix}-${version}.linux-${ARCH}.tar.gz"
 # TARBALL_GCS_PATH is the path to download cri-containerd tarball for node e2e.
 TARBALL_GCS_PATH="https://storage.googleapis.com/${deploy_path}/${TARBALL_GCS_NAME}"
 # TARBALL is the name of the tarball after being downloaded.
@@ -148,7 +154,7 @@ tar_sha1="${CONTAINERD_TAR_SHA1:-""}"
 
 if [ -z "${version}" ]; then
   # Try using preloaded containerd if version is not specified.
-  tarball_gcs_pattern="${pkg_prefix}-.*.linux-amd64.tar.gz"
+  tarball_gcs_pattern="${pkg_prefix}-.*.linux-${ARCH}.tar.gz"
   if is_preloaded "${tarball_gcs_pattern}" "${tar_sha1}"; then
     echo "CONTAINERD_VERSION is not set, use preloaded containerd"
   else
@@ -156,9 +162,9 @@ if [ -z "${version}" ]; then
     exit 1
   fi
 else
-  if [ $(uname -m) == "aarch64" ]; then
+  if [ ${ARCH} == "arm64" ]; then
     curl -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 --retry-delay 10 \
-	"https://github.com/containerd/containerd/releases/download/v${version}/cri-containerd-${version}-linux-arm64.tar.gz"
+	"https://github.com/containerd/containerd/releases/download/v${version}/cri-containerd-${version}-linux-${ARCH}.tar.gz"
     tar xvf "${TARBALL}"
     rm -f "${TARBALL}"
   elif is_preloaded "${TARBALL_GCS_NAME}" "${tar_sha1}"; then
@@ -230,7 +236,7 @@ containerd_extra_runtime_handler=${CONTAINERD_EXTRA_RUNTIME_HANDLER:-""}
 if [[ -n "${containerd_extra_runtime_handler}" ]]; then
   cat >> ${config_path} <<EOF
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.${containerd_extra_runtime_handler}]
-  runtime_type = "${CONTAINERD_EXTRA_RUNTIME_TYPE:-io.containerd.runc.v1}"
+  runtime_type = "${CONTAINERD_EXTRA_RUNTIME_TYPE:-io.containerd.runc.v2}"
 
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.${containerd_extra_runtime_handler}.options]
 ${CONTAINERD_EXTRA_RUNTIME_OPTIONS:-}
