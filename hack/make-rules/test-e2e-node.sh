@@ -129,9 +129,6 @@ echo "Image Config File: ${image_config_dir}/${image_config_file}"
 echo "Kubelet Config File: ${kubelet_config_file}"
 echo "Kubernetes directory: ${KUBE_ROOT}"
 
-# Temporary SG hack
-aws ec2 authorize-security-group-ingress --group-name default --protocol tcp --port 22 --cidr 0.0.0.0/0 --region="${AWS_REGION}" || true
-
 # Invoke the runner
 go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --ssh-env="aws" --ssh-key="${ssh_key}" --ssh-options="${ssh_options}" --ssh-user="${ssh_user}" \
