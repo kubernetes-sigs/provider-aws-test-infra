@@ -83,7 +83,7 @@ fi
 hosts=${HOSTS:-""}
 image_config_file=${IMAGE_CONFIG_FILE:-"aws-instance.yaml"}
 image_config_dir=${IMAGE_CONFIG_DIR:-"config"}
-use_dockerized_build=${USE_DOCKERIZED_BUILD:-""}
+use_dockerized_build=${USE_DOCKERIZED_BUILD:-"false"}
 target_build_arch=${TARGET_BUILD_ARCH:-""}
 runtime_config=${RUNTIME_CONFIG:-""}
 instance_prefix=${INSTANCE_PREFIX:-"test"}
