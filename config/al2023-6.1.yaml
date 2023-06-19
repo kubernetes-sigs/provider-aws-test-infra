@@ -15,7 +15,7 @@ write_files:
     content: |
       # installed by cloud-init
       [Unit]
-      Description=Download and install containerd binaries and configurations.
+      Description=Download and install containerd binaries and configuration.
       After=network-online.target
       [Service]
       Type=oneshot
