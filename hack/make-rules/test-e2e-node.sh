@@ -83,6 +83,8 @@ fi
 hosts=${HOSTS:-""}
 image_config_file=${IMAGE_CONFIG_FILE:-"aws-instance.yaml"}
 image_config_dir=${IMAGE_CONFIG_DIR:-"config"}
+use_dockerized_build=${USE_DOCKERIZED_BUILD:-""}
+target_build_arch=${TARGET_BUILD_ARCH:-""}
 runtime_config=${RUNTIME_CONFIG:-""}
 instance_prefix=${INSTANCE_PREFIX:-"test"}
 cleanup=${CLEANUP:-"true"}
@@ -141,6 +143,8 @@ go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --delete-instances="${delete_instances}" --test_args="${test_args}" \
   --image-config-file="${image_config_file}" --system-spec-name="${system_spec_name}" \
   --runtime-config="${runtime_config}" --image-config-dir="${image_config_dir}" --region="${region}" \
+  --use-dockerized-build="${use_dockerized_build}" \
+  --target-build-arch="${target_build_arch}" \
   --extra-envs="${extra_envs}" --kubelet-config-file="${kubelet_config_file}" --test-suite="${test_suite}" \
   "${timeout_arg}" \
   2>&1 | tee -i "${artifacts}/build-log.txt"
