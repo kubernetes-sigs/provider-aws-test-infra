@@ -187,15 +187,14 @@ rm -f "${CONTAINERD_HOME}/etc/crictl.yaml"
 config_path="${CONTAINERD_CONFIG_PATH:-"/etc/containerd/config.toml"}"
 mkdir -p $(dirname ${config_path})
 cni_bin_dir="${CONTAINERD_HOME}/opt/cni/bin"
-cni_template_path="${CONTAINERD_HOME}/opt/containerd/cluster/gce/cni.template"
-if [ "${KUBERNETES_MASTER:-}" != "true" ]; then
-  if [ "${NETWORK_POLICY_PROVIDER:-"none"}" != "none" ] || [ "${ENABLE_NETD:-}" == "true" ]; then
-    # Use Kubernetes cni daemonset on node if network policy provider is specified
-    # or netd is enabled.
-    cni_bin_dir="${KUBE_HOME}/bin"
-    cni_template_path=""
-  fi
-fi
+cni_template_path="${CONTAINERD_HOME}/cni.template"
+
+CNI_VERSION=v1.2.0 &&\
+mkdir -p ${cni_bin_dir} &&\
+curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${ARCH}-${CNI_VERSION}.tgz \
+    | tar xfz - -C ${cni_bin_dir}
+curl -fsSL -o ${cni_template_path} https://raw.githubusercontent.com/kubernetes/test-infra/master/jobs/e2e_node/containerd/cni.template
+
 # Use systemd cgroup if specified in env
 systemdCgroup="${CONTAINERD_SYSTEMD_CGROUP:-"false"}"
 
