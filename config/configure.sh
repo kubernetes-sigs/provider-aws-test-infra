@@ -186,6 +186,9 @@ rm -f "${CONTAINERD_HOME}/etc/crictl.yaml"
 # Generate containerd config
 config_path="${CONTAINERD_CONFIG_PATH:-"/etc/containerd/config.toml"}"
 mkdir -p $(dirname ${config_path})
+
+# Download and configure CNI
+cni_template_path="${CONTAINERD_HOME}/opt/containerd/cluster/gce/cni.template"
 cni_bin_dir="${CONTAINERD_HOME}/opt/cni/bin"
 cni_template_path="${CONTAINERD_HOME}/cni.template"
 
@@ -193,7 +196,6 @@ CNI_VERSION=v1.2.0 &&\
 mkdir -p ${cni_bin_dir} &&\
 curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${ARCH}-${CNI_VERSION}.tgz \
     | tar xfz - -C ${cni_bin_dir}
-curl -fsSL -o ${cni_template_path} https://raw.githubusercontent.com/kubernetes/test-infra/master/jobs/e2e_node/containerd/cni.template
 
 # Use systemd cgroup if specified in env
 systemdCgroup="${CONTAINERD_SYSTEMD_CGROUP:-"false"}"
