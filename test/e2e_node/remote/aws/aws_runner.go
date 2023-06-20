@@ -51,6 +51,7 @@ var region = flag.String("region", "", "AWS region that the hosts live in (aws)"
 var userDataFile = flag.String("user-data-file", "", "Path to user data to pass to created instances (aws)")
 var instanceProfile = flag.String("instance-profile", "", "The name of the instance profile to assign to the node (aws)")
 var instanceConnect = flag.Bool("ec2-instance-connect", true, "Use EC2 instance connect to generate a one time use key (aws)")
+var reuseInstances = flag.Bool("reuse-instances", false, "Reuse already running instance")
 
 const defaultAWSInstanceType = "t3a.medium"
 const amiIDTag = "Node-E2E-Test"
@@ -276,7 +277,7 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 	}
 
 	var instance *ec2.Instance
-	if len(existing.Reservations) > 0 && len(existing.Reservations[0].Instances) > 0 {
+	if *reuseInstances && len(existing.Reservations) > 0 && len(existing.Reservations[0].Instances) > 0 {
 		instance = existing.Reservations[0].Instances[0]
 		klog.Infof("reusing existing instance %s", *instance.InstanceId)
 	} else {
@@ -449,7 +450,7 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 			{
 				DeviceName: aws.String("/dev/xvda"),
 				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(20),
+					VolumeSize: aws.Int64(100),
 					VolumeType: aws.String("gp3"),
 				},
 			},
