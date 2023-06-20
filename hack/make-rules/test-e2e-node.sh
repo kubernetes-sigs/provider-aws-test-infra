@@ -80,6 +80,14 @@ if [[ -n ${image_service_endpoint} ]] ; then
   test_args="--image-service-endpoint=${image_service_endpoint} ${test_args}"
 fi
 
+if [[ "${test_args}" != *"prepull-images"* ]]; then
+  test_args="--prepull-images=${PREPULL_IMAGES:-false}  ${test_args}"
+fi
+
+if [[ "${test_args}" != *"server-start-timeout"* ]]; then
+  test_args="--server-start-timeout=${SERVER_START_TIMEOUT:-3m}  ${test_args}"
+fi
+
 hosts=${HOSTS:-""}
 image_config_file=${IMAGE_CONFIG_FILE:-"aws-instance.yaml"}
 image_config_dir=${IMAGE_CONFIG_DIR:-"config"}
