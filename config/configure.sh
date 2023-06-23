@@ -35,6 +35,10 @@ else
 fi
 echo "Version : " $(${PYTHON} -V 2>&1)
 
+## sysctl settings (required by Prow to avoid inotify issues)
+sysctl -w fs.inotify.max_user_watches=1048576
+sysctl -w fs.inotify.max_user_instances=8192
+
 # CONTAINERD_HOME is the directory for containerd.
 CONTAINERD_HOME="/home/containerd"
 cd "${CONTAINERD_HOME}"
