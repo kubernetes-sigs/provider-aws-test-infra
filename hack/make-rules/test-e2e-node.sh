@@ -48,14 +48,17 @@ ssh_key=${SSH_KEY:-}
 ssh_options=${SSH_OPTIONS:-}
 kubelet_config_file=${KUBELET_CONFIG_FILE:-"test/e2e_node/jenkins/default-kubelet-config.yaml"}
 
-# Parse the flags to pass to ginkgo
-ginkgoflags="-timeout=24h"
-if [[ ${parallelism} -gt 1 ]]; then
-  ginkgoflags="${ginkgoflags} -nodes=${parallelism} "
-fi
-
 if [[ ${focus} != "" ]]; then
   ginkgoflags="${ginkgoflags} -focus=\"${focus}\" "
+  if [[ "${focus}" == *"Serial"* ]]; then
+    parallelism=1
+  fi
+fi
+
+# Parse the flags to pass to ginkgo
+ginkgoflags="-timeout=24h"
+if [[ ${parallelism} -ge 1 ]]; then
+  ginkgoflags="${ginkgoflags} -nodes=${parallelism} "
 fi
 
 if [[ ${skip} != "" ]]; then
