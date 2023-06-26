@@ -139,7 +139,7 @@ else
   if [ ${ARCH} == "arm64" ]; then
     version=$(curl -f --ipv4 --retry 6 --retry-delay 3 --silent --show-error \
       -H "Accept: application/vnd.github.v3+json" \
-      "https://api.github.com/repos/containerd/containerd/releases/tags/v1.6.21" \
+      "https://api.github.com/repos/containerd/containerd/releases/latest" \
       | ${PYTHON} -c "import sys, json; print(json.load(sys.stdin)['tag_name'])" \
       | sed "s:v::g")
   else
