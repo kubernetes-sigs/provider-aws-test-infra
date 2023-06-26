@@ -450,7 +450,7 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 			{
 				DeviceName: aws.String("/dev/xvda"),
 				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(100),
+					VolumeSize: aws.Int64(500),
 					VolumeType: aws.String("gp3"),
 				},
 			},
