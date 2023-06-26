@@ -410,6 +410,11 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 }
 
 func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, error) {
+	images, err := a.ec2Service.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&img.amiID}})
+	if err != nil {
+		return nil, fmt.Errorf("describing images, %w", err)
+	}
+
 	input := &ec2.RunInstancesInput{
 		InstanceType: &img.instanceType,
 		ImageId:      &img.amiID,
@@ -448,7 +453,7 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 		},
 		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
 			{
-				DeviceName: aws.String("/dev/xvda"),
+				DeviceName: aws.String(*images.Images[0].RootDeviceName),
 				Ebs: &ec2.EbsBlockDevice{
 					VolumeSize: aws.Int64(100),
 					VolumeType: aws.String("gp3"),
