@@ -105,7 +105,7 @@ instance_profile=${INSTANCE_PROFILE:-""}
 user_data_file=${USER_DATA_FILE:-""}
 test_suite=${TEST_SUITE:-"default"}
 if [[ -n "${TIMEOUT:-"4h"}" ]] ; then
-  timeout_arg="--test-timeout=${TIMEOUT}"
+  timeout_arg="--test-timeout=${TIMEOUT:-"4h"}"
 fi
 
 # get the account ID
