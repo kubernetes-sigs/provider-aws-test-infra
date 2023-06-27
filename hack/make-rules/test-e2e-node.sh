@@ -47,6 +47,7 @@ ssh_user=${SSH_USER:-"${USER}"}
 ssh_key=${SSH_KEY:-}
 ssh_options=${SSH_OPTIONS:-}
 kubelet_config_file=${KUBELET_CONFIG_FILE:-"test/e2e_node/jenkins/default-kubelet-config.yaml"}
+instance_type=${INSTANCE_TYPE:-}
 
 # Parse the flags to pass to ginkgo
 ginkgoflags="-timeout=24h"
@@ -152,7 +153,7 @@ go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --delete-instances="${delete_instances}" --test_args="${test_args}" \
   --image-config-file="${image_config_file}" --system-spec-name="${system_spec_name}" \
   --runtime-config="${runtime_config}" --image-config-dir="${image_config_dir}" --region="${region}" \
-  --use-dockerized-build="${use_dockerized_build}" \
+  --use-dockerized-build="${use_dockerized_build}" --instance-type="${instance_type}" \
   --target-build-arch="${target_build_arch}" \
   --extra-envs="${extra_envs}" --kubelet-config-file="${kubelet_config_file}" --test-suite="${test_suite}" \
   "${timeout_arg}" \

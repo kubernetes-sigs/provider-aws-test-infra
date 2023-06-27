@@ -51,9 +51,9 @@ var region = flag.String("region", "", "AWS region that the hosts live in (aws)"
 var userDataFile = flag.String("user-data-file", "", "Path to user data to pass to created instances (aws)")
 var instanceProfile = flag.String("instance-profile", "", "The name of the instance profile to assign to the node (aws)")
 var instanceConnect = flag.Bool("ec2-instance-connect", true, "Use EC2 instance connect to generate a one time use key (aws)")
+var instanceType = flag.String("instance-type", "t3a.medium", "EC2 Instance type to use for test")
 var reuseInstances = flag.Bool("reuse-instances", false, "Reuse already running instance")
 
-const defaultAWSInstanceType = "t3a.medium"
 const amiIDTag = "Node-E2E-Test"
 
 type AWSRunner struct {
@@ -194,7 +194,7 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 				imageDesc:       shortName,
 			}
 			if awsImage.instanceType == "" {
-				awsImage.instanceType = defaultAWSInstanceType
+				awsImage.instanceType = *instanceType
 			}
 			ret = append(ret, awsImage)
 		}
@@ -204,7 +204,7 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		for _, img := range a.cfg.Images {
 			ret = append(ret, internalAWSImage{
 				amiID:        img,
-				instanceType: defaultAWSInstanceType,
+				instanceType: *instanceType,
 			})
 		}
 	}
