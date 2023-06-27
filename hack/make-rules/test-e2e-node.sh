@@ -104,7 +104,7 @@ delete_instances=${DELETE_INSTANCES:-"true"}
 instance_profile=${INSTANCE_PROFILE:-""}
 user_data_file=${USER_DATA_FILE:-""}
 test_suite=${TEST_SUITE:-"default"}
-if [[ -n "${TIMEOUT:-}" ]] ; then
+if [[ -n "${TIMEOUT:-"4h"}" ]] ; then
   timeout_arg="--test-timeout=${TIMEOUT}"
 fi
 
