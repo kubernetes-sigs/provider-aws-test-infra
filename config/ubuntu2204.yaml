@@ -66,6 +66,8 @@ runcmd:
   - "echo \"$(dig $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/).ec2.internal +short) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/)\" | sudo tee -a /etc/hosts"
   - "sudo sed -i \"s/^#ReadEtcHosts/ReadEtcHosts/\" /etc/systemd/resolved.conf"
   - sudo systemctl restart systemd-resolved
+  - sudo rm /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
+  - sudo systemctl restart systemd-logind
   # Stop the existing containerd service if there is one. (for Docker 18.09+)
   - systemctl is-active containerd && systemctl stop containerd
   - systemctl daemon-reload
