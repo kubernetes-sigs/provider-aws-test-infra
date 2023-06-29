@@ -4,6 +4,10 @@ system_info:
   default_user:
     name: ec2-user
     groups: root
+package_upgrade: true
+package_update: true
+packages:
+    - nfs-common
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
