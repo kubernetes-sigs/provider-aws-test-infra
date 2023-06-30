@@ -119,7 +119,7 @@ func getECRCredentialProviderURL() string {
 	if builder.IsTargetArchArm64() {
 		arch = "arm64"
 	}
-	return fmt.Sprintf("https://artifacts.k8s.io/binaries/cloud-provider-aws/%s/linux/%s/ecr-credential-provider-linux-%s", ecrCredentialProviderVersion, arch,arch)
+	return fmt.Sprintf("https://artifacts.k8s.io/binaries/cloud-provider-aws/%s/linux/%s/ecr-credential-provider-linux-%s", ecrCredentialProviderVersion, arch, arch)
 }
 
 func setupECRCredentialProvider(host, workspace string) error {
