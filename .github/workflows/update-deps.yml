@@ -52,4 +52,4 @@ jobs:
           labels: ok-to-test
           body: |
             Updating go.mod with latest kubernetes related dependencies...
-        working-directory: src/sigs.k8s.io/provider-aws-test-infra
+        path: src/sigs.k8s.io/provider-aws-test-infra
