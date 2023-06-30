@@ -158,4 +158,14 @@ go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --extra-envs="${extra_envs}" --kubelet-config-file="${kubelet_config_file}" --test-suite="${test_suite}" \
   "${timeout_arg}" \
   2>&1 | tee -i "${artifacts}/build-log.txt"
-exit $?
+
+result=${PIPESTATUS[0]} # capture the exit code of the first cmd in pipe.
+echo ">> go run exited with ${result} at $(date)"
+echo ""
+if [[ $result -eq 0 ]]; then
+  echo "test-e2e-node.sh: SUCCESS"
+else
+  echo "test-e2e-node.sh: FAIL"
+fi
+
+exit "$result"
