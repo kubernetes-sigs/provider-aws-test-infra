@@ -1,6 +1,8 @@
 #!/bin/bash
 
-pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
+KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../../../k8s.io/kubernetes/
+
+pushd "${KUBE_ROOT}" >/dev/null
 git reset --hard HEAD && git clean -xdff
 git fetch --all
 git checkout master
