@@ -1,0 +1,45 @@
+name: 'Update Dependencies'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+env:
+  GOPROXY: https://proxy.golang.org
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-deps:
+    if: ${{ github.repository == 'kubernetes-sigs/provider-aws-test-infra' }}
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753
+        with:
+          go-version: '1.20.5'
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - name: Update Dependencies
+        id: update_deps
+        run: |
+          hack/bump-k8s.sh
+          echo 'changes<<EOF' >> $GITHUB_OUTPUT
+          git status --porcelain >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+      - name: Create PR
+        if: ${{ steps.update_deps.outputs.changes != '' }}
+        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38
+        with:
+          title: 'Update dependencies'
+          commit-message: Update Kubernetes to latest master
+          committer: github-actions <actions@github.com>
+          author: github-actions <actions@github.com>
+          branch: dependencies/update
+          branch-suffix: timestamp
+          base: master
+          delete-branch: true
+          labels: ok-to-test
+          body: |
+            Updating go.mod with latest kubernetes related dependencies...
