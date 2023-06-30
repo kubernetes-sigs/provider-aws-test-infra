@@ -1,6 +1,8 @@
 #!/bin/bash
 
-KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../../../k8s.io/kubernetes/
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+KUBE_ROOT=${SCRIPTDIR}/../../../k8s.io/kubernetes/
 
 pushd "${KUBE_ROOT}" >/dev/null
 git reset --hard HEAD && git clean -xdff
