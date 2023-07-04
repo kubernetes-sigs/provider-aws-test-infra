@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -xeuo pipefail
+
 # Copyright 2016 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-${ROOT}/hack/populate-s3.sh
+TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+${TEST_INFRA_ROOT}/hack/populate-s3.sh
 
 curl -fsSL https://releases.hashicorp.com/packer/1.9.1/packer_1.9.1_linux_amd64.zip | funzip > /usr/local/bin/packer && \
   chmod +x /usr/local/bin/packer
@@ -24,11 +26,17 @@ curl -fsSL https://releases.hashicorp.com/packer/1.9.1/packer_1.9.1_linux_amd64.
   mkdir -p "$(go env GOPATH)/src/github.com/awslabs" && \
   git clone https://github.com/awslabs/amazon-eks-ami "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami"
 
+pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
+  KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
+  KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
+popd
+KUBE_DATE=$(date -u +'%Y-%m-%d')
+
 # Generate aws-iam-authenticator binaries
 # shellcheck disable=SC2164
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   sed -i 's/amazon-eks/provider-aws-test-infra/' eks-worker-al2-variables.json
   sed -i 's/us-west-2/us-east-1/' eks-worker-al2-variables.json
-  make k8s kubernetes_version=v1.28.0 kubernetes_build_date=2023-07-04 pull_cni_from_github=true
+  make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} pull_cni_from_github=true
 # shellcheck disable=SC2164
 popd
