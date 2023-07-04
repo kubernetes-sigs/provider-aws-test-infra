@@ -2,8 +2,8 @@
 
 set -xeuo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-mkdir -p "${ROOT}/_output"
+TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+mkdir -p "${TEST_INFRA_ROOT}/_output"
 
 if [[ -z "$(which aarch64-linux-gnu-gcc)" || -z "$(which x86_64-linux-gnu-gcc)" ]]; then
   echo "Can't find aarch64-linux-gnu-gcc x86_64-linux-gnu-gcc or in PATH, please install and retry"
@@ -18,13 +18,14 @@ if [[ -z "$(which aarch64-linux-gnu-gcc)" || -z "$(which x86_64-linux-gnu-gcc)" 
   fi
 fi
 
-DATE=$(date -u +'%Y-%m-%d')
+KUBE_DATE=$(date -u +'%Y-%m-%d')
 
 # Generate kubernetes binaries
 pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
 
-  VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}' | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
-  BIN_DIR="${ROOT}/_output/${VERSION}/${DATE}/bin"
+  KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
+  KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
+  BIN_DIR="${ROOT}/_output/${KUBE_VERSION}/${KUBE_DATE}/bin"
 
   make kubectl KUBE_BUILD_PLATFORMS="darwin/amd64" && \
     make kubectl KUBE_BUILD_PLATFORMS="darwin/arm64" && \
@@ -60,15 +61,15 @@ popd
 
 # Generate aws-iam-authenticator binaries
 pushd "$(go env GOPATH)/src/sigs.k8s.io/aws-iam-authenticator" >/dev/null
-  VERSION=$(git describe --tags `git rev-list --tags --max-count=1`)
-  echo ${VERSION/#v} > version.txt
+  AUTHENTICATOR_VERSION=$(git describe --tags `git rev-list --tags --max-count=1`)
+  echo ${AUTHENTICATOR_VERSION/#v} > version.txt
   make build-all-bins
 
-  cp "_output/bin/aws-iam-authenticator_${VERSION}_darwin_amd64" "${BIN_DIR}/darwin/amd64/aws-iam-authenticator"
+  cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_darwin_amd64" "${BIN_DIR}/darwin/amd64/aws-iam-authenticator"
   #cp "${ROOT}/_output/local/bin/darwin/arm64/aws-iam-authenticator" "${BIN_DIR}/darwin/arm64/aws-iam-authenticator"
-  cp "_output/bin/aws-iam-authenticator_${VERSION}_linux_amd64" "${BIN_DIR}/linux/amd64/aws-iam-authenticator"
-  cp "_output/bin/aws-iam-authenticator_${VERSION}_linux_arm64" "${BIN_DIR}/linux/arm64/aws-iam-authenticator"
-  cp "_output/bin/aws-iam-authenticator_${VERSION}_windows_amd64.exe" "${BIN_DIR}/windows/amd64/aws-iam-authenticator.exe"
+  cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_linux_amd64" "${BIN_DIR}/linux/amd64/aws-iam-authenticator"
+  cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_linux_arm64" "${BIN_DIR}/linux/arm64/aws-iam-authenticator"
+  cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_windows_amd64.exe" "${BIN_DIR}/windows/amd64/aws-iam-authenticator.exe"
 
 popd
 

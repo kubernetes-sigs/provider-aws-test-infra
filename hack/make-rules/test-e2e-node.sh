@@ -14,14 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
-  ${ROOT}/hack/build-ami.sh
+  ${TEST_INFRA_ROOT}/hack/build-ami.sh
   ami_id=$(jq -r ".builds[].artifact_id" $(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami/manifest.json | cut -f 2 -d ':')
-  cat > ${ROOT}/config/aws-instance-eks.yaml <<EOF
+  cat > ${TEST_INFRA_ROOT}/config/aws-instance-eks.yaml <<EOF
 images:
-  eks-ami-126:
+  eks-ami-daily:
     ami_id: ${ami_id}
     instance_type: m6a.large
     user_data_file: userdata.sh

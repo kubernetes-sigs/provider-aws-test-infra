@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-${ROOT}/hack/populate-s3.sh
+TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+${TEST_INFRA_ROOT}/hack/populate-s3.sh
 
 curl -fsSL https://releases.hashicorp.com/packer/1.9.1/packer_1.9.1_linux_amd64.zip | funzip > /usr/local/bin/packer && \
   chmod +x /usr/local/bin/packer
@@ -29,6 +29,6 @@ curl -fsSL https://releases.hashicorp.com/packer/1.9.1/packer_1.9.1_linux_amd64.
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   sed -i 's/amazon-eks/provider-aws-test-infra/' eks-worker-al2-variables.json
   sed -i 's/us-west-2/us-east-1/' eks-worker-al2-variables.json
-  make k8s kubernetes_version=v1.28.0 kubernetes_build_date=2023-07-04 pull_cni_from_github=true
+  make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} pull_cni_from_github=true
 # shellcheck disable=SC2164
 popd
