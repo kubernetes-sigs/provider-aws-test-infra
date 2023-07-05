@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # install a CNI
-cat << __ECNI__ > /etc/cni/net.d/10-testcni.conflist
+sudo mkdir -p /etc/cni/net.d/
+cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
 {
   "cniVersion": "0.3.1",
   "name": "testcni",
