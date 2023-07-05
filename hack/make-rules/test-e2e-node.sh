@@ -24,7 +24,7 @@ KUBE_DATE=$(date -u +'%Y-%m-%d')
 
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
-  ami_id=$(aws ec2 describe-images  --filters Name=name,Values=amazon-eks-node-${KUBE_VERSION}-v${KUBE_DATE}  --query 'Images[*].[ImageId]' --output text)
+  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_VERSION}-v${KUBE_DATE}  --query 'Images[*].[ImageId]' --output text)
   if [ -z "${ami_id}" ] ; then
     TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
@@ -32,7 +32,7 @@ if [[ ${build_eks_ami} != "false" ]]; then
   else
     echo "found existing ami : ${ami_id} skipping building a new AMI..."
   fi
-  aws ec2 describe-images --image-ids ${ami_id}
+  aws ec2 describe-images --region=us-east-1 --image-ids ${ami_id}
   cat > ${TEST_INFRA_ROOT}/config/aws-instance-eks.yaml <<EOF
 images:
   eks-ami-daily:
