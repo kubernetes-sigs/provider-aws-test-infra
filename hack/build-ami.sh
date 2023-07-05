@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -xeuo pipefail
+
 # Copyright 2016 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +25,12 @@ curl -fsSL https://releases.hashicorp.com/packer/1.9.1/packer_1.9.1_linux_amd64.
 [[ ! -d "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" ]] && \
   mkdir -p "$(go env GOPATH)/src/github.com/awslabs" && \
   git clone https://github.com/awslabs/amazon-eks-ami "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami"
+
+pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
+  KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
+  KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
+popd
+KUBE_DATE=$(date -u +'%Y-%m-%d')
 
 # Generate aws-iam-authenticator binaries
 # shellcheck disable=SC2164

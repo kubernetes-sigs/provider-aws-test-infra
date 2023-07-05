@@ -25,7 +25,7 @@ pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
 
   KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
   KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
-  BIN_DIR="${ROOT}/_output/${KUBE_VERSION}/${KUBE_DATE}/bin"
+  BIN_DIR="${TEST_INFRA_ROOT}/_output/${KUBE_VERSION}/${KUBE_DATE}/bin"
 
   make kubectl KUBE_BUILD_PLATFORMS="darwin/amd64" && \
     make kubectl KUBE_BUILD_PLATFORMS="darwin/arm64" && \
@@ -66,7 +66,7 @@ pushd "$(go env GOPATH)/src/sigs.k8s.io/aws-iam-authenticator" >/dev/null
   make build-all-bins
 
   cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_darwin_amd64" "${BIN_DIR}/darwin/amd64/aws-iam-authenticator"
-  #cp "${ROOT}/_output/local/bin/darwin/arm64/aws-iam-authenticator" "${BIN_DIR}/darwin/arm64/aws-iam-authenticator"
+  #cp "${TEST_INFRA_ROOT}/_output/local/bin/darwin/arm64/aws-iam-authenticator" "${BIN_DIR}/darwin/arm64/aws-iam-authenticator"
   cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_linux_amd64" "${BIN_DIR}/linux/amd64/aws-iam-authenticator"
   cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_linux_arm64" "${BIN_DIR}/linux/arm64/aws-iam-authenticator"
   cp "_output/bin/aws-iam-authenticator_${AUTHENTICATOR_VERSION}_windows_amd64.exe" "${BIN_DIR}/windows/amd64/aws-iam-authenticator.exe"
