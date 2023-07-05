@@ -17,14 +17,13 @@
 set -xeuo pipefail
 
 pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
-  KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
-  KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
+  KUBE_MINOR_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}' | sed -E 's/v([0-9]+)\.([0-9]+).*/v\1.\2/')
 popd
-KUBE_DATE=$(date -u +'%Y-%m-%d')
+TODAYS_DATE=$(date -u +'%Y%m%d')
 
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
-  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_VERSION}-v${KUBE_DATE}  --query 'Images[*].[ImageId]' --output text)
+  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
   if [ -z "${ami_id}" ] ; then
     TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
