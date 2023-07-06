@@ -33,6 +33,8 @@ sed -i'' 's#602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.5#public.ec
 sed -i'' 's#SystemdCgroup = true#SystemdCgroup = false#' /etc/containerd/config.toml
 systemctl restart containerd
 
+systemctl restart systemd-logind
+
 # hack systemd-run so it ignores the "-p StandardError=file:///some/file.log" option that isn't supported
 # by systemd
 sudo mv /usr/bin/systemd-run /usr/bin/systemd-run.real
