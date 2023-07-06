@@ -24,13 +24,14 @@ TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
-  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
-  if [ -z "${ami_id}" ] ; then
-    ${TEST_INFRA_ROOT}/hack/build-ami.sh
-    ami_id=$(jq -r ".builds[].artifact_id" "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami/manifest.json" | cut -f 2 -d ':')
-  else
-    echo "found existing ami : ${ami_id} skipping building a new AMI..."
-  fi
+#  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+#  if [ -z "${ami_id}" ] ; then
+#    ${TEST_INFRA_ROOT}/hack/build-ami.sh
+#    ami_id=$(jq -r ".builds[].artifact_id" "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami/manifest.json" | cut -f 2 -d ':')
+#  else
+#    echo "found existing ami : ${ami_id} skipping building a new AMI..."
+#  fi
+  ami_id="ami-096588430efb15bf6" # al2023 1.27 eks image
   aws ec2 describe-images --region=us-east-1 --image-ids ${ami_id}
   cat > ${TEST_INFRA_ROOT}/config/aws-instance-eks.yaml <<EOF
 images:
