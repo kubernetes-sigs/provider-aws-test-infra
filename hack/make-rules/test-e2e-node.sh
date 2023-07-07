@@ -77,7 +77,7 @@ kubelet_config_file=${KUBELET_CONFIG_FILE:-"test/e2e_node/jenkins/default-kubele
 instance_type=${INSTANCE_TYPE:-}
 
 # Parse the flags to pass to ginkgo
-ginkgoflags="-timeout=24h"
+ginkgoflags="-timeout=4h"
 
 if [[ ${focus} != "" ]]; then
   ginkgoflags="${ginkgoflags} -focus=\"${focus}\" "
