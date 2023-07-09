@@ -62,6 +62,8 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 runcmd:
+  # Ensure we can use EC2 connect to run tests
+  - sudo yum -y install ec2-instance-connect
   # Install missing iptables
   - sudo yum -y install iptables-legacy
   # Stop the existing containerd service if there is one. (for Docker 18.09+)
