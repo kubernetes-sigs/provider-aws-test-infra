@@ -24,7 +24,11 @@ TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
-  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+  if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+  else
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+  fi
   if [ -z "${ami_id}" ] ; then
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
     ami_id=$(jq -r ".builds[].artifact_id" "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami/manifest.json" | cut -f 2 -d ':')

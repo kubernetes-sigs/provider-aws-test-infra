@@ -37,6 +37,11 @@ KUBE_DATE=$(date -u +'%Y-%m-%d')
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   sed -i 's/amazon-eks/provider-aws-test-infra/' eks-worker-al2-variables.json
   sed -i 's/us-west-2/us-east-1/' eks-worker-al2-variables.json
+  if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
+    make transform-al2-to-al2023
+    export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2023-variables.json
+    export PACKER_TEMPLATE_FILE=eks-worker-al2023.json
+  fi
   make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} pull_cni_from_github=true
 # shellcheck disable=SC2164
 popd
