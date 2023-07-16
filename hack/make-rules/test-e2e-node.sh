@@ -22,12 +22,19 @@ popd
 TODAYS_DATE=$(date -u +'%Y%m%d')
 TEST_INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 
+# x86_64 does not affect the name of the image, just arm64
+# see https://github.com/awslabs/amazon-eks-ami/blob/master/Makefile#L34-L41
+build_eks_arch=""
+if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
+  build_eks_arch="arm64-"
+fi
+
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
-    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-${build_eks_arch}node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
   else
-    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
   fi
   if [ -z "${ami_id}" ] ; then
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
