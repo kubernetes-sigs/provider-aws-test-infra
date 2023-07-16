@@ -31,7 +31,9 @@ fi
 
 build_eks_ami=${BUILD_EKS_AMI:-"false"}
 if [[ ${build_eks_ami} != "false" ]]; then
+  instance_type=${INSTANCE_TYPE:-"m6a.large"}
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
+    instance_type=${INSTANCE_TYPE:-"m6g.large"}
     ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-${build_eks_arch}node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
   else
     ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
@@ -47,7 +49,7 @@ if [[ ${build_eks_ami} != "false" ]]; then
 images:
   eks-ami-daily:
     ami_id: ${ami_id}
-    instance_type: m6a.large
+    instance_type: ${instance_type}
     user_data_file: userdata.sh
 EOF
 fi
