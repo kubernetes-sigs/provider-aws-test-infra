@@ -136,8 +136,9 @@ if [[ "${test_args}" != *"server-start-timeout"* ]]; then
 fi
 
 hosts=${HOSTS:-""}
-image_config_file=${IMAGE_CONFIG_FILE:-"aws-instance.yaml"}
-image_config_dir=${IMAGE_CONFIG_DIR:-"config"}
+images=${IMAGES:-""}
+image_config_file=${IMAGE_CONFIG_FILE:-""}
+image_config_dir=${IMAGE_CONFIG_DIR:-""}
 use_dockerized_build=${USE_DOCKERIZED_BUILD:-"false"}
 target_build_arch=${TARGET_BUILD_ARCH:-""}
 runtime_config=${RUNTIME_CONFIG:-""}
@@ -174,6 +175,9 @@ echo "Region: ${region}"
 if [[ -n ${hosts} ]]; then
   echo "Hosts: ${hosts}"
 fi
+if [[ -n ${images} ]]; then
+  echo "Images: ${images}"
+fi
 echo "SSH User: ${ssh_user}"
 if [[ -n ${ssh_key} ]]; then
   echo "SSH Key: ${ssh_key}"
@@ -182,7 +186,12 @@ if [[ -n ${ssh_options} ]]; then
   echo "SSH Options: ${ssh_options}"
 fi
 echo "Ginkgo Flags: ${ginkgoflags}"
-echo "Image Config File: ${image_config_dir}/${image_config_file}"
+if [[ -n ${image_config_file} ]]; then
+  echo "Image Config File: ${image_config_dir}/${image_config_file}"
+fi
+if [[ -n ${instance_type} ]]; then
+  echo "Instance Type: ${instance_type}"
+fi
 echo "Kubelet Config File: ${kubelet_config_file}"
 echo "Kubernetes directory: ${KUBE_ROOT}"
 
@@ -192,7 +201,7 @@ go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --instance-profile="${instance_profile}" --hosts="${hosts}" --cleanup="${cleanup}" \
   --results-dir="${artifacts}" --ginkgo-flags="${ginkgoflags}" --runtime-config="${runtime_config}" \
   --instance-name-prefix="${instance_prefix}" --user-data-file="${user_data_file}" \
-  --delete-instances="${delete_instances}" --test_args="${test_args}" \
+  --delete-instances="${delete_instances}" --test_args="${test_args}" --images="${images}" \
   --image-config-file="${image_config_file}" --system-spec-name="${system_spec_name}" \
   --runtime-config="${runtime_config}" --image-config-dir="${image_config_dir}" --region="${region}" \
   --use-dockerized-build="${use_dockerized_build}" --instance-type="${instance_type}" \
