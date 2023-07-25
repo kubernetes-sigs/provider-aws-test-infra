@@ -27,10 +27,16 @@ cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
 }
 __ECNI__
 
+# use the EKS AMI version of the containerd config
+cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
 # rewrite the pause image url
-sed -i'' 's#602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.5#public.ecr.aws/eks-distro/kubernetes/pause:3.2#' /etc/containerd/config.toml
-# use systemd as the containerd cgroup driver
+sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.toml
+# use cgroupfs as the containerd cgroup driver
 sed -i'' 's#SystemdCgroup = .*#SystemdCgroup = true#' /etc/containerd/config.toml
+
+sudo mkdir -p /etc/systemd/system/containerd.service.d
+printf '[Service]\nSlice=runtime.slice\n' | sudo tee /etc/systemd/system/containerd.service.d/00-runtime-slice.conf
+
 systemctl restart containerd
 
 # hack systemd-run so it ignores the "-p StandardError=file:///some/file.log" option that isn't supported
