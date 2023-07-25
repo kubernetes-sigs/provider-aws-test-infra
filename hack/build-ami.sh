@@ -47,6 +47,6 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     sed -i 's/x86_64/arm64/' ${PACKER_TEMPLATE_FILE}
   fi
   make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
-    pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-""}
+    pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"}
 # shellcheck disable=SC2164
 popd
