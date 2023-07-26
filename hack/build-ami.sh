@@ -42,7 +42,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2023-variables.json
     export PACKER_TEMPLATE_FILE=eks-worker-al2023.json
   else
-    export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al-variables.json
+    export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2-variables.json
     export PACKER_TEMPLATE_FILE=eks-worker-al2.json
   fi
   if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
