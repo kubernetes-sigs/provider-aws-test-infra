@@ -14,6 +14,8 @@ git checkout master
 popd >/dev/null
 
 git reset --hard HEAD && git clean -xdff
+
+export GOPROXY=direct
 go get k8s.io/kubernetes@HEAD
 go mod tidy
 go mod vendor
