@@ -38,25 +38,3 @@ sudo mkdir -p /etc/systemd/system/containerd.service.d
 printf '[Service]\nSlice=runtime.slice\n' | sudo tee /etc/systemd/system/containerd.service.d/00-runtime-slice.conf
 
 systemctl restart containerd
-
-# hack systemd-run so it ignores the "-p StandardError=file:///some/file.log" option that isn't supported
-# by systemd
-sudo mv /usr/bin/systemd-run /usr/bin/systemd-run.real
-cat << __ESYSD__ > /usr/bin/systemd-run
-#!/usr/bin/env python3
-
-import sys
-import subprocess
-
-
-actual_args = ["systemd-run.real"]
-for arg in sys.argv[1:]:
- if arg.startswith('StandardError'):
-  # remove the -p
-  actual_args.pop()
- else:
-  actual_args.append(arg)
-
-subprocess.run(actual_args)
-__ESYSD__
-chmod a+x /usr/bin/systemd-run
