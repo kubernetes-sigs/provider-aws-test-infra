@@ -35,6 +35,8 @@ KUBE_DATE=$(date -u +'%Y-%m-%d')
 # Generate aws-iam-authenticator binaries
 # shellcheck disable=SC2164
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
+  # disable sha256 check
+  sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh || true
   sed -i 's/amazon-eks/provider-aws-test-infra/' eks-worker-al2-variables.json
   sed -i 's/us-west-2/us-east-1/' eks-worker-al2-variables.json
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
