@@ -34,7 +34,4 @@ sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.tom
 # use cgroupfs as the containerd cgroup driver
 sed -i'' 's#SystemdCgroup = .*#SystemdCgroup = true#' /etc/containerd/config.toml
 
-sudo mkdir -p /etc/systemd/system/containerd.service.d
-printf '[Service]\nSlice=runtime.slice\n' | sudo tee /etc/systemd/system/containerd.service.d/00-runtime-slice.conf
-
 systemctl restart containerd
