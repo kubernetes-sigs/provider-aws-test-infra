@@ -131,6 +131,8 @@ type internalAWSImage struct {
 
 func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	var ret []internalAWSImage
+	var userData []byte
+	var err error
 
 	// Parse images from given config file and convert them to internalGCEImage.
 	if a.cfg.ImageConfigFile != "" {
@@ -141,7 +143,7 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 
 		imageConfigData, err := os.ReadFile(configPath)
 		if err != nil {
-			return nil, fmt.Errorf("Could not read image config file provided: %w", err)
+			return nil, fmt.Errorf("could not read image config file provided: %w", err)
 		}
 		externalImageConfig := AWSImageConfig{Images: make(map[string]AWSImage)}
 		err = yaml.Unmarshal(imageConfigData, &externalImageConfig)
@@ -169,11 +171,10 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 			if imageUserDataFile == "" && imageConfig.UserData != "" {
 				imageUserDataFile = filepath.Join(a.cfg.ImageConfigDir, imageConfig.UserData)
 			}
-			var userdata []byte
 			if imageUserDataFile != "" {
-				userdata, err = os.ReadFile(imageUserDataFile)
+				userData, err = readUserdata(imageUserDataFile)
 				if err != nil {
-					return nil, fmt.Errorf("reading userdata file %q, %w", imageUserDataFile, err)
+					return nil, err
 				}
 			}
 
@@ -188,7 +189,7 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 
 			awsImage := internalAWSImage{
 				amiID:           amiID,
-				userData:        userdata,
+				userData:        userData,
 				instanceType:    imageConfig.InstanceType,
 				instanceProfile: instanceProfile,
 				imageDesc:       shortName,
@@ -201,10 +202,18 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	}
 
 	if len(a.cfg.Images) > 0 {
+		if *userDataFile != "" {
+			userData, err = readUserdata(*userDataFile)
+			if err != nil {
+				return nil, err
+			}
+		}
 		for _, img := range a.cfg.Images {
 			ret = append(ret, internalAWSImage{
-				amiID:        img,
-				instanceType: *instanceType,
+				amiID:           img,
+				instanceType:    *instanceType,
+				instanceProfile: *instanceProfile,
+				userData:        userData,
 			})
 		}
 	}
@@ -534,4 +543,12 @@ func generateSSHKeypair() (*temporarySSHKey, error) {
 		private: privatePEM,
 		signer:  signer,
 	}, nil
+}
+
+func readUserdata(userdataFile string) ([]byte, error) {
+	userdata, err := os.ReadFile(userdataFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading userdata file %q, %w", userdataFile, err)
+	}
+	return userdata, nil
 }
