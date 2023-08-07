@@ -20,9 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-// ignore package name stutter
-type BuildAndStageStrategy string //nolint:golint
-
 type Options struct {
 	StageLocation   string `flag:"~stage" desc:"Upload binaries to s3 bucket if set"`
 	RepoRoot        string `flag:"-"`

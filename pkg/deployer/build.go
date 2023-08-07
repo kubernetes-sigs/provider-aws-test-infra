@@ -42,7 +42,10 @@ func (d *deployer) Build() error {
 	})
 	d.BuildOptions.CommonBuildOptions.S3Uploader = s3Uploader
 
-	d.BuildOptions.Validate()
+	err = d.BuildOptions.Validate()
+	if err != nil {
+		return err
+	}
 
 	// this supports the kubernetes/kubernetes build
 	klog.Info("starting to build kubernetes")
