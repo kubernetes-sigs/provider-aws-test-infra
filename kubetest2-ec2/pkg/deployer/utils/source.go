@@ -43,7 +43,7 @@ func SourceVersion(kubeRoot string) (string, error) {
 		}
 		if parts[0] == "gitVersion" {
 			version = parts[1]
-			return version, nil
+			return strings.TrimSuffix(version, "-dirty"), nil
 		}
 	}
 	if version == "" {
