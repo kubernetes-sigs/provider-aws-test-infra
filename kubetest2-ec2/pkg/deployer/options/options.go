@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Kubernetes Authors.
+Copyright 2023 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,14 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package options
 
 import (
-	"sigs.k8s.io/kubetest2/pkg/app"
-
-	"sigs.k8s.io/provider-aws-test-infra/pkg/deployer"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/build"
 )
 
-func main() {
-	app.Main(deployer.Name, deployer.New)
+type BuildOptions struct {
+	CommonBuildOptions *build.Options
+}
+
+var _ build.Builder = &BuildOptions{}
+
+func (bo *BuildOptions) Validate() error {
+	return bo.CommonBuildOptions.Validate()
+}
+
+func (bo *BuildOptions) Build() (string, error) {
+	return bo.CommonBuildOptions.Build()
+}
+
+func (bo *BuildOptions) Stage(version string) interface{} {
+	return bo.CommonBuildOptions.Stage(version)
 }

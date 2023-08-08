@@ -42,10 +42,10 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/test/e2e_node/remote"
 	"sigs.k8s.io/kubetest2/pkg/exec"
 
-	"sigs.k8s.io/provider-aws-test-infra/pkg/deployer/utils"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/remote"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 )
 
 func (d *deployer) IsUp() (up bool, err error) {

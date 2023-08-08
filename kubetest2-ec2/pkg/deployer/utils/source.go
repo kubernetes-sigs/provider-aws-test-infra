@@ -18,8 +18,9 @@ package utils
 
 import (
 	"fmt"
-	"sigs.k8s.io/kubetest2/pkg/exec"
 	"strings"
+
+	"sigs.k8s.io/kubetest2/pkg/exec"
 )
 
 // SourceVersion the kubernetes git version based on hack/print-workspace-status.sh
