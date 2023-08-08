@@ -390,12 +390,12 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	}
 
 	// add our ssh key to authorized keys so it will last longer than 60 seconds
-	session, err := client.NewSession()
+	sess, err := client.NewSession()
 	if err != nil {
-		return fmt.Errorf("creating SSH session, %w", err)
+		return fmt.Errorf("creating SSH sess, %w", err)
 	}
 
-	_, err = session.CombinedOutput(fmt.Sprintf("echo '%s' >> ~/.ssh/authorized_keys", string(testInstance.sshKey.public)))
+	_, err = sess.CombinedOutput(fmt.Sprintf("echo '%s' >> ~/.ssh/authorized_keys", string(testInstance.sshKey.public)))
 	if err != nil {
 		return fmt.Errorf("registering SSH key, %w", err)
 	}
