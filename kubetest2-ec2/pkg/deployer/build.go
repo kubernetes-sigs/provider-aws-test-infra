@@ -18,15 +18,16 @@ package deployer
 
 import (
 	"fmt"
+	"runtime"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"runtime"
 
 	"k8s.io/klog/v2"
 
-	"sigs.k8s.io/provider-aws-test-infra/pkg/deployer/build"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/build"
 )
 
 func (d *deployer) Build() error {

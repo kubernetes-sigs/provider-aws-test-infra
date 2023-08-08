@@ -19,7 +19,7 @@ package build
 import (
 	"fmt"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/provider-aws-test-infra/pkg/deployer/utils"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 
 	"sigs.k8s.io/kubetest2/pkg/exec"
 )

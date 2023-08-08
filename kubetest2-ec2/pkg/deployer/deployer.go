@@ -20,20 +20,20 @@ package deployer
 import (
 	"flag"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/pflag"
 
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/test/e2e_node/remote"
 
 	"sigs.k8s.io/kubetest2/pkg/types"
 
-	"sigs.k8s.io/provider-aws-test-infra/pkg/deployer/build"
-	"sigs.k8s.io/provider-aws-test-infra/pkg/deployer/options"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/build"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/options"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/remote"
 )
 
 // Name is the name of the deployer
