@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/octago/sflags/gen/gpflag"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/kubetest2/pkg/artifacts"
+	"sigs.k8s.io/kubetest2/pkg/exec"
 	"sigs.k8s.io/kubetest2/pkg/types"
 
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/build"
@@ -45,6 +47,10 @@ var GitTag string
 // New implements deployer.New for ec2
 func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 	// create a deployer object and set fields that are not flag controlled
+	user := remote.GetSSHUser()
+	if user == "" {
+		user = "ec2-user"
+	}
 	d := &deployer{
 		commonOptions: opts,
 		BuildOptions: &options.BuildOptions{
@@ -60,7 +66,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		},
 		Ec2InstanceConnect: true,
 		InstanceType:       "t3a.medium",
-		SSHUser:            remote.GetSSHUser(),
+		SSHUser:            user,
 		SSHEnv:             "aws",
 		Region:             "us-east-1",
 		NumNodes:           2,
@@ -131,6 +137,42 @@ func (d *deployer) Kubeconfig() (string, error) {
 
 func (d *deployer) Version() string {
 	return GitTag
+}
+
+func (d *deployer) waitForKubectlNodes() {
+	if d.kubectlPath == "" {
+		klog.Warningf("kubectl not found, cannot wait for all worker nodes to come up")
+		return
+	}
+	if d.KubeconfigPath == "" {
+		klog.Warningf("KUBECONFIG is not set, cannot wait for all worker nodes to come up")
+		return
+	}
+	args := []string{
+		d.kubectlPath,
+		"--kubeconfig",
+		d.KubeconfigPath,
+		"get",
+		"nodes",
+		"-o=name",
+	}
+	klog.Infof("Running kubectl command %v", args)
+	for i := 0; i < 30; i++ {
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.SetStderr(os.Stderr)
+		lines, err := exec.OutputLines(cmd)
+		if err != nil {
+			klog.Errorf("unable to get nodes: %s", err)
+			return
+		}
+		if len(lines) == len(d.runner.instances) {
+			klog.Infof("found %d nodes in cluster: %v", len(lines), lines)
+			break
+		} else {
+			klog.Infof("waiting for %d nodes in cluster, found %d", len(d.runner.instances), len(lines))
+			time.Sleep(time.Second * 10)
+		}
+	}
 }
 
 // helper used to create & bind a flagset to the deployer
