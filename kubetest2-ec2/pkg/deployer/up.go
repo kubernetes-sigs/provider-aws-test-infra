@@ -123,6 +123,8 @@ func (d *deployer) Up() error {
 		klog.Infof("starting instance id: %s", instance.instanceID)
 		runner.instances = append(runner.instances, instance)
 	}
+
+	d.waitForKubectlNodes()
 	return nil
 }
 
