@@ -139,12 +139,23 @@ write_files:
 
       ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
 
-      sudo kubeadm init \
-       --apiserver-cert-extra-sans $(curl -4 icanhazip.com) \
-       --cri-socket /run/containerd/containerd.sock \
-       --kubernetes-version=$(kubelet --version | awk '{print $2}') \
-       --ignore-preflight-errors=ImagePull \
-       --pod-network-cidr=192.168.0.0/16
+      # {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
+      KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
+      if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
+        sudo kubeadm init \
+         --token {{KUBEADM_TOKEN}} \
+         --apiserver-cert-extra-sans $(curl -4 icanhazip.com) \
+         --cri-socket /run/containerd/containerd.sock \
+         --kubernetes-version=$(kubelet --version | awk '{print $2}') \
+         --ignore-preflight-errors=ImagePull \
+         --pod-network-cidr=192.168.0.0/16
+      else
+        sudo kubeadm join \
+         --v 10 \
+         --token {{KUBEADM_TOKEN}} \
+         --discovery-token-unsafe-skip-ca-verification \
+         {{KUBEADM_CONTROL_PLANE_IP}}:6443
+      fi
 runcmd:
   # Ensure instance-id resolves to the ip address of the host
   - "echo \"$(dig $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/).ec2.internal +short) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/)\" | sudo tee -a /etc/hosts"
