@@ -29,6 +29,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"sigs.k8s.io/kubetest2/pkg/artifacts"
 	"sigs.k8s.io/kubetest2/pkg/types"
 
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/build"
@@ -62,6 +63,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		SSHUser:            remote.GetSSHUser(),
 		SSHEnv:             "aws",
 		Region:             "us-east-1",
+		logsDir:            filepath.Join(artifacts.BaseDir(), "logs"),
 	}
 	// register flags and return
 	return d, bindFlags(d)
@@ -90,10 +92,14 @@ type deployer struct {
 	SSHUser            string   `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
 	SSHEnv             string   `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
 
-	runner *AWSRunner
+	runner  *AWSRunner
+	logsDir string
 }
 
 func (d *deployer) Down() error {
+	if err := d.DumpClusterLogs(); err != nil {
+		klog.Warningf("Dumping cluster logs at the start of Down() failed: %s", err)
+	}
 	for _, instance := range d.runner.instances {
 		_, err := d.runner.ec2Service.TerminateInstances(&ec2.TerminateInstancesInput{
 			InstanceIds: []*string{&instance.instanceID},
@@ -103,10 +109,6 @@ func (d *deployer) Down() error {
 		}
 		klog.Infof("deleted instance id: %s", instance.instanceID)
 	}
-	return nil
-}
-
-func (d *deployer) DumpClusterLogs() error {
 	return nil
 }
 
