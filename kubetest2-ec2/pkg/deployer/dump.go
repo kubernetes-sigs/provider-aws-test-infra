@@ -24,11 +24,21 @@ func (d *deployer) DumpClusterLogs() error {
 		return fmt.Errorf("unexpected exception when making cluster logs directory: %s", err)
 	}
 
+	d.dumpContainerdInstallationLogs()
+	d.dumpContainerdLogs()
 	d.dumpCloudInitLogs()
 	d.dumpKubeletLogs()
 	d.kubectlDump()
 
 	return nil
+}
+
+func (d *deployer) dumpContainerdInstallationLogs() {
+	d.dumpRemoteLogs("containerd-installation", "journalctl", "-u", "containerd-installation", "--no-pager")
+}
+
+func (d *deployer) dumpContainerdLogs() {
+	d.dumpRemoteLogs("containerd", "journalctl", "-u", "containerd", "--no-pager")
 }
 
 func (d *deployer) dumpKubeletLogs() {
