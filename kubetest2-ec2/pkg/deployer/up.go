@@ -58,7 +58,9 @@ func (d *deployer) IsUp() (up bool, err error) {
 			return false, fmt.Errorf("instance2 %s not yet started", instance.instanceID)
 		}
 		klog.Infof("found instance2 id: %s", instance2.instanceID)
-		d.KubeconfigPath = downloadKubeConfig(instance2.instanceID, instance2.publicIP)
+		if d.KubeconfigPath == "" {
+			d.KubeconfigPath = downloadKubeConfig(instance2.instanceID, instance2.publicIP)
+		}
 		break
 	}
 	args := []string{
@@ -134,6 +136,8 @@ type AWSRunner struct {
 	instanceNamePrefix string
 	internalAWSImages  []internalAWSImage
 	instances          []*awsInstance
+	token              string
+	controlPlaneIP     string
 }
 
 type AWSImageConfig struct {
@@ -177,6 +181,7 @@ func (d *deployer) NewAWSRunner() *AWSRunner {
 	d.runner = &AWSRunner{
 		deployer:           d,
 		instanceNamePrefix: "tmp-e2e-" + uuid.New().String()[:8],
+		token:              utils.RandomFixedLengthString(6) + "." + utils.RandomFixedLengthString(16),
 	}
 	return d.runner
 }
@@ -228,6 +233,9 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 			continue
 		}
 		testInstance.publicIP = *instance.PublicIpAddress
+		if a.controlPlaneIP == "" {
+			a.controlPlaneIP = *testInstance.instance.PrivateIpAddress
+		}
 
 		// generate a temporary SSH key and send it to the node via instance-connect
 		if a.deployer.Ec2InstanceConnect && !createdSSHKey {
@@ -265,19 +273,22 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 			err = fmt.Errorf("instance %s is still running cloud-init daemon: %s", testInstance.instanceID, output)
 			continue
 		}
-		output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf version")
-		if err != nil {
-			err = fmt.Errorf("checking instance %s is api server running - Command failed: %s", testInstance.instanceID, output)
-			continue
-		}
-		output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name")
-		if err != nil {
-			err = fmt.Errorf("checking instance %s is node present - Command failed: %s", testInstance.instanceID, output)
-			continue
-		}
-		if !strings.Contains(output, "node/") {
-			err = fmt.Errorf("instance %s does not yet have a node: %s", testInstance.instanceID, output)
-			continue
+
+		if a.controlPlaneIP == *testInstance.instance.PrivateIpAddress {
+			output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf version")
+			if err != nil {
+				err = fmt.Errorf("checking instance %s is api server running - Command failed: %s", testInstance.instanceID, output)
+				continue
+			}
+			output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name")
+			if err != nil {
+				err = fmt.Errorf("checking instance %s is node present - Command failed: %s", testInstance.instanceID, output)
+				continue
+			}
+			if !strings.Contains(output, "node/") {
+				err = fmt.Errorf("instance %s does not yet have a node: %s", testInstance.instanceID, output)
+				continue
+			}
 		}
 
 		instanceRunning = true
@@ -286,15 +297,19 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 	if !instanceRunning {
 		return nil, fmt.Errorf("instance %s is not running", testInstance.instanceID)
 	} else {
-		output, err := remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready nodes --timeout=5m --all")
-		if err != nil {
-			return nil, fmt.Errorf("checking instance %s is not ready - Command failed: %s", testInstance.instanceID, output)
+		if a.controlPlaneIP == *testInstance.instance.PrivateIpAddress {
+			output, err := remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready nodes --timeout=5m --all")
+			if err != nil {
+				return nil, fmt.Errorf("checking instance %s is not ready - Command failed: %s", testInstance.instanceID, output)
+			}
+			output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-")
+			if err != nil {
+				return nil, fmt.Errorf("unable to remove taints for nodes in %s - Command failed: %s", testInstance.instanceID, output)
+			}
+			if a.deployer.KubeconfigPath == "" {
+				a.deployer.KubeconfigPath = downloadKubeConfig(testInstance.instanceID, testInstance.publicIP)
+			}
 		}
-		output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-")
-		if err != nil {
-			return nil, fmt.Errorf("unable to remove taints for nodes in %s - Command failed: %s", testInstance.instanceID, output)
-		}
-		a.deployer.KubeconfigPath = downloadKubeConfig(testInstance.instanceID, testInstance.publicIP)
 	}
 	klog.Infof("instance %s is running", testInstance.instanceID)
 	return testInstance, nil
@@ -328,13 +343,14 @@ func downloadKubeConfig(instanceID string, publicIp string) string {
 func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	var ret []internalAWSImage
 
-	var userdata string
+	var userControlPlane string
+	var userDataWorkerNode string
 	if a.deployer.UserDataFile != "" {
 		userDataBytes, err := os.ReadFile(a.deployer.UserDataFile)
 		if err != nil {
 			return nil, fmt.Errorf("reading userdata file %q, %w", a.deployer.UserDataFile, err)
 		}
-		userdata = string(userDataBytes)
+		var userdata = string(userDataBytes)
 
 		if a.deployer.BuildOptions.CommonBuildOptions.StageLocation == "" {
 			return nil, fmt.Errorf("please specify --stage with the s3 bucket")
@@ -348,17 +364,28 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 				a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
 		}
 		userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
-		userdata = base64.StdEncoding.EncodeToString([]byte(userdata))
+
+		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
+		userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
+		userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 	}
 
 	if len(a.deployer.Images) > 0 {
 		for _, imageID := range a.deployer.Images {
 			ret = append(ret, internalAWSImage{
 				amiID:           imageID,
-				userData:        userdata,
+				userData:        userControlPlane,
 				instanceType:    a.deployer.InstanceType,
 				instanceProfile: a.deployer.InstanceProfile,
 			})
+			for i := 0; i < a.deployer.NumNodes; i++ {
+				ret = append(ret, internalAWSImage{
+					amiID:           imageID,
+					userData:        userDataWorkerNode,
+					instanceType:    a.deployer.InstanceType,
+					instanceProfile: a.deployer.InstanceProfile,
+				})
+			}
 		}
 	}
 	return ret, nil
@@ -532,7 +559,11 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 		},
 	}
 	if len(img.userData) > 0 {
-		input.UserData = aws.String(img.userData)
+		data := img.userData
+		if a.controlPlaneIP != "" {
+			data = strings.ReplaceAll(data, "{{KUBEADM_CONTROL_PLANE_IP}}", a.controlPlaneIP)
+		}
+		input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(data)))
 	}
 	if img.instanceProfile != "" {
 		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{

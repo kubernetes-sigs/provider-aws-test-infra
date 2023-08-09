@@ -63,6 +63,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		SSHUser:            remote.GetSSHUser(),
 		SSHEnv:             "aws",
 		Region:             "us-east-1",
+		NumNodes:           2,
 		logsDir:            filepath.Join(artifacts.BaseDir(), "logs"),
 	}
 	// register flags and return
@@ -91,6 +92,7 @@ type deployer struct {
 	Images             []string `flag:"~images" desc:"images to test"`
 	SSHUser            string   `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
 	SSHEnv             string   `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
+	NumNodes           int      `flag:"num-nodes" desc:"Number of nodes in the cluster."`
 
 	runner  *AWSRunner
 	logsDir string
