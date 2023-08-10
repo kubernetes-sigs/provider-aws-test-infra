@@ -71,6 +71,8 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		Region:             "us-east-1",
 		NumNodes:           2,
 		logsDir:            filepath.Join(artifacts.BaseDir(), "logs"),
+		InstanceProfile:    "provider-aws-test-instance-profile",
+		RoleName:           "provider-aws-test-role",
 	}
 	// register flags and return
 	return d, bindFlags(d)
@@ -93,6 +95,7 @@ type deployer struct {
 	Region             string   `desc:"AWS region that the hosts live in (aws)"`
 	UserDataFile       string   `desc:"Path to user data to pass to created instances (aws)"`
 	InstanceProfile    string   `desc:"The name of the instance profile to assign to the node (aws)"`
+	RoleName           string   `desc:"The name of the role assign to the node (aws)"`
 	Ec2InstanceConnect bool     `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
 	InstanceType       string   `desc:"EC2 Instance type to use for test"`
 	Images             []string `flag:"~images" desc:"images to test"`
