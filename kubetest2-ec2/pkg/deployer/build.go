@@ -42,6 +42,7 @@ func (d *deployer) Build() error {
 		u.Concurrency = 10
 	})
 	d.BuildOptions.CommonBuildOptions.S3Uploader = s3Uploader
+	d.BuildOptions.CommonBuildOptions.RepoRoot = d.RepoRoot
 
 	err = d.BuildOptions.Validate()
 	if err != nil {
