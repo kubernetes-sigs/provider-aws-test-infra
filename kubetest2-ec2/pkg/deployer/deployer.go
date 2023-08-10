@@ -51,6 +51,11 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 	if user == "" {
 		user = "ec2-user"
 	}
+	k8sPath := filepath.Join(os.Getenv("GOPATH"), "src/k8s.io/kubernetes")
+	info, err := os.Stat(k8sPath)
+	if err != nil || !info.IsDir() {
+		k8sPath = ""
+	}
 	d := &deployer{
 		commonOptions: opts,
 		BuildOptions: &options.BuildOptions{
@@ -73,6 +78,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		logsDir:            filepath.Join(artifacts.BaseDir(), "logs"),
 		InstanceProfile:    "provider-aws-test-instance-profile",
 		RoleName:           "provider-aws-test-role",
+		RepoRoot:           k8sPath,
 	}
 	// register flags and return
 	return d, bindFlags(d)

@@ -45,6 +45,7 @@ type S3Stager struct {
 	StageLocation   string
 	s3Uploader      *s3manager.Uploader
 	TargetBuildArch string
+	RepoRoot        string
 }
 
 var _ Stager = &S3Stager{}
@@ -54,7 +55,7 @@ func (n *S3Stager) Stage(version string) error {
 	destinationKey := aws.String(version + "/" + tgzFile)
 	klog.Infof("uploading %s to s3://%s/%s", tgzFile, n.StageLocation, *destinationKey)
 
-	f, err := os.Open("_output/release-tars/" + tgzFile)
+	f, err := os.Open(n.RepoRoot + "/_output/release-tars/" + tgzFile)
 	if err != nil {
 		return err
 	}

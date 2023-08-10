@@ -40,6 +40,7 @@ func (o *Options) implementationFromStrategy() error {
 		TargetBuildArch: o.TargetBuildArch,
 	}
 	o.Stager = &S3Stager{
+		RepoRoot:        o.RepoRoot,
 		StageLocation:   o.StageLocation,
 		s3Uploader:      o.S3Uploader,
 		TargetBuildArch: o.TargetBuildArch,
