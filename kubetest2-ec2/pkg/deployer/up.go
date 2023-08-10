@@ -24,6 +24,7 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -208,11 +209,30 @@ func (a *AWSRunner) Validate() error {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
 	})
+
+	if err = a.ensureInstanceProfileAndRole(sess, err); err != nil {
+		klog.Fatalf("While creating instance profile / roles : %v", err)
+	}
+
 	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3Uploader
 	if a.internalAWSImages, err = a.prepareAWSImages(); err != nil {
 		klog.Fatalf("While preparing AWS images: %v", err)
 	}
 	return nil
+}
+
+func (a *AWSRunner) ensureInstanceProfileAndRole(sess *session.Session, err error) error {
+	svc := iam.New(sess, &aws.Config{Region: &a.deployer.Region})
+	err = utils.EnsureRole(svc, a.deployer.RoleName)
+	if err != nil {
+		klog.Infof("error with ensure role: %v\n", err)
+	}
+	err = utils.EnsureInstanceProfile(svc, a.deployer.InstanceProfile,
+		a.deployer.RoleName)
+	if err != nil {
+		klog.Infof("error with ensure instance profile: %v\n", err)
+	}
+	return err
 }
 
 func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstance, error) {

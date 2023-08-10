@@ -3,8 +3,11 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+
+	"k8s.io/klog/v2"
 )
 
 func EnsureRole(svc *iam.IAM, roleName string) error {
@@ -19,12 +22,12 @@ func EnsureRole(svc *iam.IAM, roleName string) error {
 	if len(listRolesResult.Roles) > 0 {
 		for _, role := range listRolesResult.Roles {
 			if *role.RoleName == roleName {
-				fmt.Printf("%s role exists already ARN: %s\n", roleName, *role.Arn)
+				klog.Infof("%s role exists already ARN: %s\n", roleName, *role.Arn)
 				return nil
 			}
 		}
 	} else {
-		fmt.Printf("did not find any pre-existing %s. creating %s...\n", roleName, roleName)
+		klog.Infof("did not find any pre-existing %s. creating %s...\n", roleName, roleName)
 	}
 
 	rolePolicyJSON := map[string]interface{}{
@@ -60,7 +63,7 @@ func EnsureRole(svc *iam.IAM, roleName string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("create role succeeded ARN : %v\n", *result.Role.Arn)
+	klog.Infof("create role succeeded ARN : %v\n", *result.Role.Arn)
 
 	policies := []string{
 		"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",

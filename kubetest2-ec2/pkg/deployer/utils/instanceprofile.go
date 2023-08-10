@@ -2,8 +2,11 @@ package utils
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+
+	"k8s.io/klog/v2"
 )
 
 func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName string) error {
@@ -19,12 +22,12 @@ func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName st
 	if len(listInstanceProfilesResult.InstanceProfiles) > 0 {
 		for _, profile := range listInstanceProfilesResult.InstanceProfiles {
 			if *profile.InstanceProfileName == instanceProfileName {
-				fmt.Printf("%s instance profile exists already ARN: %s\n", instanceProfileName, *profile.Arn)
+				klog.Infof("%s instance profile exists already ARN: %s\n", instanceProfileName, *profile.Arn)
 				return nil
 			}
 		}
 	} else {
-		fmt.Printf("did not find any pre-existing %s. creating %s...\n", instanceProfileName, instanceProfileName)
+		klog.Infof("did not find any pre-existing %s. creating %s...\n", instanceProfileName, instanceProfileName)
 	}
 
 	createInput := &iam.CreateInstanceProfileInput{
@@ -36,7 +39,7 @@ func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName st
 	if err != nil {
 		return fmt.Errorf("unable to create instance profile : %w", err)
 	}
-	fmt.Printf("created instance profile: %v\n", *createResult.InstanceProfile.Arn)
+	klog.Infof("created instance profile: %v\n", *createResult.InstanceProfile.Arn)
 
 	listProfilesForRoleInput := &iam.ListInstanceProfilesForRoleInput{RoleName: aws.String(roleName)}
 	listProfilesForRoleResult, err := svc.ListInstanceProfilesForRole(listProfilesForRoleInput)
@@ -44,7 +47,7 @@ func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName st
 		return fmt.Errorf("unable to list instance profile for role: %w", err)
 	}
 	if len(listProfilesForRoleResult.InstanceProfiles) > 0 {
-		fmt.Printf("found instance profile %s for role %s already", instanceProfileName, roleName)
+		klog.Infof("found instance profile %s for role %s already", instanceProfileName, roleName)
 		return nil
 	}
 
@@ -56,6 +59,6 @@ func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName st
 	if err != nil {
 		return fmt.Errorf("unable to add role to instance profile : %w", err)
 	}
-	fmt.Printf("added role %s to instance profile %s\n", roleName, instanceProfileName)
+	klog.Infof("added role %s to instance profile %s\n", roleName, instanceProfileName)
 	return nil
 }
