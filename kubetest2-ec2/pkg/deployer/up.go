@@ -136,6 +136,7 @@ type AWSRunner struct {
 	ec2Service         *ec2.EC2
 	ec2icService       *ec2instanceconnect.EC2InstanceConnect
 	ssmService         *ssm.SSM
+	iamService         *iam.IAM
 	instanceNamePrefix string
 	internalAWSImages  []internalAWSImage
 	instances          []*awsInstance
@@ -205,6 +206,7 @@ func (a *AWSRunner) Validate() error {
 	a.ec2Service = ec2.New(sess)
 	a.ec2icService = ec2instanceconnect.New(sess)
 	a.ssmService = ssm.New(sess)
+	a.iamService = iam.New(sess, &aws.Config{Region: &a.deployer.Region})
 	s3Uploader := s3manager.NewUploaderWithClient(s3.New(sess), func(u *s3manager.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
@@ -222,12 +224,11 @@ func (a *AWSRunner) Validate() error {
 }
 
 func (a *AWSRunner) ensureInstanceProfileAndRole(sess *session.Session, err error) error {
-	svc := iam.New(sess, &aws.Config{Region: &a.deployer.Region})
-	err = utils.EnsureRole(svc, a.deployer.RoleName)
+	err = utils.EnsureRole(a.iamService, a.deployer.RoleName)
 	if err != nil {
 		klog.Infof("error with ensure role: %v\n", err)
 	}
-	err = utils.EnsureInstanceProfile(svc, a.deployer.InstanceProfile,
+	err = utils.EnsureInstanceProfile(a.iamService, a.deployer.InstanceProfile,
 		a.deployer.RoleName)
 	if err != nil {
 		klog.Infof("error with ensure instance profile: %v\n", err)
@@ -380,7 +381,7 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 
 		userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",
 			a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
-		version, err := utils.SourceVersion(a.deployer.BuildOptions.CommonBuildOptions.RepoRoot)
+		version, err := utils.SourceVersion(a.deployer.RepoRoot)
 		if err != nil {
 			return nil, fmt.Errorf("extracting version from repo %q, %w",
 				a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
@@ -588,8 +589,12 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 		input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(data)))
 	}
 	if img.instanceProfile != "" {
+		arn, err := utils.GetInstanceProfileArn(a.iamService, img.instanceProfile)
+		if err != nil {
+			return nil, fmt.Errorf("getting instance profile arn, %w", err)
+		}
 		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
-			Name: &img.instanceProfile,
+			Arn: aws.String(arn),
 		}
 	}
 

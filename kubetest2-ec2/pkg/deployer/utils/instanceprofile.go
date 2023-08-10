@@ -9,6 +9,24 @@ import (
 	"k8s.io/klog/v2"
 )
 
+func GetInstanceProfileArn(svc *iam.IAM, instanceProfileName string) (string, error) {
+	listInstanceProfilesInput := &iam.ListInstanceProfilesInput{
+		PathPrefix: aws.String("/kubetest2/"),
+	}
+	listInstanceProfilesResult, err := svc.ListInstanceProfiles(listInstanceProfilesInput)
+	if err != nil {
+		return "", err
+	}
+	if len(listInstanceProfilesResult.InstanceProfiles) > 0 {
+		for _, profile := range listInstanceProfilesResult.InstanceProfiles {
+			if *profile.InstanceProfileName == instanceProfileName {
+				return *profile.Arn, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("unable to find Arn for %s instance profile", instanceProfileName)
+}
+
 func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName string) error {
 
 	listInstanceProfilesInput := &iam.ListInstanceProfilesInput{
