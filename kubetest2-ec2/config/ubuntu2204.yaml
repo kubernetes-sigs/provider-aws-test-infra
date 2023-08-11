@@ -177,6 +177,17 @@ write_files:
          --discovery-token-unsafe-skip-ca-verification \
          {{KUBEADM_CONTROL_PLANE_IP}}:6443
       fi
+  - path: /usr/local/bin/run-post-install.sh
+    permissions: 0755
+    owner: root
+    content: |
+      #!/bin/bash
+      set -xeu
+
+      KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
+      if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
+        kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
+      fi
 runcmd:
   # Ensure instance-id resolves to the ip address of the host
   - "echo \"$(dig $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/).ec2.internal +short) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/)\" | sudo tee -a /etc/hosts"
@@ -192,3 +203,4 @@ runcmd:
   - systemctl enable containerd.target
   - systemctl start containerd.target
   - /usr/local/bin/run-kubeadm.sh
+  - /usr/local/bin/run-post-install.sh
