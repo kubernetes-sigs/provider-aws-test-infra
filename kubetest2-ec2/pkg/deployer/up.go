@@ -241,7 +241,7 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 	createdSSHKey := false
 	for i := 0; i < 30 && !instanceRunning; i++ {
 		if i > 0 {
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 15)
 		}
 
 		var op *ec2.DescribeInstancesOutput
