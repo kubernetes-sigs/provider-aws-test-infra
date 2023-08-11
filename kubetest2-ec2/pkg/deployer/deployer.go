@@ -179,7 +179,7 @@ func (d *deployer) waitForKubectlNodes() {
 			break
 		} else {
 			klog.Infof("waiting for %d nodes in cluster, found %d", len(d.runner.instances), len(lines))
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 15)
 		}
 	}
 }
