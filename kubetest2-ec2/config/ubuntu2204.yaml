@@ -76,12 +76,29 @@ write_files:
       net.ipv4.ip_forward=1
       net.bridge.bridge-nf-call-ip6tables = 1
       net.bridge.bridge-nf-call-iptables = 1
+  - path: /etc/kubernetes/credential-provider.yaml
+    permissions: 0644
+    owner: root
+    content: |
+      kind: CredentialProviderConfig
+      apiVersion: kubelet.config.k8s.io/v1
+      providers:
+      - name: ecr-credential-provider
+        apiVersion: credentialprovider.kubelet.k8s.io/v1
+        matchImages:
+        - "*.dkr.ecr.*.amazonaws.com"
+        - "*.dkr.ecr.*.amazonaws.com.cn"
+        - "*.dkr.ecr-fips.*.amazonaws.com"
+        - "*.dkr.ecr.us-iso-east-1.c2s.ic.gov"
+        - "*.dkr.ecr.us-isob-east-1.sc2s.sgov.gov"
+        defaultCacheDuration: 12h
   - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
     permissions: 0644
     owner: root
     content: |
       # Note: This dropin only works with kubeadm and kubelet v1.11+
       [Service]
+      Environment="KUBELET_EXTRA_ARGS=--image-credential-provider-bin-dir=/usr/local/bin --image-credential-provider-config=/etc/kubernetes/credential-provider.yaml"
       Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
       Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
       # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
@@ -121,6 +138,10 @@ write_files:
       else
         ARCH=amd64
       fi
+
+      VERSION="v1.27.1"
+      curl -sSLo /usr/local/bin/ecr-credential-provider --fail --retry 5 https://artifacts.k8s.io/binaries/cloud-provider-aws/$VERSION/linux/$ARCH/ecr-credential-provider-linux-$ARCH
+      chmod +x /usr/local/bin/ecr-credential-provider
 
       aws s3 cp s3://{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz kubernetes-server-linux-$ARCH.tar.gz --no-sign-request
 
