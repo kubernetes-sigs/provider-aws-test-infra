@@ -193,7 +193,7 @@ mkdir -p $(dirname ${config_path})
 
 # Download and configure CNI
 cni_template_path="${CONTAINERD_HOME}/opt/containerd/cluster/gce/cni.template"
-cni_bin_dir="${CONTAINERD_HOME}/opt/cni/bin"
+cni_bin_dir="/opt/cni/bin"
 
 CNI_VERSION=v1.2.0 &&\
 mkdir -p ${cni_bin_dir} &&\
