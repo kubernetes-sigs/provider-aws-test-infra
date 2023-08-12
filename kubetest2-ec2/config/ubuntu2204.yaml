@@ -13,7 +13,7 @@ packages:
     - awscli
     - net-tools
     - jq
-    - python
+    - python3
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
@@ -30,10 +30,6 @@ write_files:
       [Service]
       Type=oneshot
       RemainAfterExit=yes
-      ExecStartPre=/bin/mkdir -p /home/containerd
-      ExecStartPre=/bin/mount --bind /home/containerd /home/containerd
-      ExecStartPre=/bin/mount -o remount,exec /home/containerd
-      ExecStartPre=/usr/bin/curl --fail --retry 5 --retry-delay 3 --silent --show-error -o /home/containerd/configure.sh https://raw.githubusercontent.com/kubernetes-sigs/provider-aws-test-infra/main/config/configure.sh
       ExecStartPre=/bin/chmod 544 /home/containerd/configure.sh
       ExecStart=/home/containerd/configure.sh
       [Install]
@@ -193,6 +189,11 @@ write_files:
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
         kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
       fi
+  - path: /home/containerd/configure.sh
+    encoding: gzip+base64
+    content: {{CONFIGURE_SH}}
+    owner: root
+    permissions: '0544'
 runcmd:
   # Ensure instance-id resolves to the ip address of the host
   - "echo \"$(dig $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/).ec2.internal +short) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/)\" | sudo tee -a /etc/hosts"

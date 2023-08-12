@@ -17,6 +17,8 @@ limitations under the License.
 package deployer
 
 import (
+	"bytes"
+	"compress/gzip"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -387,8 +389,14 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 				a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
 		}
 		userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
-
 		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
+
+		script, err := a.fetchConfigureScript()
+		if err != nil {
+			return nil, fmt.Errorf("unable to fetch script : %w", err)
+		}
+		userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
+
 		userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 		userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 	}
@@ -614,6 +622,26 @@ func (a *AWSRunner) getSSMImage(path string) (string, error) {
 		return "", fmt.Errorf("getting AMI ID from SSM path %q, %w", path, err)
 	}
 	return *rsp.Parameter.Value, nil
+}
+
+func (a *AWSRunner) fetchConfigureScript() (string, error) {
+	scriptFile := filepath.Dir(a.deployer.UserDataFile) + "/" + "configure.sh"
+	scriptBytes, err := os.ReadFile(scriptFile)
+	if err != nil {
+		return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
+	}
+	var buffer bytes.Buffer
+	gz := gzip.NewWriter(&buffer)
+	if _, err := gz.Write(scriptBytes); err != nil {
+		return "", err
+	}
+	if err := gz.Flush(); err != nil {
+		return "", err
+	}
+	if err := gz.Close(); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(buffer.Bytes()), nil
 }
 
 func generateSSHKeypair() (*temporarySSHKey, error) {
