@@ -192,7 +192,6 @@ config_path="${CONTAINERD_CONFIG_PATH:-"/etc/containerd/config.toml"}"
 mkdir -p $(dirname ${config_path})
 
 # Download and configure CNI
-cni_template_path="${CONTAINERD_HOME}/opt/containerd/cluster/gce/cni.template"
 cni_bin_dir="/opt/cni/bin"
 
 CNI_VERSION=v1.2.0 &&\
@@ -222,7 +221,6 @@ disabled_plugins = ["io.containerd.internal.v1.restart"]
 [plugins."io.containerd.grpc.v1.cri".cni]
   bin_dir = "${cni_bin_dir}"
   conf_dir = "/etc/cni/net.d"
-  conf_template = "${cni_template_path}"
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
   endpoint = ["https://mirror.gcr.io","https://registry-1.docker.io"]
 [plugins."io.containerd.grpc.v1.cri".containerd]

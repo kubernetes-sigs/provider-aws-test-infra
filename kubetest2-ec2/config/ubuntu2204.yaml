@@ -195,6 +195,8 @@ write_files:
     owner: root
     permissions: '0544'
 runcmd:
+  - sudo systemctl stop apparmor
+  - sudo systemctl disable apparmor
   # Ensure instance-id resolves to the ip address of the host
   - "echo \"$(dig $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/).ec2.internal +short) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/)\" | sudo tee -a /etc/hosts"
   - "sudo sed -i \"s/^#ReadEtcHosts/ReadEtcHosts/\" /etc/systemd/resolved.conf"
