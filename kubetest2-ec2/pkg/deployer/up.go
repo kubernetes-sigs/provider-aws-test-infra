@@ -193,40 +193,62 @@ func (d *deployer) NewAWSRunner() *AWSRunner {
 }
 
 func (a *AWSRunner) Validate() error {
-	if len(a.deployer.Images) == 0 {
-		klog.Fatalf("Must specify --images.")
+	sess, err := a.initializeServices()
+	if err != nil {
+		return fmt.Errorf("unable to initialize AWS services : %w", err)
 	}
-	for _, img := range a.deployer.Images {
-		if !strings.HasPrefix(img, "ami-") {
-			return fmt.Errorf("invalid AMI id format for %q", img)
+
+	if a.deployer.Image == "" {
+		arch := strings.Split(a.deployer.BuildOptions.CommonBuildOptions.TargetBuildArch, "/")[1]
+		path := "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
+		klog.Infof("image was not specified, looking up latest image in SSM:")
+		klog.Infof("%s", path)
+		id, err := utils.GetSSMImage(a.ssmService, path)
+		if err == nil {
+			klog.Infof("using image id from ssm %s", id)
+			a.deployer.Image = id
+		} else {
+			return fmt.Errorf("error looking up ssm : %w", err)
 		}
 	}
+
+	if len(a.deployer.Image) == 0 {
+		return fmt.Errorf("must specify an Ubuntu AMI using --image")
+	}
+
+	if !strings.HasPrefix(a.deployer.Image, "ami-") {
+		return fmt.Errorf("invalid AMI id format for %q", a.deployer.Image)
+	}
+
+	if err = a.ensureInstanceProfileAndRole(sess); err != nil {
+		return fmt.Errorf("while creating instance profile / roles : %v", err)
+	}
+
+	a.internalAWSImages, err = a.prepareAWSImages()
+	if err != nil {
+		return fmt.Errorf("while preparing AWS images: %v", err)
+	}
+	return nil
+}
+
+func (a *AWSRunner) initializeServices() (*session.Session, error) {
 	sess, err := session.NewSession(&aws.Config{Region: &a.deployer.Region})
 	if err != nil {
-		klog.Fatalf("Unable to create AWS session, %s", err)
+		return nil, fmt.Errorf("unable to create AWS session, %w", err)
 	}
 	a.ec2Service = ec2.New(sess)
 	a.ec2icService = ec2instanceconnect.New(sess)
 	a.ssmService = ssm.New(sess)
 	a.iamService = iam.New(sess, &aws.Config{Region: &a.deployer.Region})
-	s3Uploader := s3manager.NewUploaderWithClient(s3.New(sess), func(u *s3manager.Uploader) {
+	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3manager.NewUploaderWithClient(s3.New(sess), func(u *s3manager.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
 	})
-
-	if err = a.ensureInstanceProfileAndRole(sess, err); err != nil {
-		klog.Fatalf("While creating instance profile / roles : %v", err)
-	}
-
-	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3Uploader
-	if a.internalAWSImages, err = a.prepareAWSImages(); err != nil {
-		klog.Fatalf("While preparing AWS images: %v", err)
-	}
-	return nil
+	return sess, nil
 }
 
-func (a *AWSRunner) ensureInstanceProfileAndRole(sess *session.Session, err error) error {
-	err = utils.EnsureRole(a.iamService, a.deployer.RoleName)
+func (a *AWSRunner) ensureInstanceProfileAndRole(sess *session.Session) error {
+	err := utils.EnsureRole(a.iamService, a.deployer.RoleName)
 	if err != nil {
 		klog.Infof("error with ensure role: %v\n", err)
 	}
@@ -401,23 +423,20 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 	}
 
-	if len(a.deployer.Images) > 0 {
-		for _, imageID := range a.deployer.Images {
-			ret = append(ret, internalAWSImage{
-				amiID:           imageID,
-				userData:        userControlPlane,
-				instanceType:    a.deployer.InstanceType,
-				instanceProfile: a.deployer.InstanceProfile,
-			})
-			for i := 0; i < a.deployer.NumNodes; i++ {
-				ret = append(ret, internalAWSImage{
-					amiID:           imageID,
-					userData:        userDataWorkerNode,
-					instanceType:    a.deployer.InstanceType,
-					instanceProfile: a.deployer.InstanceProfile,
-				})
-			}
-		}
+	imageID := a.deployer.Image
+	ret = append(ret, internalAWSImage{
+		amiID:           imageID,
+		userData:        userControlPlane,
+		instanceType:    a.deployer.InstanceType,
+		instanceProfile: a.deployer.InstanceProfile,
+	})
+	for i := 0; i < a.deployer.NumNodes; i++ {
+		ret = append(ret, internalAWSImage{
+			amiID:           imageID,
+			userData:        userDataWorkerNode,
+			instanceType:    a.deployer.InstanceType,
+			instanceProfile: a.deployer.InstanceProfile,
+		})
 	}
 	return ret, nil
 }
