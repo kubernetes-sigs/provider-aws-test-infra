@@ -163,8 +163,7 @@ write_files:
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
         MAC=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/ -s | head -n 1)
         CIDR=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks)
-
-        sudo kubeadm init \
+        kubeadm init \
          --token {{KUBEADM_TOKEN}} \
          --apiserver-cert-extra-sans $(curl -4 icanhazip.com) \
          --cri-socket /run/containerd/containerd.sock \
@@ -172,7 +171,7 @@ write_files:
          --ignore-preflight-errors=ImagePull \
          --pod-network-cidr="$CIDR"
       else
-        sudo kubeadm join \
+        kubeadm join \
          --v 10 \
          --token {{KUBEADM_TOKEN}} \
          --discovery-token-unsafe-skip-ca-verification \
@@ -184,10 +183,17 @@ write_files:
     content: |
       #!/bin/bash
       set -xeu
-
       KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
-        kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
+        if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
+          ARCH=arm64
+        else
+          ARCH=amd64
+        fi
+        curl -sSL --retry 5 https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-$ARCH.tar.gz | tar -xz -C /usr/local/bin
+        export KUBECONFIG=/etc/kubernetes/admin.conf
+        cilium install --version 1.14.0
+        cilium status --wait
       fi
   - path: /home/containerd/configure.sh
     encoding: gzip+base64
