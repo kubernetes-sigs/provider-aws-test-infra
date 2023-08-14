@@ -51,8 +51,8 @@ var (
 // StoreCommonBinaries will best effort try to store commonly built binaries
 // to the output directory
 func StoreCommonBinaries(kuberoot string, outroot string, targetBuildArch string) {
-	const dockerizedOutput = "_output/dockerized"
-	root := filepath.Join(kuberoot, dockerizedOutput, "bin", targetBuildArch)
+	const localOutput = "_output/local"
+	root := filepath.Join(kuberoot, localOutput, "bin", targetBuildArch)
 	for _, binary := range CommonTestBinaries {
 		source := filepath.Join(root, binary)
 		dest := filepath.Join(outroot, binary)
