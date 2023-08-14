@@ -23,7 +23,7 @@ import (
 type Options struct {
 	StageLocation   string `flag:"~stage" desc:"Upload binaries to s3 bucket if set"`
 	RepoRoot        string `flag:"-"`
-	VersionSuffix   string `flag:"-"`
+	StageVersion    string `flag:"~version" desc:"Specify version already in s3 bucket"`
 	TargetBuildArch string `flag:"~target-build-arch" desc:"Target architecture for the test artifacts"`
 	S3Uploader      *s3manager.Uploader
 	Builder
