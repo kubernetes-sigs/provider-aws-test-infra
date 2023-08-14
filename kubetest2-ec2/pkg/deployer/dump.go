@@ -18,9 +18,8 @@ func (d *deployer) DumpClusterLogs() error {
 		if err != nil {
 			return fmt.Errorf("failed to create %s: %s", d.logsDir, err)
 		}
-		return nil
-	}
-	if err != nil {
+		klog.Infof("created logs directory %s", d.logsDir)
+	} else {
 		return fmt.Errorf("unexpected exception when making cluster logs directory: %s", err)
 	}
 
