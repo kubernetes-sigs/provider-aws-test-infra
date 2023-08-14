@@ -26,7 +26,6 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -38,6 +37,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -47,6 +47,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/kubetest2/pkg/exec"
 
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/config"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/remote"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 )
@@ -392,36 +393,43 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 
 	var userControlPlane string
 	var userDataWorkerNode string
+	var userdata string
 	if a.deployer.UserDataFile != "" {
 		userDataBytes, err := os.ReadFile(a.deployer.UserDataFile)
 		if err != nil {
-			return nil, fmt.Errorf("reading userdata file %q, %w", a.deployer.UserDataFile, err)
+			return nil, fmt.Errorf("error reading userdata file %q, %w", a.deployer.UserDataFile, err)
 		}
-		var userdata = string(userDataBytes)
-
-		if a.deployer.BuildOptions.CommonBuildOptions.StageLocation == "" {
-			return nil, fmt.Errorf("please specify --stage with the s3 bucket")
-		}
-
-		userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",
-			a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
-		version, err := utils.SourceVersion(a.deployer.RepoRoot)
+		userdata = string(userDataBytes)
+	} else {
+		userDataBytes, err := config.ConfigFS.ReadFile("ubuntu2204.yaml")
 		if err != nil {
-			return nil, fmt.Errorf("extracting version from repo %q, %w",
-				a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
+			return nil, fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
 		}
-		userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
-		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
-
-		script, err := a.fetchConfigureScript()
-		if err != nil {
-			return nil, fmt.Errorf("unable to fetch script : %w", err)
-		}
-		userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
-
-		userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
-		userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
+		userdata = string(userDataBytes)
 	}
+
+	if a.deployer.BuildOptions.CommonBuildOptions.StageLocation == "" {
+		return nil, fmt.Errorf("please specify --stage with the s3 bucket")
+	}
+
+	userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",
+		a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
+	version, err := utils.SourceVersion(a.deployer.RepoRoot)
+	if err != nil {
+		return nil, fmt.Errorf("extracting version from repo %q, %w",
+			a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
+	}
+	userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
+	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
+
+	script, err := a.fetchConfigureScript()
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch script : %w", err)
+	}
+	userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
+
+	userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
+	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 
 	imageID := a.deployer.Image
 	ret = append(ret, internalAWSImage{
@@ -644,10 +652,19 @@ func (a *AWSRunner) getSSMImage(path string) (string, error) {
 }
 
 func (a *AWSRunner) fetchConfigureScript() (string, error) {
-	scriptFile := filepath.Dir(a.deployer.UserDataFile) + "/" + "configure.sh"
-	scriptBytes, err := os.ReadFile(scriptFile)
-	if err != nil {
-		return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
+	var scriptBytes []byte
+	var err error
+	if a.deployer.UserDataFile != "" {
+		scriptFile := filepath.Dir(a.deployer.UserDataFile) + "/" + "configure.sh"
+		scriptBytes, err = os.ReadFile(scriptFile)
+		if err != nil {
+			return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
+		}
+	} else {
+		scriptBytes, err = config.ConfigFS.ReadFile("configure.sh")
+		if err != nil {
+			return "", fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
+		}
 	}
 	var buffer bytes.Buffer
 	gz := gzip.NewWriter(&buffer)
