@@ -412,13 +412,20 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		return nil, fmt.Errorf("please specify --stage with the s3 bucket")
 	}
 
+	var version string
+	var err error
+	if a.deployer.BuildOptions.CommonBuildOptions.StageVersion != "" {
+		version, err = utils.SourceVersion(a.deployer.RepoRoot)
+		if err != nil {
+			return nil, fmt.Errorf("extracting version from repo %q, %w",
+				a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
+		}
+	} else {
+		version = a.deployer.BuildOptions.CommonBuildOptions.StageVersion
+	}
+
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",
 		a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
-	version, err := utils.SourceVersion(a.deployer.RepoRoot)
-	if err != nil {
-		return nil, fmt.Errorf("extracting version from repo %q, %w",
-			a.deployer.BuildOptions.CommonBuildOptions.RepoRoot, err)
-	}
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
 
