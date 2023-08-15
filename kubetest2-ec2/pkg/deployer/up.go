@@ -421,7 +421,7 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 
 	var version string
 	var err error
-	if a.deployer.BuildOptions.CommonBuildOptions.StageVersion != "" {
+	if a.deployer.BuildOptions.CommonBuildOptions.StageVersion == "" {
 		version, err = utils.SourceVersion(a.deployer.RepoRoot)
 		if err != nil {
 			return nil, fmt.Errorf("extracting version from repo %q, %w",
