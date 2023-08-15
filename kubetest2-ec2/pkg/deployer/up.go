@@ -125,7 +125,7 @@ func (d *deployer) Up() error {
 			runner.instances = append(runner.instances, instance)
 		}
 		if err != nil {
-			klog.Errorf("error starting %s : %w", instance.instanceID, err)
+			klog.Errorf("error starting instance for image %s : %s", image.amiID, err)
 			if err2 := d.DumpClusterLogs(); err2 != nil {
 				klog.Warningf("Dumping cluster logs at the when Up() failed: %s", err2)
 			}
@@ -216,6 +216,12 @@ func (a *AWSRunner) Validate() error {
 			a.deployer.Image = id
 		} else {
 			return fmt.Errorf("error looking up ssm : %w", err)
+		}
+
+		// Looks like we need an arm64 image and the default instance type is amd64, so
+		// pick an equivalent image to t3a.medium which is t4g.medium.
+		if a.deployer.InstanceType == "t3a.medium" && arch == "arm64" {
+			a.deployer.InstanceType = "t4g.medium"
 		}
 	}
 
@@ -509,7 +515,8 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 		return nil, err
 	}
 	instance = newInstance
-	klog.Infof("launched new instance %s with ami-id: %s", *instance.InstanceId, *instance.ImageId)
+	klog.Infof("launched new instance %s with ami-id: %s on instance type: %s",
+		*instance.InstanceId, *instance.ImageId, *instance.InstanceType)
 
 	testInstance := &awsInstance{
 		instanceID: *instance.InstanceId,
