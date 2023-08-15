@@ -185,15 +185,7 @@ write_files:
       set -xeu
       KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
-        if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
-          ARCH=arm64
-        else
-          ARCH=amd64
-        fi
-        curl -sSL --retry 5 https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-$ARCH.tar.gz | tar -xz -C /usr/local/bin
-        export KUBECONFIG=/etc/kubernetes/admin.conf
-        cilium install --version 1.14.0
-        cilium status --wait
+        kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
       fi
   - path: /home/containerd/configure.sh
     encoding: gzip+base64
@@ -204,7 +196,7 @@ runcmd:
   - ufw disable || echo "ufw not installed"
   - systemctl stop apparmor
   - systemctl disable apparmor
-  - iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+  - iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT && iptables -P OUTPUT ACCEPT
   # Ensure instance-id resolves to the ip address of the host
   - "echo \"$(dig $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/).ec2.internal +short) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/)\" | sudo tee -a /etc/hosts"
   - "sudo sed -i \"s/^#ReadEtcHosts/ReadEtcHosts/\" /etc/systemd/resolved.conf"
