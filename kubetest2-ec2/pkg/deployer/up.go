@@ -121,7 +121,14 @@ func (d *deployer) Up() error {
 
 	for _, image := range runner.internalAWSImages {
 		instance, err := runner.getAWSInstance(image)
+		if instance != nil {
+			runner.instances = append(runner.instances, instance)
+		}
 		if err != nil {
+			klog.Errorf("error starting %s : %w", instance.instanceID, err)
+			if err2 := d.DumpClusterLogs(); err2 != nil {
+				klog.Warningf("Dumping cluster logs at the when Up() failed: %s", err2)
+			}
 			return err
 		}
 		klog.Infof("starting instance id: %s", instance.instanceID)
@@ -343,7 +350,7 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 	}
 
 	if !instanceRunning {
-		return nil, fmt.Errorf("instance %s is not running", testInstance.instanceID)
+		return testInstance, fmt.Errorf("instance %s is not running", testInstance.instanceID)
 	} else {
 		if a.controlPlaneIP == *testInstance.instance.PrivateIpAddress {
 			output, err := remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready nodes --timeout=5m --all")
