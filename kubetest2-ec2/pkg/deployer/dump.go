@@ -20,7 +20,9 @@ func (d *deployer) DumpClusterLogs() error {
 		}
 		klog.Infof("created logs directory %s", d.logsDir)
 	} else {
-		return fmt.Errorf("unexpected exception when making cluster logs directory: %s", err)
+		if err != nil {
+			return fmt.Errorf("unexpected exception when making cluster logs directory: %s", err)
+		}
 	}
 
 	d.dumpContainerdInstallationLogs()
@@ -28,6 +30,7 @@ func (d *deployer) DumpClusterLogs() error {
 	d.dumpCloudInitLogs()
 	d.dumpKubeletLogs()
 	d.kubectlDump()
+	d.dumpVPCCNILogs()
 
 	return nil
 }
@@ -59,13 +62,13 @@ func (d *deployer) kubectlDump() {
 
 func (d *deployer) dumpRemoteLogs(outputFilePrefix string, args ...string) {
 	for _, instance := range d.runner.instances {
-		file := outputFilePrefix + "-" + instance.instanceID + ".log"
-		klog.Infof("Running command to dump logs to file %s: %v", file, args)
+		file := outputFilePrefix + ".log"
+		klog.Infof("Running command to dump logs to file %s/%s: %v", instance.instanceID, file, args)
 		output, err := remote.SSH(instance.instanceID, args...)
 		if err != nil {
 			klog.Errorf("error running %v - Command failed: %s", args, instance.instanceID, output)
 		}
-		outfile, err := os.Create(filepath.Join(d.logsDir, file))
+		outfile, err := os.Create(filepath.Join(d.logsDir, instance.instanceID, file))
 		if err != nil {
 			klog.Errorf("failed to create %s log files : %w", outputFilePrefix, err)
 		} else {
@@ -74,6 +77,26 @@ func (d *deployer) dumpRemoteLogs(outputFilePrefix string, args ...string) {
 		_, err = outfile.WriteString(output)
 		if err != nil {
 			klog.Errorf("failed to write to %s log file: %w", outputFilePrefix, err)
+		}
+	}
+}
+
+func (d *deployer) dumpVPCCNILogs() {
+	for _, instance := range d.runner.instances {
+		destDir := filepath.Join(d.logsDir, instance.instanceID, "aws-cni")
+		err := os.MkdirAll(destDir, os.ModePerm)
+		if err != nil {
+			klog.Errorf("failed to create %s: %s", destDir, err)
+			continue
+		}
+		output, err := remote.SSH(instance.instanceID, "/opt/cni/bin/aws-cni-support.sh")
+		if err != nil {
+			klog.Errorf("error running /opt/cni/bin/aws-cni-support.sh - Command failed: %s",
+				instance.instanceID, output)
+		}
+		output, err = remote.SCP(instance.instanceID, "/var/log/eks*.tar.gz", destDir)
+		if err != nil {
+			klog.Errorf("error scp from /var/log/eks*.tar.gz failed: %s", instance.instanceID, output)
 		}
 	}
 }
