@@ -42,6 +42,9 @@ import (
 // Name is the name of the deployer
 const Name = "ec2"
 
+const defaultAMD64InstanceType = "r5d.4xlarge"
+const defaultARM64InstanceTYpe = "r7g.4xlarge"
+
 var GitTag string
 
 // New implements deployer.New for ec2
@@ -70,7 +73,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 			},
 		},
 		Ec2InstanceConnect: true,
-		InstanceType:       "t3a.medium",
+		InstanceType:       defaultAMD64InstanceType,
 		SSHUser:            user,
 		SSHEnv:             "aws",
 		Region:             "us-east-1",
