@@ -220,8 +220,8 @@ func (a *AWSRunner) Validate() error {
 
 		// Looks like we need an arm64 image and the default instance type is amd64, so
 		// pick an equivalent image to t3a.medium which is t4g.medium.
-		if a.deployer.InstanceType == "t3a.medium" && arch == "arm64" {
-			a.deployer.InstanceType = "t4g.medium"
+		if a.deployer.InstanceType == defaultAMD64InstanceType && arch == "arm64" {
+			a.deployer.InstanceType = defaultARM64InstanceTYpe
 		}
 	}
 
