@@ -186,6 +186,7 @@ write_files:
       KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
         kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
+        kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system WARM_ENI_TARGET=3
       fi
   - path: /home/containerd/configure.sh
     encoding: gzip+base64
