@@ -25,12 +25,12 @@ func (d *deployer) DumpClusterLogs() error {
 		}
 	}
 
+	d.dumpVPCCNILogs()
 	d.dumpContainerdInstallationLogs()
 	d.dumpContainerdLogs()
 	d.dumpCloudInitLogs()
 	d.dumpKubeletLogs()
 	d.kubectlDump()
-	d.dumpVPCCNILogs()
 
 	return nil
 }
