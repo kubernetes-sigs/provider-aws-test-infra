@@ -116,6 +116,11 @@ func SSH(host string, cmd ...string) (string, error) {
 	return runSSHCommand(host, "ssh", append([]string{GetHostnameOrIP(host), "--", "sudo"}, cmd...)...)
 }
 
+func SCP(host string, srcDir string, logDir string) (string, error) {
+	return runSSHCommand(host, "scp", "-r",
+		fmt.Sprintf("%s:%s", GetHostnameOrIP(host), srcDir), logDir)
+}
+
 // runSSHCommand executes the ssh or scp command, adding the flag provided --ssh-options
 func runSSHCommand(host, cmd string, args ...string) (string, error) {
 	if key, err := getPrivateSSHKey(host); len(key) != 0 {
