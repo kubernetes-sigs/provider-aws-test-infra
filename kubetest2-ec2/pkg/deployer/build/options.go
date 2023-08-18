@@ -21,7 +21,7 @@ import (
 )
 
 type Options struct {
-	StageLocation   string `flag:"~stage" desc:"Upload binaries to s3 bucket if set"`
+	StageLocation   string `flag:"~stage" desc:"Upload/Download binaries to s3 bucket, https://dl.k8s.io/ to stand up cluster from release artifacts"`
 	RepoRoot        string `flag:"-"`
 	StageVersion    string `flag:"~version" desc:"Specify version already in s3 bucket"`
 	TargetBuildArch string `flag:"~target-build-arch" desc:"Target architecture for the test artifacts"`

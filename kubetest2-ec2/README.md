@@ -71,6 +71,15 @@ kubetest2 ec2 \
  --up
 ```
 
+Instead of building, pushing to s3 buckets and then standing up a cluster from there, you can use release
+artifacts directly as well, like so:
+```bash
+kubetest2 ec2 \
+  --stage https://dl.k8s.io/ \
+  --version v1.28.0 \
+  --up
+```
+
 So you can see that a lot of things have defaults and/or picked up from the environment (like the AWS credentials)
 
 Some important CLI parameters are:

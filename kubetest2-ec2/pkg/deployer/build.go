@@ -19,6 +19,7 @@ package deployer
 import (
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -60,6 +61,9 @@ func (d *deployer) Build() error {
 	// stage build if requested
 	bucket := d.BuildOptions.CommonBuildOptions.StageLocation
 	if d.BuildOptions.CommonBuildOptions.StageLocation != "" {
+		if strings.Contains(d.BuildOptions.CommonBuildOptions.StageLocation, "://") {
+			return fmt.Errorf("unsupported stage location, please specify the name of the s3 bucket (without s3:// prefix)")
+		}
 		_, err := d.runner.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
 		if err != nil {
 			return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
