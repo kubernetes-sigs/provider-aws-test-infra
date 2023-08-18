@@ -88,9 +88,11 @@ func (a *AWSRunner) Validate() error {
 	if bucket == "" {
 		return fmt.Errorf("please specify --stage with the s3 bucket")
 	}
-	_, err = a.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
-	if err != nil {
-		return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
+	if !strings.Contains(bucket, "://") {
+		_, err = a.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+		if err != nil {
+			return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
+		}
 	}
 
 	if a.deployer.Image == "" {
@@ -296,35 +298,9 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		version = a.deployer.BuildOptions.CommonBuildOptions.StageVersion
 	}
 
-	results, err := a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
-		Prefix: aws.String(version),
-	})
+	err = a.validateS3Bucket(version)
 	if err != nil {
-		return nil, fmt.Errorf("version %s is missing from bucket %s: %w",
-			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
-			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
-			err)
-	} else if results.KeyCount == nil || *results.KeyCount == 0 {
-		results, _ = a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
-			Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
-			Prefix: aws.String("v"),
-		})
-
-		availableVersions := map[string]string{}
-		if results != nil && results.KeyCount != nil && *results.KeyCount > 0 {
-			for _, item := range results.Contents {
-				dir := strings.Split(*item.Key, "/")[0]
-				if _, ok := availableVersions[dir]; !ok {
-					availableVersions[dir] = *item.Key
-				}
-			}
-		}
-
-		return nil, fmt.Errorf("version %s is missing from bucket %s, choose one of %s",
-			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
-			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
-			maps.Keys(availableVersions))
+		return nil, fmt.Errorf("unable to validate s3 bucket : %w", err)
 	}
 
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",
@@ -357,6 +333,44 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		})
 	}
 	return ret, nil
+}
+
+func (a *AWSRunner) validateS3Bucket(version string) error {
+	if strings.Contains(a.deployer.BuildOptions.CommonBuildOptions.StageLocation, "://") {
+		return nil
+	}
+
+	results, err := a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
+		Prefix: aws.String(version),
+	})
+	if err != nil {
+		return fmt.Errorf("version %s is missing from bucket %s: %w",
+			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
+			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
+			err)
+	} else if results.KeyCount == nil || *results.KeyCount == 0 {
+		results, _ = a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
+			Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
+			Prefix: aws.String("v"),
+		})
+
+		availableVersions := map[string]string{}
+		if results != nil && results.KeyCount != nil && *results.KeyCount > 0 {
+			for _, item := range results.Contents {
+				dir := strings.Split(*item.Key, "/")[0]
+				if _, ok := availableVersions[dir]; !ok {
+					availableVersions[dir] = *item.Key
+				}
+			}
+		}
+
+		return fmt.Errorf("version %s is missing from bucket %s, choose one of %s",
+			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
+			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
+			maps.Keys(availableVersions))
+	}
+	return nil
 }
 
 func (a *AWSRunner) deleteAWSInstance(instanceID string) {
