@@ -82,6 +82,16 @@ func (a *AWSRunner) Validate() error {
 		return fmt.Errorf("unable to initialize AWS services : %w", err)
 	}
 
+	s3Service := s3.New(sess)
+	bucket := a.deployer.BuildOptions.CommonBuildOptions.StageLocation
+	if bucket == "" {
+		return fmt.Errorf("please specify --stage with the s3 bucket")
+	}
+	_, err = s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+	if err != nil {
+		return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
+	}
+
 	if a.deployer.Image == "" {
 		arch := strings.Split(a.deployer.BuildOptions.CommonBuildOptions.TargetBuildArch, "/")[1]
 		path := "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
@@ -270,10 +280,6 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 			return nil, fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
 		}
 		userdata = string(userDataBytes)
-	}
-
-	if a.deployer.BuildOptions.CommonBuildOptions.StageLocation == "" {
-		return nil, fmt.Errorf("please specify --stage with the s3 bucket")
 	}
 
 	var version string
