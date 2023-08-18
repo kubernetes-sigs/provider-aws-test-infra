@@ -37,6 +37,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/exp/maps"
 
 	"k8s.io/klog/v2"
 
@@ -51,6 +52,7 @@ type AWSRunner struct {
 	ec2icService       *ec2instanceconnect.EC2InstanceConnect
 	ssmService         *ssm.SSM
 	iamService         *iam.IAM
+	s3Service          *s3.S3
 	instanceNamePrefix string
 	internalAWSImages  []internalAWSImage
 	instances          []*awsInstance
@@ -77,17 +79,16 @@ type awsInstance struct {
 }
 
 func (a *AWSRunner) Validate() error {
-	sess, err := a.initializeServices()
+	sess, err := a.InitializeServices()
 	if err != nil {
 		return fmt.Errorf("unable to initialize AWS services : %w", err)
 	}
 
-	s3Service := s3.New(sess)
 	bucket := a.deployer.BuildOptions.CommonBuildOptions.StageLocation
 	if bucket == "" {
 		return fmt.Errorf("please specify --stage with the s3 bucket")
 	}
-	_, err = s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+	_, err = a.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
 	if err != nil {
 		return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
 	}
@@ -233,7 +234,7 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 	return testInstance, nil
 }
 
-func (a *AWSRunner) initializeServices() (*session.Session, error) {
+func (a *AWSRunner) InitializeServices() (*session.Session, error) {
 	sess, err := session.NewSession(&aws.Config{Region: &a.deployer.Region})
 	if err != nil {
 		return nil, fmt.Errorf("unable to create AWS session, %w", err)
@@ -242,7 +243,8 @@ func (a *AWSRunner) initializeServices() (*session.Session, error) {
 	a.ec2icService = ec2instanceconnect.New(sess)
 	a.ssmService = ssm.New(sess)
 	a.iamService = iam.New(sess, &aws.Config{Region: &a.deployer.Region})
-	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3manager.NewUploaderWithClient(s3.New(sess), func(u *s3manager.Uploader) {
+	a.s3Service = s3.New(sess)
+	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3manager.NewUploaderWithClient(a.s3Service, func(u *s3manager.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
 	})
@@ -292,6 +294,37 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		}
 	} else {
 		version = a.deployer.BuildOptions.CommonBuildOptions.StageVersion
+	}
+
+	results, err := a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
+		Prefix: aws.String(version),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("version %s is missing from bucket %s: %w",
+			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
+			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
+			err)
+	} else if results.KeyCount == nil || *results.KeyCount == 0 {
+		results, _ = a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
+			Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
+			Prefix: aws.String("v"),
+		})
+
+		availableVersions := map[string]string{}
+		if results != nil && results.KeyCount != nil && *results.KeyCount > 0 {
+			for _, item := range results.Contents {
+				dir := strings.Split(*item.Key, "/")[0]
+				if _, ok := availableVersions[dir]; !ok {
+					availableVersions[dir] = *item.Key
+				}
+			}
+		}
+
+		return nil, fmt.Errorf("version %s is missing from bucket %s, choose one of %s",
+			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
+			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
+			maps.Keys(availableVersions))
 	}
 
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",

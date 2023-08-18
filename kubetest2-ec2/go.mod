@@ -8,6 +8,7 @@ require (
 	github.com/octago/sflags v0.2.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/crypto v0.11.0
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	k8s.io/klog/v2 v2.100.1
 	sigs.k8s.io/kubetest2 v0.0.0-20230725165207-9117a2acfe97
 )
@@ -20,5 +21,5 @@ require (
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect
 	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
 )
