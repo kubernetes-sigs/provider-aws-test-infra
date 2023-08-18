@@ -37,7 +37,8 @@ func (d *deployer) Build() error {
 	if err != nil {
 		klog.Fatalf("Unable to create AWS session, %s", err)
 	}
-	s3Uploader := s3manager.NewUploaderWithClient(s3.New(sess), func(u *s3manager.Uploader) {
+	s3Service := s3.New(sess)
+	s3Uploader := s3manager.NewUploaderWithClient(s3Service, func(u *s3manager.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
 	})
@@ -57,7 +58,12 @@ func (d *deployer) Build() error {
 	}
 
 	// stage build if requested
+	bucket := d.BuildOptions.CommonBuildOptions.StageLocation
 	if d.BuildOptions.CommonBuildOptions.StageLocation != "" {
+		_, err := s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+		if err != nil {
+			return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
+		}
 		if err := d.BuildOptions.Stage(version); err != nil {
 			return fmt.Errorf("error staging build: %v", err)
 		}
