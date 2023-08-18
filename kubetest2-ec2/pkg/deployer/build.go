@@ -21,7 +21,6 @@ import (
 	"runtime"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
@@ -33,12 +32,13 @@ import (
 func (d *deployer) Build() error {
 	klog.Info("EC2 deployer starting Build()")
 
-	sess, err := session.NewSession(&aws.Config{Region: aws.String(d.Region)})
+	runner := d.NewAWSRunner()
+	_, err := runner.InitializeServices()
 	if err != nil {
-		klog.Fatalf("Unable to create AWS session, %s", err)
+		return fmt.Errorf("unable to initialize AWS services : %w", err)
 	}
-	s3Service := s3.New(sess)
-	s3Uploader := s3manager.NewUploaderWithClient(s3Service, func(u *s3manager.Uploader) {
+
+	s3Uploader := s3manager.NewUploaderWithClient(d.runner.s3Service, func(u *s3manager.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
 	})
@@ -60,13 +60,14 @@ func (d *deployer) Build() error {
 	// stage build if requested
 	bucket := d.BuildOptions.CommonBuildOptions.StageLocation
 	if d.BuildOptions.CommonBuildOptions.StageLocation != "" {
-		_, err := s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+		_, err := d.runner.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
 		if err != nil {
 			return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
 		}
 		if err := d.BuildOptions.Stage(version); err != nil {
 			return fmt.Errorf("error staging build: %v", err)
 		}
+		klog.Infof("staged version %s to s3 bucket %s", version, bucket)
 	}
 	build.StoreCommonBinaries(d.RepoRoot, d.commonOptions.RunDir(),
 		runtime.GOOS+"/"+runtime.GOARCH)
