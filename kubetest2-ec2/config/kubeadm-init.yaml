@@ -1,0 +1,23 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: {{BOOTSTRAP_TOKEN}}
+nodeRegistration:
+  criSocket: unix:///run/containerd/containerd.sock
+  kubeletExtraArgs:
+    cloud-provider: external
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+kubernetesVersion: {{KUBERNETES_VERSION}}
+apiServer:
+  cloud-provider: external
+  certSANs:
+  - {{EXTRA_SANS}}
+controllerManager:
+  extraArgs:
+    cloud-provider: external
+networking:
+  podSubnet: {{POD_CIDR}}

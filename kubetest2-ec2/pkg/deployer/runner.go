@@ -314,6 +314,26 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	}
 	userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
 
+	yamlBytes, err := config.ConfigFS.ReadFile("kubeadm-init.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
+	}
+	yamlString, err := gzipAndBase64Encode(yamlBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
+	}
+	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_INIT_YAML}}", yamlString)
+
+	yamlBytes, err = config.ConfigFS.ReadFile("kubeadm-join.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
+	}
+	yamlString, err = gzipAndBase64Encode(yamlBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
+	}
+	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_JOIN_YAML}}", yamlString)
+
 	userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 
@@ -588,12 +608,16 @@ func (a *AWSRunner) fetchConfigureScript() (string, error) {
 	} else {
 		scriptBytes, err = config.ConfigFS.ReadFile("configure.sh")
 		if err != nil {
-			return "", fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
+			return "", fmt.Errorf("error reading configure script file: %w", err)
 		}
 	}
+	return gzipAndBase64Encode(scriptBytes)
+}
+
+func gzipAndBase64Encode(fileBytes []byte) (string, error) {
 	var buffer bytes.Buffer
 	gz := gzip.NewWriter(&buffer)
-	if _, err := gz.Write(scriptBytes); err != nil {
+	if _, err := gz.Write(fileBytes); err != nil {
 		return "", err
 	}
 	if err := gz.Flush(); err != nil {

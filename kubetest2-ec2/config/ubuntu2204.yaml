@@ -169,20 +169,25 @@ write_files:
       KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
         MAC=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/ -s | head -n 1)
-        CIDR=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks)
+        POD_CIDR=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks)
+
+        sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
+        EXTRA_SANS=$(curl -4 icanhazip.com)
+        sed -i "s|{{EXTRA_SANS}}|$EXTRA_SANS|g" /etc/kubernetes/kubeadm-init.yaml
+        KUBERNETES_VERSION=$(kubelet --version | awk '{print $2}')
+        sed -i "s|{{KUBERNETES_VERSION}}|$KUBERNETES_VERSION|g" /etc/kubernetes/kubeadm-init.yaml
+        sed -i "s|{{POD_CIDR}}|$POD_CIDR|g" /etc/kubernetes/kubeadm-init.yaml
+
         kubeadm init \
-         --token {{KUBEADM_TOKEN}} \
-         --apiserver-cert-extra-sans $(curl -4 icanhazip.com) \
-         --cri-socket /run/containerd/containerd.sock \
-         --kubernetes-version=$(kubelet --version | awk '{print $2}') \
+         --v 10 \
          --ignore-preflight-errors=ImagePull \
-         --pod-network-cidr="$CIDR"
+         --config /etc/kubernetes/kubeadm-init.yaml
       else
+        sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-join.yaml
+        sed -i "s|{{APISERVER_PORT}}|{{KUBEADM_CONTROL_PLANE_IP}}:6443|g" /etc/kubernetes/kubeadm-join.yaml
         kubeadm join \
          --v 10 \
-         --token {{KUBEADM_TOKEN}} \
-         --discovery-token-unsafe-skip-ca-verification \
-         {{KUBEADM_CONTROL_PLANE_IP}}:6443
+         --config /etc/kubernetes/kubeadm-join.yaml
       fi
   - path: /usr/local/bin/run-post-install.sh
     permissions: 0755
@@ -198,6 +203,16 @@ write_files:
   - path: /home/containerd/configure.sh
     encoding: gzip+base64
     content: {{CONFIGURE_SH}}
+    owner: root
+    permissions: '0544'
+  - path: /etc/kubernetes/kubeadm-init.yaml
+    encoding: gzip+base64
+    content: {{KUBEADM_INIT_YAML}}
+    owner: root
+    permissions: '0544'
+  - path: /etc/kubernetes/kubeadm-join.yaml
+    encoding: gzip+base64
+    content: {{KUBEADM_JOIN_YAML}}
     owner: root
     permissions: '0544'
 runcmd:
