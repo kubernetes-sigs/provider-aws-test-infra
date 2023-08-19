@@ -7,5 +7,3 @@ discovery:
     unsafeSkipCAVerification: true
 nodeRegistration:
   criSocket: unix:///run/containerd/containerd.sock
-  kubeletExtraArgs:
-    cloud-provider: external
