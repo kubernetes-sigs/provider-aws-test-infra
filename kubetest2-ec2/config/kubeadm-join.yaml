@@ -1,0 +1,11 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: {{APISERVER_PORT}}
+    token: {{BOOTSTRAP_TOKEN}}
+    unsafeSkipCAVerification: true
+nodeRegistration:
+  criSocket: unix:///run/containerd/containerd.sock
+  kubeletExtraArgs:
+    cloud-provider: external
