@@ -314,23 +314,15 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	}
 	userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
 
-	yamlBytes, err := config.ConfigFS.ReadFile("kubeadm-init.yaml")
+	yamlString, err := a.fetchKubeadmInitYaml()
 	if err != nil {
-		return nil, fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
-	}
-	yamlString, err := gzipAndBase64Encode(yamlBytes)
-	if err != nil {
-		return nil, fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
+		return nil, fmt.Errorf("unable to fetch kubeadm-init.yaml : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_INIT_YAML}}", yamlString)
 
-	yamlBytes, err = config.ConfigFS.ReadFile("kubeadm-join.yaml")
+	yamlString, err = a.fetchKubeadmJoinYaml()
 	if err != nil {
-		return nil, fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
-	}
-	yamlString, err = gzipAndBase64Encode(yamlBytes)
-	if err != nil {
-		return nil, fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
+		return nil, fmt.Errorf("unable to fetch kubeadm-join.yaml : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_JOIN_YAML}}", yamlString)
 
@@ -353,6 +345,48 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		})
 	}
 	return ret, nil
+}
+
+func (a *AWSRunner) fetchKubeadmInitYaml() (string, error) {
+	var yamlBytes []byte
+	var err error
+	if a.deployer.KubeadmInitFile != "" {
+		yamlBytes, err = os.ReadFile(a.deployer.KubeadmInitFile)
+		if err != nil {
+			return "", fmt.Errorf("reading kubeadm-init.yaml file %q, %w", a.deployer.KubeadmInitFile, err)
+		}
+	} else {
+		yamlBytes, err = config.ConfigFS.ReadFile("kubeadm-init.yaml")
+		if err != nil {
+			return "", fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
+		}
+	}
+	yamlString, err := gzipAndBase64Encode(yamlBytes)
+	if err != nil {
+		return "", fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
+	}
+	return yamlString, nil
+}
+
+func (a *AWSRunner) fetchKubeadmJoinYaml() (string, error) {
+	var yamlBytes []byte
+	var err error
+	if a.deployer.KubeadmJoinFile != "" {
+		yamlBytes, err = os.ReadFile(a.deployer.KubeadmJoinFile)
+		if err != nil {
+			return "", fmt.Errorf("reading kubeadm-join.yaml file %q, %w", a.deployer.KubeadmJoinFile, err)
+		}
+	} else {
+		yamlBytes, err = config.ConfigFS.ReadFile("kubeadm-join.yaml")
+		if err != nil {
+			return "", fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
+		}
+	}
+	yamlString, err := gzipAndBase64Encode(yamlBytes)
+	if err != nil {
+		return "", fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
+	}
+	return yamlString, nil
 }
 
 func (a *AWSRunner) validateS3Bucket(version string) error {

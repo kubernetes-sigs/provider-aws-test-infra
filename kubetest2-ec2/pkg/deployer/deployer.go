@@ -103,6 +103,8 @@ type deployer struct {
 
 	Region             string `desc:"AWS region that the hosts live in (aws)"`
 	UserDataFile       string `desc:"Path to user data to pass to created instances (aws)"`
+	KubeadmInitFile    string `desc:"custom kubeadm-init config file (aws)"`
+	KubeadmJoinFile    string `desc:"custom kubeadm-join config file (aws)"`
 	InstanceProfile    string `desc:"The name of the instance profile to assign to the node (aws)"`
 	RoleName           string `desc:"The name of the role assign to the node (aws)"`
 	Ec2InstanceConnect bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
