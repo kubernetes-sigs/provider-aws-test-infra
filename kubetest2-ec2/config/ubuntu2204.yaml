@@ -152,11 +152,12 @@ write_files:
       VERSION="v1.27.1"
       curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tools/release/$VERSION/crictl-$VERSION-linux-$ARCH.tar.gz | sudo tar -xvzf - -C /usr/local/bin
 
+      META_URL=http://169.254.169.254/latest/meta-data
       # generate the right provider-id and host name needed for external aws cloud provider
-      AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
-      INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+      AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone)
+      INSTANCE_ID=$(curl -s $META_URL/instance-id)
       PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
-      PRIVATE_DNS_NAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname)
+      PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname)
 
       sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
       sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
@@ -173,11 +174,11 @@ write_files:
       # {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
       KUBEADM_CONTROL_PLANE={{KUBEADM_CONTROL_PLANE}}
       if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
-        MAC=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/ -s | head -n 1)
-        POD_CIDR=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks)
+        MAC=$(curl -s $META_URL/network/interfaces/macs/ -s | head -n 1)
+        POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks)
 
         sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
-        EXTRA_SANS=$(curl -s --connect-timeout 3 http://169.254.169.254/latest/meta-data/public-ipv4)
+        EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4)
         sed -i "s|{{EXTRA_SANS}}|$EXTRA_SANS|g" /etc/kubernetes/kubeadm-init.yaml
         KUBERNETES_VERSION=$(kubelet --version | awk '{print $2}')
         sed -i "s|{{KUBERNETES_VERSION}}|$KUBERNETES_VERSION|g" /etc/kubernetes/kubeadm-init.yaml
@@ -233,8 +234,6 @@ runcmd:
   - systemctl restart systemd-resolved
   - rm /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
   - systemctl restart systemd-logind
-  # Stop the existing containerd service if there is one. (for Docker 18.09+)
-  - systemctl is-active containerd && systemctl stop containerd
   - systemctl daemon-reload
   - systemctl enable containerd-installation.service
   - systemctl enable containerd.service
