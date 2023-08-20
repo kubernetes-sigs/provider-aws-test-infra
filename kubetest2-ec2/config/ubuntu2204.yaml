@@ -171,7 +171,7 @@ write_files:
         POD_CIDR=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks)
 
         sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
-        EXTRA_SANS=$(curl -4 icanhazip.com)
+        EXTRA_SANS=$(curl -s --connect-timeout 3 http://169.254.169.254/latest/meta-data/public-ipv4)
         sed -i "s|{{EXTRA_SANS}}|$EXTRA_SANS|g" /etc/kubernetes/kubeadm-init.yaml
         KUBERNETES_VERSION=$(kubelet --version | awk '{print $2}')
         sed -i "s|{{KUBERNETES_VERSION}}|$KUBERNETES_VERSION|g" /etc/kubernetes/kubeadm-init.yaml
