@@ -573,6 +573,10 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 						Key:   aws.String(amiIDTag),
 						Value: aws.String(img.amiID),
 					},
+					{
+						Key:   aws.String("kubernetes.io/cluster/" + a.deployer.ClusterID),
+						Value: aws.String("owned"),
+					},
 				},
 			},
 			{

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/google/uuid"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/pflag"
 
@@ -60,6 +61,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		k8sPath = ""
 	}
 	d := &deployer{
+		ClusterID:     "cid-" + uuid.New().String()[:8],
 		commonOptions: opts,
 		BuildOptions: &options.BuildOptions{
 			CommonBuildOptions: &build.Options{
@@ -98,6 +100,7 @@ type deployer struct {
 
 	kubectlPath string
 
+	ClusterID      string `desc:"A unique name/id for the cluster."`
 	KubeconfigPath string `flag:"kubeconfig" desc:"Absolute path to existing kubeconfig for cluster"`
 	RepoRoot       string `desc:"The path to the root of the local kubernetes/kubernetes repo."`
 
@@ -180,10 +183,16 @@ func (d *deployer) waitForKubectlNodes() {
 			return
 		}
 		if len(lines) == len(d.runner.instances) {
-			klog.Infof("found %d nodes in cluster: %v", len(lines), lines)
+			klog.Infof("found %d nodes in cluster %s: %v",
+				len(lines),
+				d.ClusterID,
+				lines)
 			break
 		} else {
-			klog.Infof("waiting for %d nodes in cluster, found %d", len(d.runner.instances), len(lines))
+			klog.Infof("waiting for %d nodes in cluster %s, found %d",
+				len(d.runner.instances),
+				d.ClusterID,
+				len(lines))
 			time.Sleep(time.Second * 15)
 		}
 	}
