@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 )
 
-const amiIDTag = "Node-E2E-Test"
-
 type AWSImageConfig struct {
 	Images map[string]AWSImage `json:"images"`
 }
@@ -120,7 +118,7 @@ func (d *deployer) Up() error {
 			runner.instances = append(runner.instances, instance)
 		}
 		if err != nil {
-			klog.Errorf("error starting instance for image %s : %s", image.amiID, err)
+			klog.Errorf("error starting instance for image %s : %s", image.AmiID, err)
 			if err2 := d.DumpClusterLogs(); err2 != nil {
 				klog.Warningf("Dumping cluster logs at the when Up() failed: %s", err2)
 			}
