@@ -99,10 +99,7 @@ write_files:
       Environment="KUBELET_EXTRA_ARGS=--image-credential-provider-bin-dir=/usr/local/bin --image-credential-provider-config=/etc/kubernetes/credential-provider.yaml"
       Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
       Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
-      # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
       EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
-      # This is a file that the user can use for overrides of the kubelet args as a last resort. Preferably, the user should use
-      # the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.
       EnvironmentFile=-/etc/default/kubelet
       ExecStart=
       ExecStart=/usr/local/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
@@ -154,6 +151,15 @@ write_files:
 
       VERSION="v1.27.1"
       curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tools/release/$VERSION/crictl-$VERSION-linux-$ARCH.tar.gz | sudo tar -xvzf - -C /usr/local/bin
+
+      # generate the right provider-id and host name needed for external aws cloud provider
+      AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+      INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+      PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
+      PRIVATE_DNS_NAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname)
+
+      sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
+      sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
 
       sudo modprobe br_netfilter
       sudo sysctl --system

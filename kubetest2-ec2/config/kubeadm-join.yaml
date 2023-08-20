@@ -7,3 +7,9 @@ discovery:
     unsafeSkipCAVerification: true
 nodeRegistration:
   criSocket: unix:///run/containerd/containerd.sock
+  name: {{HOSTNAME_OVERRIDE}}
+  kubeletExtraArgs:
+    provider-id: {{PROVIDER_ID}}
+    hostname-override: {{HOSTNAME_OVERRIDE}}
+    image-credential-provider-bin-dir: /usr/local/bin
+    image-credential-provider-config: /etc/kubernetes/credential-provider.yaml
