@@ -17,13 +17,9 @@ limitations under the License.
 package deployer
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -37,8 +33,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/exp/maps"
-
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/config"
@@ -54,20 +48,10 @@ type AWSRunner struct {
 	iamService         *iam.IAM
 	s3Service          *s3.S3
 	instanceNamePrefix string
-	internalAWSImages  []internalAWSImage
+	internalAWSImages  []utils.InternalAWSImage
 	instances          []*awsInstance
 	token              string
 	controlPlaneIP     string
-}
-
-type internalAWSImage struct {
-	amiID string
-	// The instance type (e.g. t3a.medium)
-	instanceType string
-	userData     string
-	imageDesc    string
-	// name of the instance profile
-	instanceProfile string
 }
 
 type awsInstance struct {
@@ -79,7 +63,7 @@ type awsInstance struct {
 }
 
 func (a *AWSRunner) Validate() error {
-	sess, err := a.InitializeServices()
+	_, err := a.InitializeServices()
 	if err != nil {
 		return fmt.Errorf("unable to initialize AWS services : %w", err)
 	}
@@ -123,7 +107,7 @@ func (a *AWSRunner) Validate() error {
 		return fmt.Errorf("invalid AMI id format for %q", a.deployer.Image)
 	}
 
-	if err = a.ensureInstanceProfileAndRole(sess); err != nil {
+	if err = a.ensureInstanceProfileAndRole(); err != nil {
 		return fmt.Errorf("while creating instance profile / roles : %v", err)
 	}
 
@@ -253,7 +237,7 @@ func (a *AWSRunner) InitializeServices() (*session.Session, error) {
 	return sess, nil
 }
 
-func (a *AWSRunner) ensureInstanceProfileAndRole(sess *session.Session) error {
+func (a *AWSRunner) ensureInstanceProfileAndRole() error {
 	err := utils.EnsureRole(a.iamService, a.deployer.RoleName)
 	if err != nil {
 		klog.Infof("error with ensure role: %v\n", err)
@@ -266,8 +250,8 @@ func (a *AWSRunner) ensureInstanceProfileAndRole(sess *session.Session) error {
 	return err
 }
 
-func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
-	var ret []internalAWSImage
+func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
+	var ret []utils.InternalAWSImage
 
 	var userControlPlane string
 	var userDataWorkerNode string
@@ -298,7 +282,10 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 		version = a.deployer.BuildOptions.CommonBuildOptions.StageVersion
 	}
 
-	err = a.validateS3Bucket(version)
+	err = utils.ValidateS3Bucket(a.s3Service,
+		a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
+		a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
+		version)
 	if err != nil {
 		return nil, fmt.Errorf("unable to validate s3 bucket : %w", err)
 	}
@@ -308,19 +295,19 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
 
-	script, err := a.fetchConfigureScript()
+	script, err := utils.FetchConfigureScript(a.deployer.UserDataFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch script : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
 
-	yamlString, err := a.fetchKubeadmInitYaml()
+	yamlString, err := utils.FetchKubeadmInitYaml(a.deployer.KubeadmInitFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch kubeadm-init.yaml : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_INIT_YAML}}", yamlString)
 
-	yamlString, err = a.fetchKubeadmJoinYaml()
+	yamlString, err = utils.FetchKubeadmJoinYaml(a.deployer.KubeadmJoinFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch kubeadm-join.yaml : %w", err)
 	}
@@ -330,114 +317,24 @@ func (a *AWSRunner) prepareAWSImages() ([]internalAWSImage, error) {
 	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 
 	imageID := a.deployer.Image
-	ret = append(ret, internalAWSImage{
-		amiID:           imageID,
-		userData:        userControlPlane,
-		instanceType:    a.deployer.InstanceType,
-		instanceProfile: a.deployer.InstanceProfile,
+	ret = append(ret, utils.InternalAWSImage{
+		AmiID:           imageID,
+		UserData:        userControlPlane,
+		InstanceType:    a.deployer.InstanceType,
+		InstanceProfile: a.deployer.InstanceProfile,
 	})
 	for i := 0; i < a.deployer.NumNodes; i++ {
-		ret = append(ret, internalAWSImage{
-			amiID:           imageID,
-			userData:        userDataWorkerNode,
-			instanceType:    a.deployer.InstanceType,
-			instanceProfile: a.deployer.InstanceProfile,
+		ret = append(ret, utils.InternalAWSImage{
+			AmiID:           imageID,
+			UserData:        userDataWorkerNode,
+			InstanceType:    a.deployer.InstanceType,
+			InstanceProfile: a.deployer.InstanceProfile,
 		})
 	}
 	return ret, nil
 }
 
-func (a *AWSRunner) fetchKubeadmInitYaml() (string, error) {
-	var yamlBytes []byte
-	var err error
-	if a.deployer.KubeadmInitFile != "" {
-		yamlBytes, err = os.ReadFile(a.deployer.KubeadmInitFile)
-		if err != nil {
-			return "", fmt.Errorf("reading kubeadm-init.yaml file %q, %w", a.deployer.KubeadmInitFile, err)
-		}
-	} else {
-		yamlBytes, err = config.ConfigFS.ReadFile("kubeadm-init.yaml")
-		if err != nil {
-			return "", fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
-		}
-	}
-	yamlString, err := gzipAndBase64Encode(yamlBytes)
-	if err != nil {
-		return "", fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
-	}
-	return yamlString, nil
-}
-
-func (a *AWSRunner) fetchKubeadmJoinYaml() (string, error) {
-	var yamlBytes []byte
-	var err error
-	if a.deployer.KubeadmJoinFile != "" {
-		yamlBytes, err = os.ReadFile(a.deployer.KubeadmJoinFile)
-		if err != nil {
-			return "", fmt.Errorf("reading kubeadm-join.yaml file %q, %w", a.deployer.KubeadmJoinFile, err)
-		}
-	} else {
-		yamlBytes, err = config.ConfigFS.ReadFile("kubeadm-join.yaml")
-		if err != nil {
-			return "", fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
-		}
-	}
-	yamlString, err := gzipAndBase64Encode(yamlBytes)
-	if err != nil {
-		return "", fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
-	}
-	return yamlString, nil
-}
-
-func (a *AWSRunner) validateS3Bucket(version string) error {
-	if strings.Contains(a.deployer.BuildOptions.CommonBuildOptions.StageLocation, "://") {
-		return nil
-	}
-
-	results, err := a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
-		Prefix: aws.String(version),
-	})
-	if err != nil {
-		return fmt.Errorf("version %s is missing from bucket %s: %w",
-			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
-			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
-			err)
-	} else if results.KeyCount == nil || *results.KeyCount == 0 {
-		results, _ = a.s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
-			Bucket: aws.String(a.deployer.BuildOptions.CommonBuildOptions.StageLocation),
-			Prefix: aws.String("v"),
-		})
-
-		availableVersions := map[string]string{}
-		if results != nil && results.KeyCount != nil && *results.KeyCount > 0 {
-			for _, item := range results.Contents {
-				dir := strings.Split(*item.Key, "/")[0]
-				if _, ok := availableVersions[dir]; !ok {
-					availableVersions[dir] = *item.Key
-				}
-			}
-		}
-
-		return fmt.Errorf("version %s is missing from bucket %s, choose one of %s",
-			a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
-			a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
-			maps.Keys(availableVersions))
-	}
-	return nil
-}
-
-func (a *AWSRunner) deleteAWSInstance(instanceID string) {
-	klog.Infof("Terminating instance %q", instanceID)
-	_, err := a.ec2Service.TerminateInstances(&ec2.TerminateInstancesInput{
-		InstanceIds: []*string{&instanceID},
-	})
-	if err != nil {
-		klog.Errorf("Error terminating instance %q: %v", instanceID, err)
-	}
-}
-
-func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
+func (a *AWSRunner) getAWSInstance(img utils.InternalAWSImage) (*awsInstance, error) {
 	if a.deployer.SSHUser == "" {
 		return nil, fmt.Errorf("please set '--ssh-user' parameter")
 	} else {
@@ -458,10 +355,6 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 				Name:   aws.String("instance-state-name"),
 				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
 			},
-			{
-				Name:   aws.String(fmt.Sprintf("tag:%s", amiIDTag)),
-				Values: []*string{aws.String(img.amiID)},
-			},
 		},
 	})
 	if err != nil {
@@ -469,7 +362,12 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 	}
 
 	var instance *ec2.Instance
-	newInstance, err := a.launchNewInstance(img)
+	newInstance, err := utils.LaunchNewInstance(
+		a.ec2Service,
+		a.iamService,
+		a.deployer.ClusterID,
+		a.controlPlaneIP,
+		img)
 	if err != nil {
 		return nil, err
 	}
@@ -541,128 +439,4 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	remote.AddSSHKey(testInstance.instanceID, sshKeyFile)
 	testInstance.sshPublicKeyFile = sshKeyFile
 	return nil
-}
-
-func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, error) {
-	images, err := a.ec2Service.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&img.amiID}})
-	if err != nil {
-		return nil, fmt.Errorf("describing images: %w in region (%s)", err, *a.ec2Service.Config.Region)
-	}
-
-	input := &ec2.RunInstancesInput{
-		InstanceType: &img.instanceType,
-		ImageId:      &img.amiID,
-		MinCount:     aws.Int64(1),
-		MaxCount:     aws.Int64(1),
-		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
-			{
-				AssociatePublicIpAddress: aws.Bool(true),
-				DeviceIndex:              aws.Int64(0),
-			},
-		},
-		TagSpecifications: []*ec2.TagSpecification{
-			{
-				ResourceType: aws.String(ec2.ResourceTypeInstance),
-				Tags: []*ec2.Tag{
-					{
-						Key:   aws.String("Name"),
-						Value: aws.String(a.instanceNamePrefix + img.imageDesc),
-					},
-					// tagged so we can find it easily
-					{
-						Key:   aws.String(amiIDTag),
-						Value: aws.String(img.amiID),
-					},
-					{
-						Key:   aws.String("kubernetes.io/cluster/" + a.deployer.ClusterID),
-						Value: aws.String("owned"),
-					},
-				},
-			},
-			{
-				ResourceType: aws.String(ec2.ResourceTypeVolume),
-				Tags: []*ec2.Tag{
-					{
-						Key:   aws.String("Name"),
-						Value: aws.String(a.instanceNamePrefix + img.imageDesc),
-					},
-				},
-			},
-		},
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
-			{
-				DeviceName: aws.String(*images.Images[0].RootDeviceName),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(50),
-					VolumeType: aws.String("gp3"),
-				},
-			},
-		},
-	}
-	if len(img.userData) > 0 {
-		data := img.userData
-		if a.controlPlaneIP != "" {
-			data = strings.ReplaceAll(data, "{{KUBEADM_CONTROL_PLANE_IP}}", a.controlPlaneIP)
-		}
-		input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(data)))
-	}
-	if img.instanceProfile != "" {
-		arn, err := utils.GetInstanceProfileArn(a.iamService, img.instanceProfile)
-		if err != nil {
-			return nil, fmt.Errorf("getting instance profile arn, %w", err)
-		}
-		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
-			Arn: aws.String(arn),
-		}
-	}
-
-	rsv, err := a.ec2Service.RunInstances(input)
-	if err != nil {
-		return nil, fmt.Errorf("creating instance, %w", err)
-	}
-
-	return rsv.Instances[0], nil
-}
-
-func (a *AWSRunner) getSSMImage(path string) (string, error) {
-	rsp, err := a.ssmService.GetParameter(&ssm.GetParameterInput{
-		Name: &path,
-	})
-	if err != nil {
-		return "", fmt.Errorf("getting AMI ID from SSM path %q, %w", path, err)
-	}
-	return *rsp.Parameter.Value, nil
-}
-
-func (a *AWSRunner) fetchConfigureScript() (string, error) {
-	var scriptBytes []byte
-	var err error
-	if a.deployer.UserDataFile != "" {
-		scriptFile := filepath.Dir(a.deployer.UserDataFile) + "/" + "configure.sh"
-		scriptBytes, err = os.ReadFile(scriptFile)
-		if err != nil {
-			return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
-		}
-	} else {
-		scriptBytes, err = config.ConfigFS.ReadFile("configure.sh")
-		if err != nil {
-			return "", fmt.Errorf("error reading configure script file: %w", err)
-		}
-	}
-	return gzipAndBase64Encode(scriptBytes)
-}
-
-func gzipAndBase64Encode(fileBytes []byte) (string, error) {
-	var buffer bytes.Buffer
-	gz := gzip.NewWriter(&buffer)
-	if _, err := gz.Write(fileBytes); err != nil {
-		return "", err
-	}
-	if err := gz.Flush(); err != nil {
-		return "", err
-	}
-	if err := gz.Close(); err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(buffer.Bytes()), nil
 }
