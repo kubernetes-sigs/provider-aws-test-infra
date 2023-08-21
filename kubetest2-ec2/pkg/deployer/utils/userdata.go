@@ -60,7 +60,7 @@ func FetchConfigureScript(userDataFile string) (string, error) {
 	return gzipAndBase64Encode(scriptBytes)
 }
 
-func FetchKubeadmInitYaml(kubeadmInitFile string) (string, error) {
+func FetchKubeadmInitYaml(kubeadmInitFile string, replace func(string) string) (string, error) {
 	var yamlBytes []byte
 	var err error
 	if kubeadmInitFile != "" {
@@ -74,6 +74,7 @@ func FetchKubeadmInitYaml(kubeadmInitFile string) (string, error) {
 			return "", fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
 		}
 	}
+	yamlBytes = []byte(replace(string(yamlBytes)))
 	yamlString, err := gzipAndBase64Encode(yamlBytes)
 	if err != nil {
 		return "", fmt.Errorf("error reading kubeadm-init.yaml: %w", err)
@@ -81,7 +82,7 @@ func FetchKubeadmInitYaml(kubeadmInitFile string) (string, error) {
 	return yamlString, nil
 }
 
-func FetchKubeadmJoinYaml(kubeadmJoinFile string) (string, error) {
+func FetchKubeadmJoinYaml(kubeadmJoinFile string, replace func(string) string) (string, error) {
 	var yamlBytes []byte
 	var err error
 	if kubeadmJoinFile != "" {
@@ -95,6 +96,7 @@ func FetchKubeadmJoinYaml(kubeadmJoinFile string) (string, error) {
 			return "", fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
 		}
 	}
+	yamlBytes = []byte(replace(string(yamlBytes)))
 	yamlString, err := gzipAndBase64Encode(yamlBytes)
 	if err != nil {
 		return "", fmt.Errorf("error reading kubeadm-join.yaml: %w", err)
