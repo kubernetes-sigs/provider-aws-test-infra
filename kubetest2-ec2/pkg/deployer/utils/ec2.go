@@ -75,10 +75,7 @@ func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
 		},
 	}
 	if len(img.UserData) > 0 {
-		data := img.UserData
-		if controlPlaneIP != "" {
-			data = strings.ReplaceAll(data, "{{KUBEADM_CONTROL_PLANE_IP}}", controlPlaneIP)
-		}
+		data := strings.ReplaceAll(img.UserData, "{{KUBEADM_CONTROL_PLANE_IP}}", controlPlaneIP)
 		input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(data)))
 	}
 	if img.InstanceProfile != "" {

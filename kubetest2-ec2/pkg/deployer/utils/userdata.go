@@ -101,3 +101,18 @@ func FetchKubeadmJoinYaml(kubeadmJoinFile string) (string, error) {
 	}
 	return yamlString, nil
 }
+
+func FetchRunKubeadmSH(replace func(string) string) (string, error) {
+	var scriptBytes []byte
+	var err error
+	scriptBytes, err = config.ConfigFS.ReadFile("run-kubeadm.sh")
+	if err != nil {
+		return "", fmt.Errorf("error reading run-kubeadm.sh: %w", err)
+	}
+	scriptBytes = []byte(replace(string(scriptBytes)))
+	scriptString, err := gzipAndBase64Encode(scriptBytes)
+	if err != nil {
+		return "", fmt.Errorf("error reading run-kubeadm.sh: %w", err)
+	}
+	return scriptString, nil
+}

@@ -313,6 +313,18 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_JOIN_YAML}}", yamlString)
 
+	scriptString, err := utils.FetchRunKubeadmSH(func(data string) string {
+		data = strings.ReplaceAll(data, "{{STAGING_BUCKET}}",
+			a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
+		data = strings.ReplaceAll(data, "{{STAGING_VERSION}}", version)
+		data = strings.ReplaceAll(data, "{{KUBEADM_TOKEN}}", a.token)
+		return data
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch run-kubeadm.sh : %w", err)
+	}
+	userdata = strings.ReplaceAll(userdata, "{{RUN_KUBEADM_SH}}", scriptString)
+
 	userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 
