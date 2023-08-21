@@ -61,8 +61,9 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		k8sPath = ""
 	}
 	d := &deployer{
-		ClusterID:     "cid-" + uuid.New().String()[:8],
-		commonOptions: opts,
+		ClusterID:             "cid-" + uuid.New().String()[:8],
+		ExternalCloudProvider: false,
+		commonOptions:         opts,
 		BuildOptions: &options.BuildOptions{
 			CommonBuildOptions: &build.Options{
 				Builder: &build.MakeBuilder{
@@ -104,18 +105,19 @@ type deployer struct {
 	KubeconfigPath string `flag:"kubeconfig" desc:"Absolute path to existing kubeconfig for cluster"`
 	RepoRoot       string `desc:"The path to the root of the local kubernetes/kubernetes repo."`
 
-	Region             string `desc:"AWS region that the hosts live in (aws)"`
-	UserDataFile       string `desc:"Path to user data to pass to created instances (aws)"`
-	KubeadmInitFile    string `desc:"custom kubeadm-init config file (aws)"`
-	KubeadmJoinFile    string `desc:"custom kubeadm-join config file (aws)"`
-	InstanceProfile    string `desc:"The name of the instance profile to assign to the node (aws)"`
-	RoleName           string `desc:"The name of the role assign to the node (aws)"`
-	Ec2InstanceConnect bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
-	InstanceType       string `desc:"EC2 Instance type to use for test"`
-	Image              string `flag:"image" desc:"Ubuntu image to use for test"`
-	SSHUser            string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
-	SSHEnv             string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
-	NumNodes           int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
+	ExternalCloudProvider bool   `desc:"Enable external AWS cloud provider"`
+	Region                string `desc:"AWS region that the hosts live in (aws)"`
+	UserDataFile          string `desc:"Path to user data to pass to created instances (aws)"`
+	KubeadmInitFile       string `desc:"custom kubeadm-init config file (aws)"`
+	KubeadmJoinFile       string `desc:"custom kubeadm-join config file (aws)"`
+	InstanceProfile       string `desc:"The name of the instance profile to assign to the node (aws)"`
+	RoleName              string `desc:"The name of the role assign to the node (aws)"`
+	Ec2InstanceConnect    bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
+	InstanceType          string `desc:"EC2 Instance type to use for test"`
+	Image                 string `flag:"image" desc:"Ubuntu image to use for test"`
+	SSHUser               string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
+	SSHEnv                string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
+	NumNodes              int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
 
 	runner  *AWSRunner
 	logsDir string

@@ -132,9 +132,12 @@ write_files:
     content: |
       #!/bin/bash
       set -xeu
-      if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
+      if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
         kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
         kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system WARM_ENI_TARGET=3
+        if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
+          kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k 'github.com/kubernetes/cloud-provider-aws/examples/existing-cluster/base/?ref=master'
+        fi
       fi
   - path: /home/containerd/configure.sh
     encoding: gzip+base64

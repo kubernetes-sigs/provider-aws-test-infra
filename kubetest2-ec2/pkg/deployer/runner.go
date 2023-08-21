@@ -301,13 +301,24 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	}
 	userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
 
-	yamlString, err := utils.FetchKubeadmInitYaml(a.deployer.KubeadmInitFile)
+	provider := ""
+	if a.deployer.ExternalCloudProvider {
+		provider = "external"
+	}
+
+	yamlString, err := utils.FetchKubeadmInitYaml(a.deployer.KubeadmInitFile, func(data string) string {
+		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
+		return data
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch kubeadm-init.yaml : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_INIT_YAML}}", yamlString)
 
-	yamlString, err = utils.FetchKubeadmJoinYaml(a.deployer.KubeadmJoinFile)
+	yamlString, err = utils.FetchKubeadmJoinYaml(a.deployer.KubeadmJoinFile, func(data string) string {
+		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
+		return data
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch kubeadm-join.yaml : %w", err)
 	}
@@ -324,6 +335,8 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		return nil, fmt.Errorf("unable to fetch run-kubeadm.sh : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{RUN_KUBEADM_SH}}", scriptString)
+
+	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 
 	userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
