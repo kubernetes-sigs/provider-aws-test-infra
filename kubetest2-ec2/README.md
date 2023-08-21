@@ -84,13 +84,14 @@ So you can see that a lot of things have defaults and/or picked up from the envi
 
 Some important CLI parameters are:
 
-| Parameter           | Example                           | Use                                                                                          |
-|---------------------|-----------------------------------|----------------------------------------------------------------------------------------------|
-| `stage`             | `--stage provider-aws-test-infra` | s3 bucket where the `--build` process uploads artifacts to and `--up` process downloads from |
-| `instance-type`     | `--instance-type=m6a.large`       | specify an EC2 instance type                                                                 |
-| `images`            | `--images=ami-02675d30b814d1daa`  | specify a custom ubuntu image, uses SSM to pick up new ubuntu LTS images if not specified    |
-| `region`            | `----region us-east-1`            | specify a AWS region, defaults to `us-east-1`                                                |
-| `target-build-arch` | `--target-build-arch linux/amd64` | supports both `linux/amd64` and `linux/arm64`                                                |
+| Parameter                 | Example                            | Use                                                                                          |
+|---------------------------|------------------------------------|----------------------------------------------------------------------------------------------|
+| `stage`                   | `--stage provider-aws-test-infra`  | s3 bucket where the `--build` process uploads artifacts to and `--up` process downloads from |
+| `instance-type`           | `--instance-type=m6a.large`        | specify an EC2 instance type                                                                 |
+| `images`                  | `--images=ami-02675d30b814d1daa`   | specify a custom ubuntu image, uses SSM to pick up new ubuntu LTS images if not specified    |
+| `region`                  | `--region us-east-1`               | specify a AWS region, defaults to `us-east-1`                                                |
+| `target-build-arch`       | `--target-build-arch linux/amd64`  | supports both `linux/amd64` and `linux/arm64`                                                |
+| `external-cloud-provider` | `--external-cloud-provider true`   | to use AWS External cloud provider when starting the nodes and the cluster                   |
 
 
 ## Reference Implementations
