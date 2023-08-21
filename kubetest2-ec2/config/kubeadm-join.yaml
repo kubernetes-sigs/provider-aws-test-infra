@@ -2,7 +2,7 @@ apiVersion: kubeadm.k8s.io/v1beta3
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
-    apiServerEndpoint: {{APISERVER_PORT}}
+    apiServerEndpoint: {{KUBEADM_CONTROL_PLANE_IP}}:6443
     token: {{BOOTSTRAP_TOKEN}}
     unsafeSkipCAVerification: true
 nodeRegistration:
