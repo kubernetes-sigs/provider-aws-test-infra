@@ -115,6 +115,10 @@ if [[ ${run_until_failure} == "true" ]]; then
   ginkgoflags="${ginkgoflags} --until-it-fails=true "
 fi
 
+if [[ "${container_runtime_endpoint}" =~ /containerd.sock$ ]]; then
+  test_args+=" --kubelet-flags=\"--runtime-cgroups=/system.slice/containerd.service\" ${test_args}"
+fi
+
 # Setup the directory to copy test artifacts (logs, junit.xml, etc) from remote host to local host
 if [ ! -d "${artifacts}" ]; then
   echo "Creating artifacts directory at ${artifacts}"
