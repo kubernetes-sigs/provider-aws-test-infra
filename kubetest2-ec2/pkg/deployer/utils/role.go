@@ -88,6 +88,7 @@ func EnsureRole(svc *iam.IAM, roleName string) error {
 		"arn:aws:iam::aws:policy/AmazonEKSVPCResourceController",
 		"arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
 		"arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+		"arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
 	}
 
 	for _, policy := range policies {

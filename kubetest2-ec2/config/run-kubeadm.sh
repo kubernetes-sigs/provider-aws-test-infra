@@ -13,11 +13,11 @@ chmod +x /usr/local/bin/ecr-credential-provider
 
 # shellcheck disable=SC2050
 if [[ "{{STAGING_BUCKET}}" =~ ^s3.*  ]]; then
-  aws s3 cp "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz" --no-sign-request
+  aws s3 cp "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz"
 elif [[ "{{STAGING_BUCKET}}" =~ ^https.*  ]]; then
   curl -sSLo kubernetes-server-linux-$ARCH.tar.gz --fail --retry 5 "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz"
 else
-  aws s3 cp "s3://{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz" --no-sign-request
+  aws s3 cp "s3://{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz"
 fi
 
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
