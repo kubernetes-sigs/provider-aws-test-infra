@@ -18,10 +18,12 @@ package build
 
 import (
 	"fmt"
+	"runtime"
+
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 
 	"sigs.k8s.io/kubetest2/pkg/exec"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 )
 
 type MakeBuilder struct {
@@ -41,9 +43,11 @@ func (m *MakeBuilder) Build() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to build quick release: %v", err)
 	}
-	err = m.buildTestBinaries()
-	if err != nil {
-		return "", fmt.Errorf("failed to build test binaries: %v", err)
+	if m.TargetBuildArch != runtime.GOOS+"/"+runtime.GOARCH {
+		err = m.buildTestBinaries()
+		if err != nil {
+			return "", fmt.Errorf("failed to build test binaries: %v", err)
+		}
 	}
 	return version, err
 }
