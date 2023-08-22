@@ -22,6 +22,7 @@ import (
 	osexec "os/exec"
 	"path/filepath"
 	"regexp"
+	"sync"
 
 	"github.com/google/uuid"
 
@@ -112,6 +113,10 @@ func (d *deployer) Up() error {
 		return err
 	}
 
+	var wg sync.WaitGroup
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
+
 	for _, image := range runner.internalAWSImages {
 		instance, err := runner.createAWSInstance(image)
 		if instance != nil {
@@ -128,15 +133,33 @@ func (d *deployer) Up() error {
 			runner.controlPlaneIP = instance.privateIP
 		}
 		klog.Infof("started instance id: %s", instance.instanceID)
-		_, err = runner.isAWSInstanceRunning(instance)
-		if err != nil {
-			klog.Errorf("error checking instance is running %s : %s", instance.instanceID, err)
-			if err2 := d.DumpClusterLogs(); err2 != nil {
-				klog.Warningf("Dumping cluster logs at the when Up() failed: %s", err2)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err = runner.isAWSInstanceRunning(instance)
+			if err != nil {
+				klog.Errorf("error checking instance is running %s : %s", instance.instanceID, err)
+				if err2 := d.DumpClusterLogs(); err2 != nil {
+					klog.Warningf("Dumping cluster logs at the when Up() failed: %s", err2)
+				}
+				fatalErrors <- err
 			}
-			return err
-		}
-		klog.Infof("instance is running: %s", instance.instanceID)
+			klog.Infof("instance is running: %s", instance.instanceID)
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	select {
+	case <-wgDone:
+		break
+	case err := <-fatalErrors:
+		close(fatalErrors)
+		return err
 	}
 
 	d.waitForKubectlNodes()
