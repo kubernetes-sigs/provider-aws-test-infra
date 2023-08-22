@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -93,5 +94,26 @@ func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
 		return nil, fmt.Errorf("creating instance, %w", err)
 	}
 
-	return rsv.Instances[0], nil
+	return WaitForInstanceToRun(ec2Service, rsv.Instances[0]), nil
+}
+
+func WaitForInstanceToRun(ec2Service *ec2.EC2, instance *ec2.Instance) *ec2.Instance {
+	for i := 0; i < 30; i++ {
+		if i > 0 {
+			time.Sleep(time.Second * 5)
+		}
+
+		var op *ec2.DescribeInstancesOutput
+		op, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
+			InstanceIds: []*string{instance.InstanceId},
+		})
+		if err != nil {
+			continue
+		}
+		instance = op.Reservations[0].Instances[0]
+		if *instance.State.Name == ec2.InstanceStateNameRunning {
+			break
+		}
+	}
+	return instance
 }

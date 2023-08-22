@@ -113,7 +113,7 @@ func (d *deployer) Up() error {
 	}
 
 	for _, image := range runner.internalAWSImages {
-		instance, err := runner.getAWSInstance(image)
+		instance, err := runner.createAWSInstance(image)
 		if instance != nil {
 			runner.instances = append(runner.instances, instance)
 		}
@@ -124,7 +124,19 @@ func (d *deployer) Up() error {
 			}
 			return err
 		}
-		klog.Infof("starting instance id: %s", instance.instanceID)
+		if runner.controlPlaneIP == "" {
+			runner.controlPlaneIP = instance.privateIP
+		}
+		klog.Infof("started instance id: %s", instance.instanceID)
+		_, err = runner.isAWSInstanceRunning(instance)
+		if err != nil {
+			klog.Errorf("error checking instance is running %s : %s", instance.instanceID, err)
+			if err2 := d.DumpClusterLogs(); err2 != nil {
+				klog.Warningf("Dumping cluster logs at the when Up() failed: %s", err2)
+			}
+			return err
+		}
+		klog.Infof("instance is running: %s", instance.instanceID)
 	}
 
 	d.waitForKubectlNodes()

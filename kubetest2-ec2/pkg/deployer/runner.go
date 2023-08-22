@@ -59,6 +59,7 @@ type awsInstance struct {
 	instanceID       string
 	sshKey           *utils.TemporarySSHKey
 	publicIP         string
+	privateIP        string
 	sshPublicKeyFile string
 }
 
@@ -138,9 +139,7 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 			continue
 		}
 		testInstance.publicIP = *instance.PublicIpAddress
-		if a.controlPlaneIP == "" {
-			a.controlPlaneIP = *testInstance.instance.PrivateIpAddress
-		}
+		testInstance.privateIP = *instance.PrivateIpAddress
 
 		// generate a temporary SSH key and send it to the node via instance-connect
 		if a.deployer.Ec2InstanceConnect && !createdSSHKey {
@@ -359,7 +358,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	return ret, nil
 }
 
-func (a *AWSRunner) getAWSInstance(img utils.InternalAWSImage) (*awsInstance, error) {
+func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance, error) {
 	if a.deployer.SSHUser == "" {
 		return nil, fmt.Errorf("please set '--ssh-user' parameter")
 	} else {
@@ -372,19 +371,6 @@ func (a *AWSRunner) getAWSInstance(img utils.InternalAWSImage) (*awsInstance, er
 			return nil, fmt.Errorf("unable to set flag ssh-env: %w", err)
 		}
 	}
-	// TODO: Throw an error or log a warning
-	// first see if we have an instance already running the desired image
-	_, err := a.ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("instance-state-name"),
-				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	var instance *ec2.Instance
 	newInstance, err := utils.LaunchNewInstance(
@@ -394,18 +380,18 @@ func (a *AWSRunner) getAWSInstance(img utils.InternalAWSImage) (*awsInstance, er
 		a.controlPlaneIP,
 		img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to launch instance : %w", err)
 	}
 	instance = newInstance
 	klog.Infof("launched new instance %s with ami-id: %s on instance type: %s",
 		*instance.InstanceId, *instance.ImageId, *instance.InstanceType)
 
-	testInstance := &awsInstance{
+	return &awsInstance{
 		instanceID: *instance.InstanceId,
 		instance:   instance,
-	}
-
-	return a.isAWSInstanceRunning(testInstance)
+		publicIP:   *instance.PublicIpAddress,
+		privateIP:  *instance.PrivateIpAddress,
+	}, nil
 }
 
 // assignNewSSHKey generates a new SSH key-pair and assigns it to the EC2 instance using EC2-instance connect. It then
