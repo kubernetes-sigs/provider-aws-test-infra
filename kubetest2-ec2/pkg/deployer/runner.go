@@ -202,14 +202,6 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 		return testInstance, fmt.Errorf("instance %s is not running", testInstance.instanceID)
 	} else {
 		if a.controlPlaneIP == *testInstance.instance.PrivateIpAddress {
-			output, err := remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready nodes --timeout=5m --all")
-			if err != nil {
-				return nil, fmt.Errorf("checking instance %s is not ready - Command failed: %s", testInstance.instanceID, output)
-			}
-			output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-")
-			if err != nil {
-				return nil, fmt.Errorf("unable to remove taints for nodes in %s - Command failed: %s", testInstance.instanceID, output)
-			}
 			if a.deployer.KubeconfigPath == "" {
 				a.deployer.KubeconfigPath = downloadKubeConfig(testInstance.instanceID, testInstance.publicIP)
 			}
