@@ -103,7 +103,6 @@ func WaitForInstanceToRun(ec2Service *ec2.EC2, instance *ec2.Instance) *ec2.Inst
 			time.Sleep(time.Second * 5)
 		}
 
-		var op *ec2.DescribeInstancesOutput
 		op, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		})
