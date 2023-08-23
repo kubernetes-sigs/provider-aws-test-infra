@@ -137,7 +137,7 @@ func (d *deployer) Up() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err = runner.isAWSInstanceRunning(instance)
+			_, err := runner.isAWSInstanceRunning(instance)
 			if err != nil {
 				klog.Errorf("error checking instance is running %s : %s", instance.instanceID, err)
 				if err2 := d.DumpClusterLogs(); err2 != nil {
