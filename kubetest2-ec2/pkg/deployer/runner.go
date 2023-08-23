@@ -127,7 +127,6 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 			time.Sleep(time.Second * 15)
 		}
 
-		var op *ec2.DescribeInstancesOutput
 		op, err := a.ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
 			InstanceIds: []*string{&testInstance.instanceID},
 		})
