@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	api "k8s.io/kubernetes/pkg/apis/core"
+	v1 "k8s.io/api/core/v1"
 	utilnet "k8s.io/utils/net"
 )
 
@@ -41,7 +41,7 @@ func IsAllowAll(ipnets utilnet.IPNetSet) bool {
 // GetLoadBalancerSourceRanges first try to parse and verify LoadBalancerSourceRanges field from a service.
 // If the field is not specified, turn to parse and verify the AnnotationLoadBalancerSourceRangesKey annotation from a service,
 // extracting the source ranges to allow, and if not present returns a default (allow-all) value.
-func GetLoadBalancerSourceRanges(service *api.Service) (utilnet.IPNetSet, error) {
+func GetLoadBalancerSourceRanges(service *v1.Service) (utilnet.IPNetSet, error) {
 	var ipnets utilnet.IPNetSet
 	var err error
 	// if SourceRange field is specified, ignore sourceRange annotation
@@ -53,7 +53,7 @@ func GetLoadBalancerSourceRanges(service *api.Service) (utilnet.IPNetSet, error)
 			return nil, fmt.Errorf("service.Spec.LoadBalancerSourceRanges: %v is not valid. Expecting a list of IP ranges. For example, 10.0.0.0/24. Error msg: %v", specs, err)
 		}
 	} else {
-		val := service.Annotations[api.AnnotationLoadBalancerSourceRangesKey]
+		val := service.Annotations[v1.AnnotationLoadBalancerSourceRangesKey]
 		val = strings.TrimSpace(val)
 		if val == "" {
 			val = defaultLoadBalancerSourceRanges
@@ -61,33 +61,39 @@ func GetLoadBalancerSourceRanges(service *api.Service) (utilnet.IPNetSet, error)
 		specs := strings.Split(val, ",")
 		ipnets, err = utilnet.ParseIPNets(specs...)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s is not valid. Expecting a comma-separated list of source IP ranges. For example, 10.0.0.0/24,192.168.2.0/24", api.AnnotationLoadBalancerSourceRangesKey, val)
+			return nil, fmt.Errorf("%s: %s is not valid. Expecting a comma-separated list of source IP ranges. For example, 10.0.0.0/24,192.168.2.0/24", v1.AnnotationLoadBalancerSourceRangesKey, val)
 		}
 	}
 	return ipnets, nil
 }
 
 // ExternallyAccessible checks if service is externally accessible.
-func ExternallyAccessible(service *api.Service) bool {
-	return service.Spec.Type == api.ServiceTypeLoadBalancer ||
-		service.Spec.Type == api.ServiceTypeNodePort ||
-		(service.Spec.Type == api.ServiceTypeClusterIP && len(service.Spec.ExternalIPs) > 0)
+func ExternallyAccessible(service *v1.Service) bool {
+	return service.Spec.Type == v1.ServiceTypeLoadBalancer ||
+		service.Spec.Type == v1.ServiceTypeNodePort ||
+		(service.Spec.Type == v1.ServiceTypeClusterIP && len(service.Spec.ExternalIPs) > 0)
 }
 
-// RequestsOnlyLocalTraffic checks if service requests OnlyLocal traffic.
-func RequestsOnlyLocalTraffic(service *api.Service) bool {
-	if service.Spec.Type != api.ServiceTypeLoadBalancer &&
-		service.Spec.Type != api.ServiceTypeNodePort {
+// ExternalPolicyLocal checks if service is externally accessible and has ETP = Local.
+func ExternalPolicyLocal(service *v1.Service) bool {
+	if !ExternallyAccessible(service) {
 		return false
 	}
+	return service.Spec.ExternalTrafficPolicy == v1.ServiceExternalTrafficPolicyLocal
+}
 
-	return service.Spec.ExternalTrafficPolicy == api.ServiceExternalTrafficPolicyLocal
+// InternalPolicyLocal checks if service has ITP = Local.
+func InternalPolicyLocal(service *v1.Service) bool {
+	if service.Spec.InternalTrafficPolicy == nil {
+		return false
+	}
+	return *service.Spec.InternalTrafficPolicy == v1.ServiceInternalTrafficPolicyLocal
 }
 
 // NeedsHealthCheck checks if service needs health check.
-func NeedsHealthCheck(service *api.Service) bool {
-	if service.Spec.Type != api.ServiceTypeLoadBalancer {
+func NeedsHealthCheck(service *v1.Service) bool {
+	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
 		return false
 	}
-	return RequestsOnlyLocalTraffic(service)
+	return ExternalPolicyLocal(service)
 }
