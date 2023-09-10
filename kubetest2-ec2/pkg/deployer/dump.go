@@ -73,7 +73,8 @@ func (d *deployer) kubectlDump() {
 		"--kubeconfig",
 		"/etc/kubernetes/admin.conf",
 		"cluster-info",
-		"dump")
+		"dump",
+		"--all-namespaces")
 }
 
 func (d *deployer) dumpRemoteLogs(outputFilePrefix string, args ...string) {
