@@ -327,6 +327,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	userdata = strings.ReplaceAll(userdata, "{{RUN_KUBEADM_SH}}", scriptString)
 
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
+	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
 
 	userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
