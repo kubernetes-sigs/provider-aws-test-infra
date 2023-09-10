@@ -83,6 +83,7 @@ func EnsureRole(svc *iam.IAM, roleName string) error {
 
 	policies := []string{
 		"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+		"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser",
 		"arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
 		"arn:aws:iam::aws:policy/AmazonEKSServicePolicy",
 		"arn:aws:iam::aws:policy/AmazonEKSVPCResourceController",

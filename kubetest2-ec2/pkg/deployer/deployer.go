@@ -105,19 +105,21 @@ type deployer struct {
 	KubeconfigPath string `flag:"kubeconfig" desc:"Absolute path to existing kubeconfig for cluster"`
 	RepoRoot       string `desc:"The path to the root of the local kubernetes/kubernetes repo."`
 
-	ExternalCloudProvider bool   `desc:"Enable external AWS cloud provider"`
-	Region                string `desc:"AWS region that the hosts live in (aws)"`
-	UserDataFile          string `desc:"Path to user data to pass to created instances (aws)"`
-	KubeadmInitFile       string `desc:"custom kubeadm-init config file (aws)"`
-	KubeadmJoinFile       string `desc:"custom kubeadm-join config file (aws)"`
-	InstanceProfile       string `desc:"The name of the instance profile to assign to the node (aws)"`
-	RoleName              string `desc:"The name of the role assign to the node (aws)"`
-	Ec2InstanceConnect    bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
-	InstanceType          string `desc:"EC2 Instance type to use for test"`
-	Image                 string `flag:"image" desc:"Ubuntu image to use for test"`
-	SSHUser               string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
-	SSHEnv                string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
-	NumNodes              int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
+	ExternalCloudProvider      bool   `desc:"Enable external AWS cloud provider"`
+	ExternalCloudProviderImage string `desc:"repository:tag for the external cloud provider image"`
+
+	Region             string `desc:"AWS region that the hosts live in (aws)"`
+	UserDataFile       string `desc:"Path to user data to pass to created instances (aws)"`
+	KubeadmInitFile    string `desc:"custom kubeadm-init config file (aws)"`
+	KubeadmJoinFile    string `desc:"custom kubeadm-join config file (aws)"`
+	InstanceProfile    string `desc:"The name of the instance profile to assign to the node (aws)"`
+	RoleName           string `desc:"The name of the role assign to the node (aws)"`
+	Ec2InstanceConnect bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
+	InstanceType       string `desc:"EC2 Instance type to use for test"`
+	Image              string `flag:"image" desc:"Ubuntu image to use for test"`
+	SSHUser            string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
+	SSHEnv             string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
+	NumNodes           int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
 
 	runner  *AWSRunner
 	logsDir string
@@ -197,6 +199,75 @@ func (d *deployer) waitForKubectlNodes() {
 				len(lines))
 			time.Sleep(time.Second * 15)
 		}
+	}
+}
+
+func (d *deployer) waitForExternalProviderPods() {
+	if d.kubectlPath == "" {
+		klog.Warningf("kubectl not found, cannot wait for all worker nodes to come up")
+		return
+	}
+	if d.KubeconfigPath == "" {
+		klog.Warningf("KUBECONFIG is not set, cannot wait for all worker nodes to come up")
+		return
+	}
+	args := []string{
+		d.kubectlPath,
+		"--kubeconfig",
+		d.KubeconfigPath,
+		"get",
+		"pod",
+		"-l",
+		"k8s-app=aws-cloud-controller-manager",
+		"-n",
+		"kube-system",
+		"-o",
+		"name",
+	}
+	klog.Infof("Running kubectl command %v", args)
+	controllerPodName := ""
+	for i := 0; i < 30; i++ {
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.SetStderr(os.Stderr)
+		lines, err := exec.OutputLines(cmd)
+		if err != nil {
+			klog.Errorf("unable to get nodes: %s", err)
+			return
+		}
+		if len(lines) >= 1 {
+			klog.Infof("found %d pods in cluster %s: %v",
+				len(lines),
+				d.ClusterID,
+				lines)
+			controllerPodName = lines[0]
+			break
+		} else {
+			klog.Infof("waiting for %d pods in cluster %s, found %d",
+				len(d.runner.instances),
+				d.ClusterID,
+				len(lines))
+			time.Sleep(time.Second * 15)
+		}
+	}
+
+	args = []string{
+		d.kubectlPath,
+		"--kubeconfig",
+		d.KubeconfigPath,
+		"wait",
+		controllerPodName,
+		"-n",
+		"kube-system",
+		"--for=condition=Ready",
+		"--timeout=300s",
+	}
+	klog.Infof("Running kubectl command %v", args)
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.SetStderr(os.Stderr)
+	_, err := exec.OutputLines(cmd)
+	if err != nil {
+		klog.Errorf("unable to wait for pod: %s", err)
+		return
 	}
 }
 

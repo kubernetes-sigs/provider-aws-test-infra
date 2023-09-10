@@ -136,7 +136,23 @@ write_files:
         kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.4/config/master/aws-k8s-cni.yaml
         kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system WARM_ENI_TARGET=3
         if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
-          kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k 'github.com/kubernetes/cloud-provider-aws/examples/existing-cluster/base/?ref=master'
+          files=(
+            "kustomization.yaml"
+            "apiserver-authentication-reader-role-binding.yaml"
+            "aws-cloud-controller-manager-daemonset.yaml"
+            "cluster-role-binding.yaml"
+            "cluster-role.yaml"
+            "service-account.yaml"
+          )
+          mkdir cloud-provider-aws
+          for f in "${files[@]}"
+          do
+            curl -sSLo ./cloud-provider-aws/${f} --fail --retry 5 "https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/master/examples/existing-cluster/base/${f}"
+          done
+          if [[ "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}" != "" ]]; then
+            sed -i "s|registry.k8s.io/provider-aws/cloud-controller-manager.*$|{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}|" ./cloud-provider-aws/aws-cloud-controller-manager-daemonset.yaml
+          fi
+          kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k ./cloud-provider-aws/
         fi
       fi
   - path: /home/containerd/configure.sh
