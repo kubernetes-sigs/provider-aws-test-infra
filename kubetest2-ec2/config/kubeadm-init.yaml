@@ -10,6 +10,7 @@ nodeRegistration:
   kubeletExtraArgs:
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     provider-id: {{PROVIDER_ID}}
+    node-ip: {{NODE_IP}}
     hostname-override: {{HOSTNAME_OVERRIDE}}
     image-credential-provider-bin-dir: /usr/local/bin
     image-credential-provider-config: /etc/kubernetes/credential-provider.yaml
