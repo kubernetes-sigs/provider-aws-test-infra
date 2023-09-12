@@ -32,9 +32,11 @@ AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone)
 INSTANCE_ID=$(curl -s $META_URL/instance-id)
 PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
 PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname)
+NODE_IP=$(curl -s $META_URL/local-ipv4)
 
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
+sed -i "s|{{NODE_IP}}|$NODE_IP|g" /etc/kubernetes/kubeadm-*.yaml
 
 sudo modprobe br_netfilter
 sudo sysctl --system
