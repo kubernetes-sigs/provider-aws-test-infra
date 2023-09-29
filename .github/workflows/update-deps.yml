@@ -41,12 +41,11 @@ jobs:
         if: ${{ steps.update_deps.outputs.changes != '' }}
         uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38
         with:
-          title: 'Update dependencies'
-          commit-message: Update Kubernetes to latest master
+          title: 'Update Kubernetes dependencies to latest master'
+          commit-message: Update Kubernetes dependencies to latest master
           committer: github-actions <actions@github.com>
           author: github-actions <actions@github.com>
           branch: dependencies/update
-          branch-suffix: timestamp
           base: main
           delete-branch: true
           labels: ok-to-test
