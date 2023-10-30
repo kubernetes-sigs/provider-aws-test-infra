@@ -58,7 +58,8 @@ func (m *MakeBuilder) buildQuickRelease() (string, error) {
 		return "", fmt.Errorf("failed to get version: %v", err)
 	}
 	cmd := exec.Command("make", target,
-		fmt.Sprintf("KUBE_BUILD_PLATFORMS=%s", m.TargetBuildArch))
+		fmt.Sprintf("KUBE_BUILD_PLATFORMS=%s", m.TargetBuildArch),
+		"KUBE_STATIC_OVERRIDES=kubelet")
 	cmd.SetDir(m.RepoRoot)
 	setSourceDateEpoch(m.RepoRoot, cmd)
 	exec.InheritOutput(cmd)

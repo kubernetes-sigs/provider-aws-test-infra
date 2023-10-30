@@ -29,9 +29,9 @@ pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
 
   make kubectl KUBE_BUILD_PLATFORMS="darwin/amd64" && \
     make kubectl KUBE_BUILD_PLATFORMS="darwin/arm64" && \
-    make kubectl kubelet kube-proxy KUBE_BUILD_PLATFORMS="linux/arm64" && \
-    make kubectl kubelet kube-proxy KUBE_BUILD_PLATFORMS="linux/amd64" && \
-    make kubectl kubelet kube-proxy KUBE_BUILD_PLATFORMS="windows/amd64"
+    make kubectl kubelet kube-proxy KUBE_STATIC_OVERRIDES="kubelet" KUBE_BUILD_PLATFORMS="linux/arm64" && \
+    make kubectl kubelet kube-proxy KUBE_STATIC_OVERRIDES="kubelet" KUBE_BUILD_PLATFORMS="linux/amd64" && \
+    make kubectl kubelet kube-proxy KUBE_STATIC_OVERRIDES="kubelet" KUBE_BUILD_PLATFORMS="windows/amd64"
 
   mkdir -p "${BIN_DIR}/darwin/amd64"
   cp "_output/local/bin/darwin/amd64/kubectl" "${BIN_DIR}/darwin/amd64"
