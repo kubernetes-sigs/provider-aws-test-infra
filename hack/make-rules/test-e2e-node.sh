@@ -37,12 +37,15 @@ if [[ ${build_eks_ami} != "false" ]]; then
   fi
   user_data_file="userdata.sh"
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
+    AMI_NAME="amazon-eks-${build_eks_arch}node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
     user_data_file="userdata-al2023.sh"
-    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-${build_eks_arch}node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
   else
-    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values=amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}  --query 'Images[*].[ImageId]' --output text)
+    AMI_NAME="amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
   fi
   if [ -z "${ami_id}" ] ; then
+    export AMI_NAME
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
     ami_id=$(jq -r ".builds[].artifact_id" "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami/manifest.json" | cut -f 2 -d ':')
   else
