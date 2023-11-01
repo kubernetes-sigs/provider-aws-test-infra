@@ -204,6 +204,8 @@ fi
 echo "Kubelet Config File: ${kubelet_config_file}"
 echo "Kubernetes directory: ${KUBE_ROOT}"
 
+export KUBE_STATIC_OVERRIDES=kubelet
+
 # Invoke the runner
 go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
   --ssh-env="aws" --ssh-key="${ssh_key}" --ssh-options="${ssh_options}" --ssh-user="${ssh_user}" \
