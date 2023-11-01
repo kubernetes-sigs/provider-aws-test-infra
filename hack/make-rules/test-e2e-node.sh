@@ -37,7 +37,7 @@ if [[ ${build_eks_ami} != "false" ]]; then
   fi
   user_data_file="userdata.sh"
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
-    AMI_NAME="amazon-eks-${build_eks_arch}node-al2023-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
+    AMI_NAME="amazon-eks-al2023-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
     user_data_file="userdata-al2023.sh"
     ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
   else
