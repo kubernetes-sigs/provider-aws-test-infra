@@ -47,10 +47,10 @@ if [[ ${build_eks_ami} != "false" ]]; then
   if [ -z "${ami_id}" ] ; then
     export AMI_NAME
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
-    ami_id=$(jq -r ".builds[].artifact_id" "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami/manifest.json" | cut -f 2 -d ':')
   else
     echo "found existing ami : ${ami_id} skipping building a new AMI..."
   fi
+  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
   aws ec2 describe-images --region=us-east-1 --image-ids ${ami_id}
   cat > ${TEST_INFRA_ROOT}/config/aws-instance-eks.yaml <<EOF
 images:
