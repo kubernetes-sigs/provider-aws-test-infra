@@ -39,10 +39,10 @@ if [[ ${build_eks_ami} != "false" ]]; then
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
     AMI_NAME="amazon-eks-al2023-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
     user_data_file="userdata-al2023.sh"
-    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text --max-items 1)
   else
     AMI_NAME="amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
-    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
+    ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text --max-items 1)
   fi
   if [ -z "${ami_id}" ] ; then
     export AMI_NAME
@@ -50,7 +50,7 @@ if [[ ${build_eks_ami} != "false" ]]; then
   else
     echo "found existing ami : ${ami_id} skipping building a new AMI..."
   fi
-  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text)
+  ami_id=$(aws ec2 describe-images --region=us-east-1 --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text --max-items 1)
   aws ec2 describe-images --region=us-east-1 --image-ids ${ami_id}
   cat > ${TEST_INFRA_ROOT}/config/aws-instance-eks.yaml <<EOF
 images:
@@ -197,6 +197,7 @@ fi
 echo "Ginkgo Flags: ${ginkgoflags}"
 if [[ -n ${image_config_file} ]]; then
   echo "Image Config File: ${image_config_dir}/${image_config_file}"
+  cat "${image_config_dir}/${image_config_file}"
 fi
 if [[ -n ${instance_type} ]]; then
   echo "Instance Type: ${instance_type}"
