@@ -47,7 +47,9 @@ import subprocess
 
 actual_args = ["systemd-run.real"]
 for arg in sys.argv[1:]:
- if arg.startswith('StandardError'):
+ if arg.startswith('-E'):
+  actual_args.append(arg.replace("-E","--setenv"))
+ elif arg.startswith('StandardError'):
   # remove the -p
   actual_args.pop()
  else:

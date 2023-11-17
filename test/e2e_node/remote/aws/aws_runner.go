@@ -306,7 +306,7 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 
 	instanceRunning := false
 	createdSSHKey := false
-	for i := 0; i < 10 && !instanceRunning; i++ {
+	for i := 0; i < 50 && !instanceRunning; i++ {
 		if i > 0 {
 			time.Sleep(time.Second * 20)
 		}
