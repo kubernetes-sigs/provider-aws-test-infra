@@ -51,6 +51,7 @@ type AWSRunner struct {
 	internalAWSImages  []utils.InternalAWSImage
 	instances          []*awsInstance
 	token              string
+	certificateKey     string
 	controlPlaneIP     string
 }
 
@@ -106,6 +107,34 @@ func (a *AWSRunner) Validate() error {
 
 	if !strings.HasPrefix(a.deployer.Image, "ami-") {
 		return fmt.Errorf("invalid AMI id format for %q", a.deployer.Image)
+	}
+
+	if a.deployer.WorkerImage == "" {
+		arch := strings.Split(a.deployer.BuildOptions.CommonBuildOptions.TargetBuildArch, "/")[1]
+		path := "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
+		klog.Infof("image was not specified, looking up latest image in SSM:")
+		klog.Infof("%s", path)
+		id, err := utils.GetSSMImage(a.ssmService, path)
+		if err == nil {
+			klog.Infof("using image id from ssm %s", id)
+			a.deployer.WorkerImage = id
+		} else {
+			return fmt.Errorf("error looking up ssm : %w", err)
+		}
+
+		// Looks like we need an arm64 image and the default instance type is amd64, so
+		// pick an equivalent image to t3a.medium which is t4g.medium.
+		if a.deployer.InstanceType == defaultAMD64InstanceType && arch == "arm64" {
+			a.deployer.InstanceType = defaultARM64InstanceTYpe
+		}
+	}
+
+	if len(a.deployer.WorkerImage) == 0 {
+		return fmt.Errorf("must specify an AMI using --worker-image")
+	}
+
+	if !strings.HasPrefix(a.deployer.WorkerImage, "ami-") {
+		return fmt.Errorf("invalid AMI id format for %q", a.deployer.WorkerImage)
 	}
 
 	if err = a.ensureInstanceProfileAndRole(); err != nil {
@@ -243,23 +272,6 @@ func (a *AWSRunner) ensureInstanceProfileAndRole() error {
 func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	var ret []utils.InternalAWSImage
 
-	var userControlPlane string
-	var userDataWorkerNode string
-	var userdata string
-	if a.deployer.UserDataFile != "" {
-		userDataBytes, err := os.ReadFile(a.deployer.UserDataFile)
-		if err != nil {
-			return nil, fmt.Errorf("error reading userdata file %q, %w", a.deployer.UserDataFile, err)
-		}
-		userdata = string(userDataBytes)
-	} else {
-		userDataBytes, err := config.ConfigFS.ReadFile("ubuntu2204.yaml")
-		if err != nil {
-			return nil, fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
-		}
-		userdata = string(userDataBytes)
-	}
-
 	var version string
 	var err error
 	if a.deployer.BuildOptions.CommonBuildOptions.StageVersion == "" {
@@ -280,14 +292,54 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		return nil, fmt.Errorf("unable to validate s3 bucket : %w", err)
 	}
 
+	userControlPlane, err := a.getUserData(a.deployer.UserDataFile, version, true)
+	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
+
+	klog.Infof("using %s for control plane image", a.deployer.Image)
+	klog.Infof("using %s for worker node image", a.deployer.WorkerImage)
+	ret = append(ret, utils.InternalAWSImage{
+		AmiID:           a.deployer.Image,
+		UserData:        userControlPlane,
+		InstanceType:    a.deployer.InstanceType,
+		InstanceProfile: a.deployer.InstanceProfile,
+	})
+	for i := 0; i < a.deployer.NumNodes; i++ {
+		ret = append(ret, utils.InternalAWSImage{
+			AmiID:           a.deployer.WorkerImage,
+			UserData:        userDataWorkerNode,
+			InstanceType:    a.deployer.InstanceType,
+			InstanceProfile: a.deployer.InstanceProfile,
+		})
+	}
+	return ret, nil
+}
+
+func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bool) (string, error) {
+	var userdata string
+	if dataFile != "" {
+		userDataBytes, err := os.ReadFile(dataFile)
+		if err != nil {
+			return "", fmt.Errorf("error reading userdata file %q, %w", dataFile, err)
+		}
+		userdata = string(userDataBytes)
+	} else {
+		userDataBytes, err := config.ConfigFS.ReadFile("ubuntu2204.yaml")
+		if err != nil {
+			return "", fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
+		}
+		userdata = string(userDataBytes)
+	}
+
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_BUCKET}}",
 		a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
 	userdata = strings.ReplaceAll(userdata, "{{STAGING_VERSION}}", version)
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_TOKEN}}", a.token)
+	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CERTIFICATE_KEY}}", a.certificateKey)
+	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CLUSTER_ID}}", a.deployer.ClusterID)
 
-	script, err := utils.FetchConfigureScript(a.deployer.UserDataFile)
+	script, err := utils.FetchConfigureScript(dataFile)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch script : %w", err)
+		return "", fmt.Errorf("unable to fetch script : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{CONFIGURE_SH}}", script)
 
@@ -301,7 +353,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		return data
 	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch kubeadm-init.yaml : %w", err)
+		return "", fmt.Errorf("unable to fetch kubeadm-init.yaml : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_INIT_YAML}}", yamlString)
 
@@ -310,7 +362,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		return data
 	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch kubeadm-join.yaml : %w", err)
+		return "", fmt.Errorf("unable to fetch kubeadm-join.yaml : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_JOIN_YAML}}", yamlString)
 
@@ -319,35 +371,22 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 			a.deployer.BuildOptions.CommonBuildOptions.StageLocation)
 		data = strings.ReplaceAll(data, "{{STAGING_VERSION}}", version)
 		data = strings.ReplaceAll(data, "{{KUBEADM_TOKEN}}", a.token)
+		data = strings.ReplaceAll(data, "{{KUBEADM_CERTIFICATE_KEY}}", a.certificateKey)
 		return data
 	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch run-kubeadm.sh : %w", err)
+		return "", fmt.Errorf("unable to fetch run-kubeadm.sh : %w", err)
 	}
 	userdata = strings.ReplaceAll(userdata, "{{RUN_KUBEADM_SH}}", scriptString)
 
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
-
-	userControlPlane = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
-	userDataWorkerNode = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
-
-	imageID := a.deployer.Image
-	ret = append(ret, utils.InternalAWSImage{
-		AmiID:           imageID,
-		UserData:        userControlPlane,
-		InstanceType:    a.deployer.InstanceType,
-		InstanceProfile: a.deployer.InstanceProfile,
-	})
-	for i := 0; i < a.deployer.NumNodes; i++ {
-		ret = append(ret, utils.InternalAWSImage{
-			AmiID:           imageID,
-			UserData:        userDataWorkerNode,
-			InstanceType:    a.deployer.InstanceType,
-			InstanceProfile: a.deployer.InstanceProfile,
-		})
+	if controlPlane {
+		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
+	} else {
+		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "false")
 	}
-	return ret, nil
+	return userdata, nil
 }
 
 func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance, error) {

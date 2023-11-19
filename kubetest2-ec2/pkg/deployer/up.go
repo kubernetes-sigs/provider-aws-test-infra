@@ -174,6 +174,7 @@ func (d *deployer) NewAWSRunner() *AWSRunner {
 		deployer:           d,
 		instanceNamePrefix: "tmp-e2e-" + uuid.New().String()[:8],
 		token:              utils.RandomFixedLengthString(6) + "." + utils.RandomFixedLengthString(16),
+		certificateKey:     utils.RandomHexEncodedBytes(32),
 	}
 	return d.runner
 }

@@ -18,6 +18,7 @@ package utils
 
 import (
 	"bytes"
+	"encoding/hex"
 	"math/rand"
 	"time"
 )
@@ -33,4 +34,12 @@ func RandomFixedLengthString(length int) string {
 		buffer.WriteByte(charset[seededRand.Intn(len(charset))])
 	}
 	return buffer.String()
+}
+
+func RandomHexEncodedBytes(n int) string {
+	byteArray := make([]byte, n)
+	if _, err := rand.Read(byteArray); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(byteArray)
 }

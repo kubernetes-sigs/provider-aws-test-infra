@@ -109,7 +109,8 @@ type deployer struct {
 	ExternalCloudProviderImage string `desc:"repository:tag for the external cloud provider image"`
 
 	Region             string `desc:"AWS region that the hosts live in (aws)"`
-	UserDataFile       string `desc:"Path to user data to pass to created instances (aws)"`
+	UserDataFile       string `flag:"user-data-file" desc:"Path to user data to pass to control plane instances (aws)"`
+	WorkerUserDataFile string `flag:"worker-user-data-file" desc:"Path to user data to pass to worker node instances (aws)"`
 	KubeadmInitFile    string `desc:"custom kubeadm-init config file (aws)"`
 	KubeadmJoinFile    string `desc:"custom kubeadm-join config file (aws)"`
 	InstanceProfile    string `desc:"The name of the instance profile to assign to the node (aws)"`
@@ -117,6 +118,7 @@ type deployer struct {
 	Ec2InstanceConnect bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
 	InstanceType       string `desc:"EC2 Instance type to use for test"`
 	Image              string `flag:"image" desc:"Ubuntu image to use for test"`
+	WorkerImage        string `flag:"worker-image" desc:"Worker image to use for test"`
 	SSHUser            string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
 	SSHEnv             string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
 	NumNodes           int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`

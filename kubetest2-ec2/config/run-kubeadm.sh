@@ -65,6 +65,12 @@ if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
    --v 10 \
    --ignore-preflight-errors=ImagePull \
    --config /etc/kubernetes/kubeadm-init.yaml
+
+  kubeadm init phase upload-certs \
+    --v 10 \
+    --upload-certs \
+    --skip-certificate-key-print \
+    --certificate-key "{{KUBEADM_CERTIFICATE_KEY}}"
 else
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-join.yaml
   sed -i "s|{{KUBEADM_CONTROL_PLANE_IP}}|$KUBEADM_CONTROL_PLANE_IP|g" /etc/kubernetes/kubeadm-join.yaml
