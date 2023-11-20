@@ -293,7 +293,13 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	}
 
 	userControlPlane, err := a.getUserData(a.deployer.UserDataFile, version, true)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
+	}
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load worker user data %s : %w", a.deployer.WorkerUserDataFile, err)
+	}
 
 	klog.Infof("using %s for control plane image", a.deployer.Image)
 	klog.Infof("using %s for worker node image", a.deployer.WorkerImage)

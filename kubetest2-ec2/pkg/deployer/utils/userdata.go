@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,6 +48,9 @@ func FetchConfigureScript(userDataFile string) (string, error) {
 	var err error
 	if userDataFile != "" {
 		scriptFile := filepath.Dir(userDataFile) + "/" + "configure.sh"
+		if _, err = os.Stat(scriptFile); errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		}
 		scriptBytes, err = os.ReadFile(scriptFile)
 		if err != nil {
 			return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
