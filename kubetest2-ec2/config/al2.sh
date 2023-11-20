@@ -2,6 +2,8 @@
 set -o xtrace
 set -xeuo pipefail
 
+echo "testing!"
+
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
 else
