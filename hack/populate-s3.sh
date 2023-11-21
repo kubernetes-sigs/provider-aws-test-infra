@@ -56,7 +56,7 @@ pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
 
 popd
 
-[[ ! -d "$(go env GOPATH)/src/kubernetes-sigs/aws-iam-authenticator" ]] && \
+[[ ! -d "$(go env GOPATH)/src/sigs.k8s.io/aws-iam-authenticator" ]] && \
   git clone https://github.com/kubernetes-sigs/aws-iam-authenticator "$(go env GOPATH)/src/sigs.k8s.io/aws-iam-authenticator"
 
 # Generate aws-iam-authenticator binaries
