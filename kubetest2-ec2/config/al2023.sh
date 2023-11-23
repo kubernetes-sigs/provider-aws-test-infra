@@ -65,6 +65,9 @@ fi
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
 cp ./kubernetes/server/bin/* /usr/local/bin/
 
+cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
+# rewrite the pause image url
+sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.toml
 systemctl start containerd
 
 # shellcheck disable=SC2038
