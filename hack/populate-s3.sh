@@ -95,6 +95,7 @@ pushd _output >/dev/null
   find . -name "*.sha256*" -delete
   find . -name "*.sha1*" -delete
   find . -name "*.md5*" -delete
+  rm -rf local/go/cache
   for f in $(find . -type f | sort); do
       dirname=$(dirname $f)
       filename=$(basename $f)
