@@ -10,6 +10,10 @@ else
   ARCH=amd64
 fi
 
+# Fix issues with no networking from pods
+sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
+systemctl restart systemd-resolved
+
 mkdir -p /etc/kubernetes/
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
 apiVersion: kubeadm.k8s.io/v1beta3
@@ -43,6 +47,9 @@ NODE_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKE
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-join.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-join.yaml
 sed -i "s|{{NODE_IP}}|$NODE_IP|g" /etc/kubernetes/kubeadm-join.yaml
+
+# Ensure references to the instance id are resolved properly
+echo "$(curl -s -f -m 1 --header "X-aws-ec2-metadata-token: $TOKEN" $META_URL/local-ipv4) $(curl -s -f -m 1 --header "X-aws-ec2-metadata-token: $TOKEN" $META_URL/instance-id/)" | sudo tee -a /etc/hosts
 
 VERSION="v1.28.0"
 curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tools/release/$VERSION/crictl-$VERSION-linux-$ARCH.tar.gz | sudo tar -xvzf - -C /usr/local/bin
