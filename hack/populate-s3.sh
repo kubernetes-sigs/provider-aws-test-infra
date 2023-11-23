@@ -95,7 +95,6 @@ pushd _output >/dev/null
   find . -name "*.sha256*" -delete
   find . -name "*.sha1*" -delete
   find . -name "*.md5*" -delete
-  rm -rf local/go/cache
   for f in $(find . -type f | sort); do
       dirname=$(dirname $f)
       filename=$(basename $f)
@@ -108,4 +107,6 @@ pushd _output >/dev/null
 popd
 
 S3_BUCKET=${S3_BUCKET:-"provider-aws-test-infra"}
+rm -rf _output/local/go/cache
+rm -rf _output/local/go/src
 aws s3 sync _output/ "s3://${S3_BUCKET}/"
