@@ -2,7 +2,8 @@
 set -o xtrace
 set -xeuo pipefail
 
-echo "testing!"
+# this package is known to stomp on ip addr/link etc
+yum remove -y amazon-ec2-net-utils
 
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
