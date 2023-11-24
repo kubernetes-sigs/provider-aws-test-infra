@@ -35,6 +35,10 @@ func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
 		ImageId:      &img.AmiID,
 		MinCount:     aws.Int64(1),
 		MaxCount:     aws.Int64(1),
+		MetadataOptions: &ec2.InstanceMetadataOptionsRequest{
+			HttpEndpoint: aws.String("enabled"),
+			HttpTokens:   aws.String("optional"),
+		},
 		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
 			{
 				AssociatePublicIpAddress: aws.Bool(true),
