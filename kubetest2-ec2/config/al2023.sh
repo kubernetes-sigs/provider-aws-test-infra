@@ -14,6 +14,9 @@ fi
 sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
 systemctl restart systemd-resolved
 
+# Remove duplicate lines in /etc/resolv.conf
+awk -i inplace '!seen[$0]++'  /etc/resolv.conf
+
 mkdir -p /etc/kubernetes/
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
 apiVersion: kubeadm.k8s.io/v1beta3
