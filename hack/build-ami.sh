@@ -38,6 +38,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   # disable sha256 check
   sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh || true
   sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh || true
+  sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh || true
   sed -i 's/amazon-eks/provider-aws-test-infra/' eks-worker-al2-variables.json
   sed -i "s/us-west-2/${AWS_REGION:-'us-east-1'}/" eks-worker-al2-variables.json
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
