@@ -91,6 +91,8 @@ curl -sL https://github.com/containernetworking/cni/releases/download/v0.6.0/cni
 curl -sL https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-plugins-linux-amd64-v0.8.6.tgz -o "${BIN_DIR}/linux/amd64/cni-plugins-linux-amd64-v0.8.6.tgz"
 curl -sL https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-plugins-linux-amd64-v0.8.6.tgz -o "${BIN_DIR}/linux/arm64/cni-plugins-linux-arm64-v0.8.6.tgz"
 
+rm -rf _output/local/go/cache
+rm -rf _output/local/go/src
 pushd _output >/dev/null
   find . -name "*.sha256*" -delete
   find . -name "*.sha1*" -delete
@@ -107,6 +109,4 @@ pushd _output >/dev/null
 popd
 
 S3_BUCKET=${S3_BUCKET:-"provider-aws-test-infra"}
-rm -rf _output/local/go/cache
-rm -rf _output/local/go/src
 aws s3 sync _output/ "s3://${S3_BUCKET}/"
