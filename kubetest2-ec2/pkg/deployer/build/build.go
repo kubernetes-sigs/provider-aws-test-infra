@@ -51,20 +51,27 @@ var (
 // StoreCommonBinaries will best effort try to store commonly built binaries
 // to the output directory
 func StoreCommonBinaries(kuberoot string, outroot string, targetBuildArch string) {
-	root := filepath.Join(kuberoot, "_output/local", "bin", targetBuildArch)
-	if _, err := os.Stat(root); os.IsNotExist(err) {
-		root = filepath.Join(kuberoot, "_output/dockerized", "bin", targetBuildArch)
+	directories := []string{
+		"_output/local",
+		"_output/dockerized",
 	}
-	for _, binary := range CommonTestBinaries {
-		source := filepath.Join(root, binary)
-		dest := filepath.Join(outroot, binary)
-		if _, err := os.Stat(source); err == nil {
-			klog.Infof("copying %s to %s ...", source, dest)
-			if err := fs.CopyFile(source, dest); err != nil {
-				klog.Warningf("failed to copy %s to %s: %v", source, dest, err)
+	for _, directory := range directories {
+		root := filepath.Join(kuberoot, directory, "bin", targetBuildArch)
+		if _, err := os.Stat(root); os.IsNotExist(err) {
+			klog.Warningf("skipping %s as it does not exist", directory)
+			continue
+		}
+		for _, binary := range CommonTestBinaries {
+			source := filepath.Join(root, binary)
+			dest := filepath.Join(outroot, binary)
+			if _, err := os.Stat(source); err == nil {
+				klog.Infof("copying %s to %s ...", source, dest)
+				if err := fs.CopyFile(source, dest); err != nil {
+					klog.Warningf("failed to copy %s to %s: %v", source, dest, err)
+				}
+			} else {
+				klog.Warningf("could not find %s: %v", source, err)
 			}
-		} else {
-			klog.Warningf("could not find %s: %v", source, err)
 		}
 	}
 }
