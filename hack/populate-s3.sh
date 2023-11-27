@@ -101,8 +101,8 @@ pushd _output >/dev/null
       dirname=$(dirname $f)
       filename=$(basename $f)
       pushd $dirname >/dev/null
-        shasum -a 1 "$filename" > "$filename".sha1;
-        shasum -a 256 "$filename" > "$filename".sha256;
+        shasum -a 1 "$filename" > "$filename".sha1 || sha1sum "$filename" > "$filename".sha1;
+        shasum -a 256 "$filename" > "$filename".sha256 || sha256sum"$filename" > "$filename".sha256;
         md5sum "$filename" > "$filename".md5;
       popd
   done
