@@ -123,10 +123,15 @@ fi
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
 cp ./kubernetes/server/bin/* /usr/local/bin/
 
+yum reinstall runc containerd -y --allowerasing
+systemctl stop containerd
+rm -f /etc/containerd/config.toml
 cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
 # rewrite the pause image url
 sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.toml
 systemctl start containerd
+/usr/bin/containerd --version
+/usr/sbin/runc --version
 
 # shellcheck disable=SC2038
 find . -name "*.tar" -print | xargs -L 1 ctr -n k8s.io images import
