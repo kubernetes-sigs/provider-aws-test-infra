@@ -21,7 +21,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	osexec "os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -55,7 +57,14 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 	if user == "" {
 		user = "ec2-user"
 	}
-	k8sPath := filepath.Join(os.Getenv("GOPATH"), "src/k8s.io/kubernetes")
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		output, err := osexec.Command("go", "env", "GOPATH").CombinedOutput()
+		if err == nil {
+			gopath = strings.TrimSpace(string(output))
+		}
+	}
+	k8sPath := filepath.Join(gopath, "src/k8s.io/kubernetes")
 	info, err := os.Stat(k8sPath)
 	if err != nil || !info.IsDir() {
 		k8sPath = ""
