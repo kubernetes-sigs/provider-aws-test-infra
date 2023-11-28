@@ -42,6 +42,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
 
   cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
   cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
+  cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
 
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
     make transform-al2-to-al2023
