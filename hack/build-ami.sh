@@ -39,10 +39,10 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh || true
   sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh || true
   sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh || true
-  sed -i 's|-n "$AWS_ACCESS_KEY_ID"|`aws s3 ls`|' scripts/install-worker.sh
-  sed -i 's/amazon-eks/provider-aws-test-infra/' eks-worker-al2-variables.json
-  sed -i "s/us-west-2/${AWS_REGION:-'us-east-1'}/" eks-worker-al2-variables.json
-  sed -i "s/us-east-1/${AWS_REGION:-'us-east-1'}/" eks-worker-al2-variables.json
+
+  cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
+  cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
+
   if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
     make transform-al2-to-al2023
     export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2023-variables.json
