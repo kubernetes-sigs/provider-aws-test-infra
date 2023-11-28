@@ -5,6 +5,9 @@ set -xeuo pipefail
 # this package is known to stomp on ip addr/link etc
 yum remove -y amazon-ec2-net-utils
 
+# try "nft" instead of "legacy"
+yum remove iptables-legacy -y && yum install iptables-nft -y
+
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
 else
