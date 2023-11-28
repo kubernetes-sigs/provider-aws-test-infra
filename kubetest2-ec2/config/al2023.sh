@@ -134,7 +134,7 @@ systemctl start containerd
 /usr/sbin/runc --version
 
 # shellcheck disable=SC2038
-find . -name "*.tar" -print | xargs -L 1 ctr -n k8s.io images import
+find ./kubernetes/server/bin -name "*.tar" -print | xargs -L 1 ctr -n k8s.io images import
 # shellcheck disable=SC2016
 ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
 
