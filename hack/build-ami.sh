@@ -39,8 +39,6 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh || true
   sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh || true
   sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh || true
-  # shellcheck disable=SC2016
-  sed -i 's/\$BINARY_BUCKET_REGION\.//' scripts/install-worker.sh || true
 
   cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
   cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
