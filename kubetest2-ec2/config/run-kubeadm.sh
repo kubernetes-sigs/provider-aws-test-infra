@@ -52,7 +52,7 @@ ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ct
 # {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
 if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   MAC=$(curl -s $META_URL/network/interfaces/macs/ -s | head -n 1)
-  POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks)
+  POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks | shuf -n 1)
 
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
   EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4)
