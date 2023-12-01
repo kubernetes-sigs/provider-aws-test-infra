@@ -58,7 +58,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   fi
   make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
     pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"} || true
-  ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME" --query 'Images[*].[ImageId]' --output text --max-items 1)
+  ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME" --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
   if [ -z "${ami_id}" ] ; then
     echo "unable to build ${AMI_NAME}, please see packer logs above..."
     exit 1
