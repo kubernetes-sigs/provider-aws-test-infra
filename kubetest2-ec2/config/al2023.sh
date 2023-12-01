@@ -8,6 +8,9 @@ yum remove -y amazon-ec2-net-utils
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
 
+# Start with a clean slate
+iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
+
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
 else
