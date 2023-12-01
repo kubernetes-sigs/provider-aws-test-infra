@@ -2,10 +2,12 @@
 
 set -x
 
+aws sts get-caller-identity || exit 1
+
 AWS_REGION=${AWS_REGION:-"us-east-1"}
 
 build_eks_arch=""
-TARGET_BUILD_ARCH="linux/amd64"
+AMI_TARGET_BUILD_ARCH="linux/amd64"
 if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
   build_eks_arch="arm64-"
   # shellcheck disable=SC2034
