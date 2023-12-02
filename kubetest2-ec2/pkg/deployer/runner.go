@@ -240,15 +240,18 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 }
 
 func (a *AWSRunner) InitializeServices() (*session.Session, error) {
-	sess, err := session.NewSession(&aws.Config{Region: &a.deployer.Region})
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config:            aws.Config{Region: &a.deployer.Region},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to create AWS session, %w", err)
 	}
-	a.ec2Service = ec2.New(sess, &aws.Config{Region: &a.deployer.Region})
-	a.ec2icService = ec2instanceconnect.New(sess, &aws.Config{Region: &a.deployer.Region})
-	a.ssmService = ssm.New(sess, &aws.Config{Region: &a.deployer.Region})
-	a.iamService = iam.New(sess, &aws.Config{Region: &a.deployer.Region})
-	a.s3Service = s3.New(sess, &aws.Config{Region: &a.deployer.Region})
+	a.ec2Service = ec2.New(sess)
+	a.ec2icService = ec2instanceconnect.New(sess)
+	a.ssmService = ssm.New(sess)
+	a.iamService = iam.New(sess)
+	a.s3Service = s3.New(sess)
 	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3manager.NewUploaderWithClient(a.s3Service, func(u *s3manager.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 50 mb
 		u.Concurrency = 10
