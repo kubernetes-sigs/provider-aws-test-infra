@@ -13,6 +13,10 @@ if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
   # shellcheck disable=SC2034
   AMI_TARGET_BUILD_ARCH="linux/arm64"
 fi
+
+# shellcheck disable=SC2034
+NODE_OS_ARCH=$(echo "$AMI_TARGET_BUILD_ARCH" | awk -F'/' '{print $2}')
+
 # shellcheck disable=SC2164
 pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
   KUBE_MINOR_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}' | sed -E 's/v([0-9]+)\.([0-9]+).*/v\1.\2/')
