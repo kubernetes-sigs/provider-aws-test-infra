@@ -135,6 +135,8 @@ rm -f /etc/containerd/config.toml
 cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
 # rewrite the pause image url
 sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.toml
+sed -i 's|LimitNOFILE=.*|LimitNOFILE=1048576|' /usr/lib/systemd/system/containerd.service
+
 systemctl start containerd
 /usr/bin/containerd --version
 /usr/sbin/runc --version
