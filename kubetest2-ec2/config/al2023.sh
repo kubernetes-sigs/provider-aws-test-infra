@@ -2,6 +2,20 @@
 set -o xtrace
 set -xeuo pipefail
 
+# Stop services that stomp on addr/link etc
+for node in /sys/class/net/*; do
+iface=$(basename $node)
+unset ID_NET_DRIVER
+# shellcheck disable=SC2046
+eval $(udevadm info --export --query=property /sys/class/net/$iface)
+case $ID_NET_DRIVER in
+  ena|ixgbevf|vif)
+  systemctl disable --now policy-routes@${iface}.service || true
+  systemctl disable --now refresh-policy-routes@${iface}.timer || true
+  ;;
+esac
+done
+
 # this package is known to stomp on ip addr/link etc
 yum remove -y amazon-ec2-net-utils
 
