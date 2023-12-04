@@ -16,6 +16,8 @@ case $ID_NET_DRIVER in
 esac
 done
 
+systemctl restart systemd-networkd.service systemd-resolved.service
+
 set -o xtrace
 set -xeuo pipefail
 
