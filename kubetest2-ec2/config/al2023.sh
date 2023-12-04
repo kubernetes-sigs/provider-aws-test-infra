@@ -13,7 +13,7 @@ cat << EOF > /etc/udev/rules.d/98-vpc-override.rules
 SUBSYSTEM=="net", ACTION=="add", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN="/usr/local/bin/eni.sh"
 EOF
 
-cat << REALEOF > /usr/local/bin/eni.sh
+cat << 'REALEOF' > /usr/local/bin/eni.sh
 #!/bin/sh
 # suppress configuration of hotplugged ENI interfaces
 
