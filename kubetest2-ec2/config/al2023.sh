@@ -22,8 +22,11 @@ systemctl restart systemd-networkd.service systemd-resolved.service
 set -o xtrace
 set -xeuo pipefail
 
-# this package is known to stomp on ip addr/link etc
-yum remove -y amazon-ec2-net-utils
+# amazon-ec2-net-utils package is known to stomp on ip addr/link etc
+# suggestion from comment here:
+# https://github.com/amazonlinux/amazon-ec2-net-utils/issues/100#issuecomment-1828371382
+truncate -s 0 /etc/udev/rules.d/99-vpc-policy-routes.rules
+udevadm control --reload-rules && udevadm trigger
 
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
