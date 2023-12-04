@@ -16,6 +16,7 @@ case $ID_NET_DRIVER in
 esac
 done
 
+systemctl daemon-reload
 systemctl restart systemd-networkd.service systemd-resolved.service
 
 set -o xtrace
