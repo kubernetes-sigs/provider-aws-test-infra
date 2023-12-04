@@ -1,24 +1,5 @@
 #!/bin/bash
 
-# Stop services that stomp on addr/link etc
-for node in /sys/class/net/*; do
-iface=$(basename $node)
-unset ID_NET_DRIVER
-# shellcheck disable=SC2046
-eval $(udevadm info --export --query=property /sys/class/net/$iface)
-case $ID_NET_DRIVER in
-  ena|ixgbevf|vif)
-  echo "Disabling service - policy-routes@${iface}.service"
-  systemctl disable --now policy-routes@${iface}.service || true
-  echo "Disabling service - refresh-policy-routes@${iface}.timer"
-  systemctl disable --now refresh-policy-routes@${iface}.timer || true
-  ;;
-esac
-done
-
-systemctl daemon-reload
-systemctl restart systemd-networkd.service systemd-resolved.service
-
 set -o xtrace
 set -xeuo pipefail
 
