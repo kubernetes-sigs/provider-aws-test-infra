@@ -3,9 +3,6 @@
 set -o xtrace
 set -xeuo pipefail
 
-# amazon-ec2-net-utils package is known to stomp on ip addr/link etc
-yum remove -y amazon-ec2-net-utils
-
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
 
