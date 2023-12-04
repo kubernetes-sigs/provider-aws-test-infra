@@ -4,37 +4,7 @@ set -o xtrace
 set -xeuo pipefail
 
 # amazon-ec2-net-utils package is known to stomp on ip addr/link etc
-# suggestion from comment here:
-# https://github.com/amazonlinux/amazon-ec2-net-utils/issues/100#issuecomment-1828371382
-truncate -s 0 /etc/udev/rules.d/99-vpc-policy-routes.rules
-udevadm control --reload-rules && udevadm trigger
-
-cat << EOF > /etc/udev/rules.d/98-vpc-override.rules
-SUBSYSTEM=="net", ACTION=="add", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN="/usr/local/bin/eni.sh"
-EOF
-
-cat << 'REALEOF' > /usr/local/bin/eni.sh
-#!/bin/sh
-# suppress configuration of hotplugged ENI interfaces
-
-env | logger -t net-info -p user.debug
-
-mkdir -p /run/systemd/network
-
-cat <<EOF > "/run/systemd/network/20_${INTERFACE}.network"
-[Match]
-Driver=ena ixgbevf vif
-Name=${INTERFACE}
-
-[Link]
-MTUBytes=9001
-
-[Network]
-DHCP=no
-EOF
-
-networkctl reload
-REALEOF
+yum remove -y amazon-ec2-net-utils
 
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
