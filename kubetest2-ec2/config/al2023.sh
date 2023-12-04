@@ -3,6 +3,12 @@
 set -o xtrace
 set -xeuo pipefail
 
+sed -i -e 's|create_rules()|create_rules_old()|' /usr/share/amazon-ec2-net-utils/lib.sh
+cat << EOF >> /usr/share/amazon-ec2-net-utils/lib.sh
+create_rules() {
+}
+EOF
+
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
 
