@@ -109,4 +109,5 @@ pushd _output >/dev/null
 popd
 
 S3_BUCKET=${S3_BUCKET:-"provider-aws-test-infra"}
-aws s3 sync _output/ "s3://${S3_BUCKET}/"
+aws s3 sync "$(pwd)/_output/" "s3://${S3_BUCKET}/"
+aws s3 sync "${TEST_INFRA_ROOT}/_output/" "s3://${S3_BUCKET}/"
