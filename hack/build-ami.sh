@@ -36,6 +36,7 @@ KUBE_DATE=$(date -u +'%Y-%m-%d')
 # shellcheck disable=SC2164
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
   # disable sha256 check
+  sed -i 's/sudo wget .*sha256$//' scripts/install-worker.sh
   sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh || true
   sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh || true
   sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh || true
