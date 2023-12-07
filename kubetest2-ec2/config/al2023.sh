@@ -6,6 +6,23 @@ set -xeuo pipefail
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
 
+# Mask udev triggers installed by amazon-ec2-net-utils package
+touch /etc/udev/rules.d/99-vpc-policy-routes.rules
+
+# Make networkd ignore foreign settings, else it may unexpectedly delete IP rules and routes added by CNI
+mkdir -p /usr/lib/systemd/networkd.conf.d/
+cat << EOF | tee /usr/lib/systemd/networkd.conf.d/80-release.conf
+# Do not clobber any routes or rules added by CNI.
+[Network]
+ManageForeignRoutes=no
+ManageForeignRoutingPolicyRules=no
+EOF
+
+systemctl daemon-reload
+udevadm control --reload-rules
+udevadm trigger
+networkctl reload
+
 # Start with a clean slate
 iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
 
