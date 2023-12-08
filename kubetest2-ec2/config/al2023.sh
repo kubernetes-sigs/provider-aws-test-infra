@@ -6,22 +6,8 @@ set -xeuo pipefail
 # try "nft" instead of "legacy"
 yum remove iptables-legacy -y && yum install iptables-nft -y
 
-# Mask udev triggers installed by amazon-ec2-net-utils package
-touch /etc/udev/rules.d/99-vpc-policy-routes.rules
-
-# Make networkd ignore foreign settings, else it may unexpectedly delete IP rules and routes added by CNI
-mkdir -p /usr/lib/systemd/networkd.conf.d/
-cat << EOF | tee /usr/lib/systemd/networkd.conf.d/80-release.conf
-# Do not clobber any routes or rules added by CNI.
-[Network]
-ManageForeignRoutes=no
-ManageForeignRoutingPolicyRules=no
-EOF
-
-systemctl daemon-reload
-udevadm control --reload-rules
-udevadm trigger
-networkctl reload
+# one of the ci job tests needs git
+yum install git -y
 
 # Start with a clean slate
 iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
@@ -31,53 +17,6 @@ if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
 else
   ARCH=amd64
 fi
-
-cat << EOF > /etc/sysctl.d/k8s.conf
-# Kubernetes Settings
-# from https://github.com/bottlerocket-os/bottlerocket/blob/develop/packages/release/release-sysctl.conf
-# from https://github.com/kubernetes/kops/blob/master/nodeup/pkg/model/sysctls.go
-
-# Increase the number of connections
-net.core.somaxconn = 32768
-
-# Maximum Socket Receive Buffer
-net.core.rmem_max = 16777216
-# Maximum Socket Send Buffer"
-net.core.wmem_max = 16777216
-
-# Increase the maximum total buffer-space allocatable
-net.ipv4.tcp_wmem = 4096 87380 16777216
-net.ipv4.tcp_rmem = 4096 87380 16777216
-
-# Increase the number of outstanding syn requests allowed
-net.ipv4.tcp_max_syn_backlog = 8096
-
-# For persistent HTTP connections
-net.ipv4.tcp_slow_start_after_idle = 0
-
-# Allow to reuse TIME_WAIT sockets for new connections
-# when it is safe from protocol viewpoint
-net.ipv4.tcp_tw_reuse = 1
-
-# Max number of packets that can be queued on interface input
-# If kernel is receiving packets faster than can be processed
-# this queue increases
-net.core.netdev_max_backlog = 16384
-
-# Enable IPv4 forwarding for container networking.
-net.ipv4.conf.all.forwarding = 1
-
-# Enable IPv6 forwarding for container networking.
-net.ipv6.conf.all.forwarding = 1
-
-# Bumped the default TTL to 255 (maximum)
-net.ipv4.ip_default_ttl = 255
-
-# Connection tracking to prevent dropped connections
-net.netfilter.nf_conntrack_max = 1048576
-net.netfilter.nf_conntrack_generic_timeout = 600
-EOF
-sysctl --system
 
 # Fix issues with no networking from pods
 sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
@@ -151,6 +90,14 @@ cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
 # rewrite the pause image url
 sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.toml
 sed -i 's|LimitNOFILE=.*|LimitNOFILE=1048576|' /usr/lib/systemd/system/containerd.service
+
+# one of the CRI tests needs an extra "test-handler"
+cat <<EOF >> /etc/containerd/config.toml
+# Setup a runtime with the magic name ("test-handler") used for Kubernetes
+# runtime class tests ...
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.test-handler]
+  runtime_type = "io.containerd.runc.v2"
+EOF
 
 systemctl start containerd
 /usr/bin/containerd --version
