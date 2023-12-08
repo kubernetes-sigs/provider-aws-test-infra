@@ -76,7 +76,12 @@ fi
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
 cp ./kubernetes/server/bin/* /usr/local/bin/
 
-yum reinstall runc containerd -y --allowerasing
+if command -v dnf; then
+  dnf reinstall runc containerd -y --allowerasing
+else
+  yum reinstall runc containerd -y
+fi
+
 systemctl stop containerd
 rm -f /etc/containerd/config.toml
 cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
