@@ -12,8 +12,11 @@ else
   ARCH=amd64
 fi
 
-# Remove duplicate lines in /etc/resolv.conf
-awk -i inplace '!seen[$0]++'  /etc/resolv.conf
+os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
+if [ "$os" == "amzn2023" ]; then
+  # Remove duplicate lines in /etc/resolv.conf
+  awk -i inplace '!seen[$0]++'  /etc/resolv.conf || true
+fi
 
 mkdir -p /etc/kubernetes/
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
