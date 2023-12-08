@@ -45,8 +45,8 @@ import (
 // Name is the name of the deployer
 const Name = "ec2"
 
-const defaultAMD64InstanceType = "r5d.4xlarge"
-const defaultARM64InstanceTYpe = "r7gd.4xlarge"
+const defaultAMD64InstanceType = "r5d.xlarge"
+const defaultARM64InstanceTYpe = "r7g.xlarge"
 
 var GitTag string
 
