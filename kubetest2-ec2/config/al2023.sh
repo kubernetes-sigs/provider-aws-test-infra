@@ -3,24 +3,14 @@
 set -o xtrace
 set -xeuo pipefail
 
-# try "nft" instead of "legacy"
-yum remove iptables-legacy -y && yum install iptables-nft -y
-
 # one of the ci job tests needs git
 yum install git -y
-
-# Start with a clean slate
-iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
 
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
 else
   ARCH=amd64
 fi
-
-# Fix issues with no networking from pods
-sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
-systemctl restart systemd-resolved
 
 # Remove duplicate lines in /etc/resolv.conf
 awk -i inplace '!seen[$0]++'  /etc/resolv.conf
