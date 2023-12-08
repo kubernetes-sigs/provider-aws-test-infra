@@ -2,5 +2,5 @@ package config
 
 import "embed"
 
-//go:embed *.sh *.yaml
+//go:embed configure.sh run-kubeadm.sh *.yaml
 var ConfigFS embed.FS
