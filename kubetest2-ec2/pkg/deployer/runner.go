@@ -426,6 +426,12 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 	klog.Infof("launched new instance %s with ami-id: %s on instance type: %s",
 		*instance.InstanceId, *instance.ImageId, *instance.InstanceType)
 
+	if instance.PublicIpAddress == nil {
+		return nil, fmt.Errorf("missing public ip address for instance id : %s", *instance.InstanceId)
+	}
+	if instance.PrivateIpAddress == nil {
+		return nil, fmt.Errorf("missing private ip address for instance id : %s", *instance.InstanceId)
+	}
 	return &awsInstance{
 		instanceID: *instance.InstanceId,
 		instance:   instance,
