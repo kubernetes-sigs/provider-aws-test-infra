@@ -6,6 +6,10 @@ set -xeuo pipefail
 # one of the ci job tests needs git
 yum install git -y
 
+# Start with a clean slate
+# Note that the `iptables -P FORWARD ACCEPT` piece is load bearing! https://github.com/search?q=repo%3Aawslabs%2Famazon-eks-ami+%22iptables+-P%22&type=code
+iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
+
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
 else
