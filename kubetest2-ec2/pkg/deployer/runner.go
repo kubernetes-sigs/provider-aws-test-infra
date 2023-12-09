@@ -402,6 +402,22 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_LOAD_BALANCER}}", "false")
 	}
 
+	scriptString, err = utils.FetchRunPostInstallSH(func(data string) string {
+		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
+		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
+
+		if loadBalancer {
+			data = strings.ReplaceAll(data, "{{EXTERNAL_LOAD_BALANCER}}", "true")
+		} else {
+			data = strings.ReplaceAll(data, "{{EXTERNAL_LOAD_BALANCER}}", "false")
+		}
+		return data
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to fetch run-post-install.sh : %w", err)
+	}
+	userdata = strings.ReplaceAll(userdata, "{{RUN_POST_INSTALL}}", scriptString)
+
 	if controlPlane {
 		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 	} else {
