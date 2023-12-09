@@ -29,10 +29,8 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_LOAD_BALANCER}}" == "true" ]]; then
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
-    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready pod -l app=cert-manager -n cert-manager
-    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready pod -l app=cainjector -n cert-manager
-    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready pod -l app=webhook -n cert-manager
+    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n cert-manager --all deployments
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/download/v2.6.2/v2_6_2_full.yaml
-    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready pod -l app.kubernetes.io/component=controller -n kube-system
+    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments aws-load-balancer-controller
   fi
 fi
