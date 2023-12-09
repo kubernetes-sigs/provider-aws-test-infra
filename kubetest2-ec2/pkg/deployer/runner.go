@@ -416,7 +416,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 	if err != nil {
 		return "", fmt.Errorf("unable to fetch run-post-install.sh : %w", err)
 	}
-	userdata = strings.ReplaceAll(userdata, "{{RUN_POST_INSTALL}}", scriptString)
+	userdata = strings.ReplaceAll(userdata, "{{RUN_POST_INSTALL_SH}}", scriptString)
 
 	if controlPlane {
 		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
