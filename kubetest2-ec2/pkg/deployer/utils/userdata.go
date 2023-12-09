@@ -122,3 +122,18 @@ func FetchRunKubeadmSH(replace func(string) string) (string, error) {
 	}
 	return scriptString, nil
 }
+
+func FetchRunPostInstallSH(replace func(string) string) (string, error) {
+	var scriptBytes []byte
+	var err error
+	scriptBytes, err = config.ConfigFS.ReadFile("run-post-install.sh")
+	if err != nil {
+		return "", fmt.Errorf("error reading run-post-install.sh: %w", err)
+	}
+	scriptBytes = []byte(replace(string(scriptBytes)))
+	scriptString, err := gzipAndBase64Encode(scriptBytes)
+	if err != nil {
+		return "", fmt.Errorf("error reading run-post-install.sh: %w", err)
+	}
+	return scriptString, nil
+}
