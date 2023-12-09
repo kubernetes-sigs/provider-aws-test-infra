@@ -16,6 +16,10 @@ else
   ARCH=amd64
 fi
 
+# Fix issues with no networking from pods
+sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
+systemctl restart systemd-resolved
+
 os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
 if [ "$os" == "amzn2023" ]; then
   # Remove duplicate lines in /etc/resolv.conf
