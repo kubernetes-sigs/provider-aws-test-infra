@@ -357,6 +357,11 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		provider = "external"
 	}
 
+	loadBalancer := false
+	if a.deployer.ExternalLoadBalancer {
+		loadBalancer = true
+	}
+
 	yamlString, err := utils.FetchKubeadmInitYaml(a.deployer.KubeadmInitFile, func(data string) string {
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		return data
@@ -390,6 +395,13 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
+
+	if loadBalancer {
+		userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_LOAD_BALANCER}}", "true")
+	} else {
+		userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_LOAD_BALANCER}}", "false")
+	}
+
 	if controlPlane {
 		userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CONTROL_PLANE}}", "true")
 	} else {

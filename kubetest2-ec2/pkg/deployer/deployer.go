@@ -72,6 +72,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 	d := &deployer{
 		ClusterID:             "cid-" + uuid.New().String()[:8],
 		ExternalCloudProvider: false,
+		ExternalLoadBalancer:  false,
 		commonOptions:         opts,
 		BuildOptions: &options.BuildOptions{
 			CommonBuildOptions: &build.Options{
@@ -116,6 +117,8 @@ type deployer struct {
 
 	ExternalCloudProvider      bool   `desc:"Enable external AWS cloud provider"`
 	ExternalCloudProviderImage string `desc:"repository:tag for the external cloud provider image"`
+
+	ExternalLoadBalancer bool `desc:"Enable external AWS load balancer"`
 
 	Region             string `desc:"AWS region that the hosts live in (aws)"`
 	UserDataFile       string `flag:"user-data-file" desc:"Path to user data to pass to control plane instances (aws)"`
