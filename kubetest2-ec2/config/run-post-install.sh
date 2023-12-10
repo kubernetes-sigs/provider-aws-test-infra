@@ -25,6 +25,9 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
       sed -i "s|registry.k8s.io/provider-aws/cloud-controller-manager.*$|{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}|" ./cloud-provider-aws/aws-cloud-controller-manager-daemonset.yaml
     fi
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k ./cloud-provider-aws/
+    # Install the AWS EBS CSI driver
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.25"
+    kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments ebs-csi-controller
   fi
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_LOAD_BALANCER}}" == "true" ]]; then
