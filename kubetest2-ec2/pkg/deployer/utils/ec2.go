@@ -37,7 +37,7 @@ func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
 		MaxCount:     aws.Int64(1),
 		MetadataOptions: &ec2.InstanceMetadataOptionsRequest{
 			HttpEndpoint: aws.String("enabled"),
-			HttpTokens:   aws.String("optional"),
+			HttpTokens:   aws.String("required"),
 		},
 		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
 			{

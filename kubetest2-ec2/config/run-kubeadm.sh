@@ -26,13 +26,14 @@ sudo cp ./kubernetes/server/bin/* /usr/local/bin/
 VERSION="v1.27.1"
 curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tools/release/$VERSION/crictl-$VERSION-linux-$ARCH.tar.gz | sudo tar -xvzf - -C /usr/local/bin
 
+TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
 META_URL=http://169.254.169.254/latest/meta-data
 # generate the right provider-id and host name needed for external aws cloud provider
-AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone)
-INSTANCE_ID=$(curl -s $META_URL/instance-id)
+AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone --header "X-aws-ec2-metadata-token: $TOKEN")
+INSTANCE_ID=$(curl -s $META_URL/instance-id --header "X-aws-ec2-metadata-token: $TOKEN")
 PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
-PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname)
-NODE_IP=$(curl -s $META_URL/local-ipv4)
+PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname --header "X-aws-ec2-metadata-token: $TOKEN")
+NODE_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
 
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
@@ -51,11 +52,12 @@ ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ct
 
 # {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
 if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
-  MAC=$(curl -s $META_URL/network/interfaces/macs/ -s | head -n 1)
-  POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks | shuf -n 1)
+  TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
+  MAC=$(curl -s $META_URL/network/interfaces/macs/ -s --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
+  POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks --header "X-aws-ec2-metadata-token: $TOKEN" | shuf -n 1)
 
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
-  EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4)
+  EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
   sed -i "s|{{EXTRA_SANS}}|$EXTRA_SANS|g" /etc/kubernetes/kubeadm-init.yaml
   KUBERNETES_VERSION=$(kubelet --version | awk '{print $2}')
   sed -i "s|{{KUBERNETES_VERSION}}|$KUBERNETES_VERSION|g" /etc/kubernetes/kubeadm-init.yaml
