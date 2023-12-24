@@ -15,20 +15,20 @@ permissions:
 jobs:
   update-deps:
     if: ${{ github.repository == 'kubernetes-sigs/provider-aws-test-infra' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout provider-aws-test-infra
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: src/sigs.k8s.io/provider-aws-test-infra
       - name: Checkout Kubernetes
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: kubernetes/kubernetes
           path: src/k8s.io/kubernetes
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20.5'
+          go-version: '1.21.5'
       - name: Update Dependencies
         id: update_deps
         run: |
@@ -39,7 +39,7 @@ jobs:
         working-directory: src/sigs.k8s.io/provider-aws-test-infra
       - name: Create PR
         if: ${{ steps.update_deps.outputs.changes != '' }}
-        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38
+        uses: peter-evans/create-pull-request@v5
         with:
           title: 'Update Kubernetes dependencies to latest master'
           commit-message: Update Kubernetes dependencies to latest master
