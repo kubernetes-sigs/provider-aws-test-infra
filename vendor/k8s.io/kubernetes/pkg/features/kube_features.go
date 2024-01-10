@@ -129,14 +129,6 @@ const (
 	// Allow the usage of options to fine-tune the cpumanager policies.
 	CPUManagerPolicyOptions featuregate.Feature = "CPUManagerPolicyOptions"
 
-	// owner: @andyzhangx
-	// alpha: v1.15
-	// beta: v1.21
-	// GA: v1.26
-	//
-	// Enables the Azure File in-tree driver to Azure File Driver migration feature.
-	CSIMigrationAzureFile featuregate.Feature = "CSIMigrationAzureFile"
-
 	// owner: @mfordjody
 	// alpha: v1.26
 	//
@@ -264,15 +256,6 @@ const (
 	// may depend on old behavior where exec probe timeouts were ignored.
 	// Lock to default and remove after v1.22 based on user feedback that should be reflected in KEP #1972 update
 	ExecProbeTimeout featuregate.Feature = "ExecProbeTimeout"
-
-	// owner: @gjkim42
-	// kep: https://kep.k8s.io/2595
-	// alpha: v1.22
-	// beta: v1.26
-	// GA: v1.28
-	//
-	// Enables apiserver and kubelet to allow up to 32 DNSSearchPaths and up to 2048 DNSSearchListChars.
-	ExpandedDNSConfig featuregate.Feature = "ExpandedDNSConfig"
 
 	// owner: @bobbypage
 	// alpha: v1.20
@@ -409,14 +392,6 @@ const (
 	// All the node components such as CRI need to be running in the same user namespace.
 	KubeletInUserNamespace featuregate.Feature = "KubeletInUserNamespace"
 
-	// owner: @dashpole, @ffromani (only for GA graduation)
-	// alpha: v1.13
-	// beta: v1.15
-	// GA: v1.28
-	//
-	// Enables the kubelet's pod resources grpc endpoint
-	KubeletPodResources featuregate.Feature = "KubeletPodResources"
-
 	// owner: @moshe010
 	// alpha: v1.27
 	//
@@ -428,13 +403,6 @@ const (
 	//
 	// Enable POD resources API with Get method
 	KubeletPodResourcesGet featuregate.Feature = "KubeletPodResourcesGet"
-
-	// owner: @ffromani
-	// alpha: v1.21
-	// beta: v1.23
-	// GA: v1.28
-	// Enable POD resources API to return allocatable resources
-	KubeletPodResourcesGetAllocatable featuregate.Feature = "KubeletPodResourcesGetAllocatable"
 
 	// KubeletSeparateDiskGC enables Kubelet to garbage collection images/containers on different filesystems
 	// owner: @kannon92
@@ -457,14 +425,6 @@ const (
 	// Implement connection draining for terminating nodes for
 	// `externalTrafficPolicy: Cluster` services.
 	KubeProxyDrainingTerminatingNodes featuregate.Feature = "KubeProxyDrainingTerminatingNodes"
-
-	// owner: @zshihang
-	// kep: http://kep.k8s.io/2800
-	// alpha: v1.26
-	// beta: v1.27
-	//
-	// Enables tracking of secret-based service account tokens usage.
-	LegacyServiceAccountTokenTracking featuregate.Feature = "LegacyServiceAccountTokenTracking"
 
 	// owner: @yt2985
 	// kep: http://kep.k8s.io/2800
@@ -770,6 +730,7 @@ const (
 	// owner: @gjkim42 @SergeyKanzhelev @matthyx @tzneal
 	// kep: http://kep.k8s.io/753
 	// alpha: v1.28
+	// beta: v1.29
 	//
 	// Introduces sidecar containers, a new type of init container that starts
 	// before other containers but remains running for the full duration of the
@@ -977,8 +938,6 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	CPUManagerPolicyOptions: {Default: true, PreRelease: featuregate.Beta},
 
-	CSIMigrationAzureFile: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.28
-
 	CSIMigrationPortworx: {Default: false, PreRelease: featuregate.Beta}, // Off by default (requires Portworx CSI driver)
 
 	CSIMigrationRBD: {Default: false, PreRelease: featuregate.Deprecated}, //  deprecated in 1.28, remove in 1.31
@@ -995,7 +954,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	ContainerCheckpoint: {Default: false, PreRelease: featuregate.Alpha},
 
-	ConsistentHTTPGetHandlers: {Default: true, PreRelease: featuregate.GA},
+	ConsistentHTTPGetHandlers: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
 
 	CronJobsScheduledAnnotation: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1014,8 +973,6 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	EventedPLEG: {Default: false, PreRelease: featuregate.Beta}, // off by default, requires CRI Runtime support
 
 	ExecProbeTimeout: {Default: true, PreRelease: featuregate.GA}, // lock to default and remove after v1.22 based on KEP #1972 update
-
-	ExpandedDNSConfig: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.30
 
 	GracefulNodeShutdown: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1053,21 +1010,15 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	KubeletInUserNamespace: {Default: false, PreRelease: featuregate.Alpha},
 
-	KubeletPodResources: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.28, remove in 1.30
-
 	KubeletPodResourcesDynamicResources: {Default: false, PreRelease: featuregate.Alpha},
 
 	KubeletPodResourcesGet: {Default: false, PreRelease: featuregate.Alpha},
-
-	KubeletPodResourcesGetAllocatable: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.28, remove in 1.30
 
 	KubeletSeparateDiskGC: {Default: false, PreRelease: featuregate.Alpha},
 
 	KubeletTracing: {Default: true, PreRelease: featuregate.Beta},
 
 	KubeProxyDrainingTerminatingNodes: {Default: false, PreRelease: featuregate.Alpha},
-
-	LegacyServiceAccountTokenTracking: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.30
 
 	LegacyServiceAccountTokenCleanUp: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1206,27 +1157,45 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	genericfeatures.APIResponseCompression: {Default: true, PreRelease: featuregate.Beta},
 
+	genericfeatures.APIServerIdentity: {Default: true, PreRelease: featuregate.Beta},
+
+	genericfeatures.APIServerTracing: {Default: true, PreRelease: featuregate.Beta},
+
+	genericfeatures.ConsistentListFromCache: {Default: false, PreRelease: featuregate.Alpha},
+
+	genericfeatures.CustomResourceValidationExpressions: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
+
+	genericfeatures.EfficientWatchResumption: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+
 	genericfeatures.KMSv1: {Default: false, PreRelease: featuregate.Deprecated},
 
 	genericfeatures.KMSv2: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
 
 	genericfeatures.KMSv2KDF: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
 
-	genericfeatures.ValidatingAdmissionPolicy: {Default: false, PreRelease: featuregate.Beta},
-
-	genericfeatures.CustomResourceValidationExpressions: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
-
 	genericfeatures.OpenAPIEnums: {Default: true, PreRelease: featuregate.Beta},
+
+	genericfeatures.RemainingItemCount: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 
 	genericfeatures.ServerSideApply: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.29
 
 	genericfeatures.ServerSideFieldValidation: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.29
+
+	genericfeatures.StorageVersionAPI: {Default: false, PreRelease: featuregate.Alpha},
+
+	genericfeatures.StorageVersionHash: {Default: true, PreRelease: featuregate.Beta},
 
 	genericfeatures.StructuredAuthenticationConfiguration: {Default: false, PreRelease: featuregate.Alpha},
 
 	genericfeatures.StructuredAuthorizationConfiguration: {Default: false, PreRelease: featuregate.Alpha},
 
 	genericfeatures.UnauthenticatedHTTP2DOSMitigation: {Default: true, PreRelease: featuregate.Beta},
+
+	genericfeatures.ValidatingAdmissionPolicy: {Default: false, PreRelease: featuregate.Beta},
+
+	genericfeatures.WatchBookmark: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+
+	genericfeatures.WatchList: {Default: false, PreRelease: featuregate.Alpha},
 
 	genericfeatures.ZeroLimitedNominalConcurrencyShares: {Default: false, PreRelease: featuregate.Beta},
 
