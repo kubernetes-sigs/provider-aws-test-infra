@@ -248,7 +248,7 @@ func registerInSuite(ginkgoCall func(string, ...interface{}) bool, args []interf
 
 var (
 	tagRe                 = regexp.MustCompile(`\[.*?\]`)
-	deprecatedTags        = sets.New("Conformance", "NodeConformance", "Disruptive", "Serial", "Slow")
+	deprecatedTags        = sets.New("Conformance", "Flaky", "NodeConformance", "Disruptive", "Serial", "Slow")
 	deprecatedTagPrefixes = sets.New("Environment", "Feature", "NodeFeature", "FeatureGate")
 	deprecatedStability   = sets.New("Alpha", "Beta")
 )
@@ -524,6 +524,21 @@ func (f *Framework) WithLabel(label string) interface{} {
 
 func withLabel(label string) interface{} {
 	return newLabel(label)
+}
+
+// WithFlaky specifies that a certain test or group of tests are failing randomly.
+// These tests are usually filtered out and ran separately from other tests.
+func WithFlaky() interface{} {
+	return withFlaky()
+}
+
+// WithFlaky is a shorthand for the corresponding package function.
+func (f *Framework) WithFlaky() interface{} {
+	return withFlaky()
+}
+
+func withFlaky() interface{} {
+	return newLabel("Flaky")
 }
 
 type label struct {
