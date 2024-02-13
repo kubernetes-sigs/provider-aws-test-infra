@@ -35,32 +35,52 @@ KUBE_DATE=$(date -u +'%Y-%m-%d')
 # Generate aws-iam-authenticator binaries
 # shellcheck disable=SC2164
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
-  # disable sha256 check
-  sed -i 's/sudo wget .*sha256$//' scripts/install-worker.sh
-  sed -i 's/sudo rm .*sha256$//' scripts/install-worker.sh
-  sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh || true
-  sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh || true
-  sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh || true
-  sed -i 's/sudo.*cri-tools.*$//' scripts/install-worker.sh || true
+  if [ -f scripts/install-worker.sh ]; then
+    sed -i 's/sudo wget .*sha256$//' scripts/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/sudo rm .*sha256$//' scripts/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/sudo.*cri-tools.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
 
-  cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
-  cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
-  cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json
+    cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json || true
+    cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json  || true
+    cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json  || true
 
-  if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
-    make transform-al2-to-al2023
-    export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2023-variables.json
-    export PACKER_TEMPLATE_FILE=eks-worker-al2023.json
+    if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
+      make transform-al2-to-al2023
+      export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2023-variables.json
+      export PACKER_TEMPLATE_FILE=eks-worker-al2023.json
+    else
+      export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2-variables.json
+      export PACKER_TEMPLATE_FILE=eks-worker-al2.json
+    fi
+    if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
+      sed -i 's/x86_64/arm64/' ${PACKER_DEFAULT_VARIABLE_FILE}
+      sed -i 's/x86_64/arm64/' ${PACKER_TEMPLATE_FILE}
+    fi
+    make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
+      pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"} || true
   else
-    export PACKER_DEFAULT_VARIABLE_FILE=eks-worker-al2-variables.json
-    export PACKER_TEMPLATE_FILE=eks-worker-al2.json
+    # disable sha256 check
+    sed -i 's/sudo wget .*sha256$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/sudo rm .*sha256$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/sudo sha256sum.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/.*99-default.link.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/.*amazon-ec2-net-utils.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/sudo.*cri-tools.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+
+    cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
+    cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
+    cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
+
+    cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
+    cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
+    cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
+
+    make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
+      pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"} os_distro=${BUILD_EKS_AMI_OS:-"al2"} || true
   fi
-  if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
-    sed -i 's/x86_64/arm64/' ${PACKER_DEFAULT_VARIABLE_FILE}
-    sed -i 's/x86_64/arm64/' ${PACKER_TEMPLATE_FILE}
-  fi
-  make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
-    pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"} || true
   ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME" --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
   if [ -z "${ami_id}" ] ; then
     echo "unable to build ${AMI_NAME}, please see packer logs above..."
