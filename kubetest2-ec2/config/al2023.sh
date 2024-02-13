@@ -49,6 +49,27 @@ nodeRegistration:
     resolv-conf: /etc/resolv.conf
 EOF
 
+cat <<EOF > /etc/eks/image-credential-provider/config.json
+{
+  "apiVersion": "kubelet.config.k8s.io/v1",
+  "kind": "CredentialProviderConfig",
+  "providers": [
+    {
+      "name": "ecr-credential-provider",
+      "matchImages": [
+        "*.dkr.ecr.*.amazonaws.com",
+        "*.dkr.ecr.*.amazonaws.com.cn",
+        "*.dkr.ecr-fips.*.amazonaws.com",
+        "*.dkr.ecr.*.c2s.ic.gov",
+        "*.dkr.ecr.*.sc2s.sgov.gov"
+      ],
+      "defaultCacheDuration": "12h",
+      "apiVersion": "credentialprovider.kubelet.k8s.io/v1"
+    }
+  ]
+}
+EOF
+
 TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
 META_URL=http://169.254.169.254/latest/meta-data
 AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone --header "X-aws-ec2-metadata-token: $TOKEN")
@@ -93,13 +114,41 @@ fi
 
 systemctl stop containerd
 rm -f /etc/containerd/config.toml
-cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
-# rewrite the pause image url
-sed -i'' 's#SANDBOX_IMAGE#registry.k8s.io/pause:3.8#' /etc/containerd/config.toml
 sed -i 's|LimitNOFILE=.*|LimitNOFILE=1048576|' /usr/lib/systemd/system/containerd.service
 
-# one of the CRI tests needs an extra "test-handler"
+# one of the CRI tests needs an extra "test-handler" so add that at the end
 cat <<EOF >> /etc/containerd/config.toml
+version = 2
+root = "/var/lib/containerd"
+state = "/run/containerd"
+# Users can use the following import directory to add additional
+# configuration to containerd. The imports do not behave exactly like overrides.
+# see: https://github.com/containerd/containerd/blob/main/docs/man/containerd-config.toml.5.md#format
+imports = ["/etc/containerd/config.d/*.toml"]
+
+[grpc]
+address = "/run/containerd/containerd.sock"
+
+[plugins."io.containerd.grpc.v1.cri".containerd]
+default_runtime_name = "runc"
+discard_unpacked_layers = true
+
+[plugins."io.containerd.grpc.v1.cri"]
+sandbox_image = "registry.k8s.io/pause:3.8"
+
+[plugins."io.containerd.grpc.v1.cri".registry]
+config_path = "/etc/containerd/certs.d:/etc/docker/certs.d"
+
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+runtime_type = "io.containerd.runc.v2"
+
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+SystemdCgroup = true
+
+[plugins."io.containerd.grpc.v1.cri".cni]
+bin_dir = "/opt/cni/bin"
+conf_dir = "/etc/cni/net.d"
+
 # Setup a runtime with the magic name ("test-handler") used for Kubernetes
 # runtime class tests ...
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.test-handler]
@@ -119,5 +168,6 @@ ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ct
 export PATH=$PATH:/usr/local/bin
 
 kubeadm join \
+   --ignore-preflight-errors=FileContent--proc-sys-net-bridge-bridge-nf-call-iptables \
    --v 10 \
    --config /etc/kubernetes/kubeadm-join.yaml
