@@ -26,6 +26,13 @@ curl -fsSL https://releases.hashicorp.com/packer/1.9.1/packer_1.9.1_linux_amd64.
   mkdir -p "$(go env GOPATH)/src/github.com/awslabs" && \
   git clone https://github.com/awslabs/amazon-eks-ami "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami"
 
+# The default branch of this repository will be changed to main from master on February 29, 2024
+pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]]; then
+    git checkout -b main origin/main
+  fi
+popd
+
 pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
   KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
   KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
