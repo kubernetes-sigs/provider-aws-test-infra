@@ -1,5 +1,19 @@
 #!/bin/bash
 
+case $(uname -m) in
+	aarch64)	ARCH="arm64";;
+	x86_64)		ARCH="amd64";;
+	*)		ARCH="$(uname -m)";;
+esac
+
+# Download and configure CNI
+cni_bin_dir="/opt/cni/bin"
+
+CNI_VERSION=v1.2.0 &&\
+mkdir -p ${cni_bin_dir} &&\
+curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${ARCH}-${CNI_VERSION}.tgz \
+    | tar xfz - -C ${cni_bin_dir}
+
 # install a CNI
 sudo mkdir -p /etc/cni/net.d/
 cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
