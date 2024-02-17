@@ -41,35 +41,22 @@ cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
 }
 __ECNI__
 
-# one of the CRI tests needs an extra "test-handler" so add that at the end
-cat <<EOF > /etc/containerd/config.toml
-version = 2
-root = "/var/lib/containerd"
-state = "/run/containerd"
-# Users can use the following import directory to add additional
-# configuration to containerd. The imports do not behave exactly like overrides.
-# see: https://github.com/containerd/containerd/blob/main/docs/man/containerd-config.toml.5.md#format
-imports = ["/etc/containerd/config.d/*.toml"]
-[grpc]
-address = "/run/containerd/containerd.sock"
-[plugins."io.containerd.grpc.v1.cri".containerd]
-default_runtime_name = "runc"
-discard_unpacked_layers = true
-[plugins."io.containerd.grpc.v1.cri"]
-sandbox_image = "registry.k8s.io/pause:3.8"
-[plugins."io.containerd.grpc.v1.cri".registry]
-config_path = "/etc/containerd/certs.d:/etc/docker/certs.d"
-[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-runtime_type = "io.containerd.runc.v2"
-[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-SystemdCgroup = true
-[plugins."io.containerd.grpc.v1.cri".cni]
-bin_dir = "/opt/cni/bin"
-conf_dir = "/etc/cni/net.d"
-# Setup a runtime with the magic name ("test-handler") used for Kubernetes
-# runtime class tests ...
-[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.test-handler]
-  runtime_type = "io.containerd.runc.v2"
+# use nodeadm to generate containerd's config.toml
+cat <<EOF > /tmp/nodeadm.yaml
+apiVersion: node.eks.aws/v1alpha1
+kind: NodeConfig
+spec:
+  cluster:
+    name: my-cluster
+    apiServerEndpoint: https://example.com
+    certificateAuthority: Y2VydGlmaWNhdGVBdXRob3JpdHk=
+    cidr: 10.100.0.0/16
+  containerd:
+    config: |
+      [plugins."io.containerd.grpc.v1.cri"]
+      sandbox_image = "registry.k8s.io/pause:3.8"
 EOF
+
+/usr/bin/nodeadm init --skip run --daemon containerd --config-source file:///tmp/nodeadm.yaml
 
 systemctl restart containerd
