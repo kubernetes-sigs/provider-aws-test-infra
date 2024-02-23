@@ -90,6 +90,12 @@ const (
 	// Add support for distributed tracing in the API Server
 	APIServerTracing featuregate.Feature = "APIServerTracing"
 
+	// owner: @linxiulei
+	// beta: v1.30
+	//
+	// Enables serving watch requests in separate goroutines.
+	APIServingWithRoutine featuregate.Feature = "APIServingWithRoutine"
+
 	// owner: @cici37 @jpbetz
 	// kep: http://kep.k8s.io/3488
 	// alpha: v1.26
@@ -136,6 +142,13 @@ const (
 	//
 	// Enables the use of derived encryption keys with KMS v2.
 	KMSv2KDF featuregate.Feature = "KMSv2KDF"
+
+	// owner: @alexzielenski, @cici37, @jiahuif
+	// kep: https://kep.k8s.io/3962
+	// alpha: v1.30
+	//
+	// Enables the MutatingAdmissionPolicy in Admission Chain
+	MutatingAdmissionPolicy featuregate.Feature = "MutatingAdmissionPolicy"
 
 	// owner: @jiahuif
 	// kep: https://kep.k8s.io/2887
@@ -188,6 +201,12 @@ const (
 	// protection to prevent performance regressions for unauthenticated
 	// clients.
 	UnauthenticatedHTTP2DOSMitigation featuregate.Feature = "UnauthenticatedHTTP2DOSMitigation"
+
+	// owner: @jpbetz
+	// alpha: v1.30
+	// Resource create requests using generateName are retried automatically by the apiserver
+	// if the generated name conflicts with an existing resource name, up to a maximum number of 7 retries.
+	RetryGenerateName featuregate.Feature = "RetryGenerateName"
 
 	// owner: @caesarxuchao @roycaihw
 	// alpha: v1.20
@@ -247,6 +266,7 @@ const (
 
 	// owner: @tkashem
 	// beta: v1.29
+	// GA: v1.30
 	//
 	// Allow Priority & Fairness in the API server to use a zero value for
 	// the 'nominalConcurrencyShares' field of the 'limited' section of a
@@ -277,6 +297,8 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	APIServerTracing: {Default: true, PreRelease: featuregate.Beta},
 
+	APIServingWithRoutine: {Default: true, PreRelease: featuregate.Beta},
+
 	ValidatingAdmissionPolicy: {Default: false, PreRelease: featuregate.Beta},
 
 	CustomResourceValidationExpressions: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
@@ -292,6 +314,8 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	OpenAPIEnums: {Default: true, PreRelease: featuregate.Beta},
 
 	RemainingItemCount: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.32
+
+	RetryGenerateName: {Default: false, PreRelease: featuregate.Alpha},
 
 	ServerSideApply: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.29
 
@@ -315,5 +339,5 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	ConsistentListFromCache: {Default: false, PreRelease: featuregate.Alpha},
 
-	ZeroLimitedNominalConcurrencyShares: {Default: false, PreRelease: featuregate.Beta},
+	ZeroLimitedNominalConcurrencyShares: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.32
 }
