@@ -346,7 +346,10 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CERTIFICATE_KEY}}", a.certificateKey)
 	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CLUSTER_ID}}", a.deployer.ClusterID)
 
-	script, err := utils.FetchConfigureScript(dataFile)
+	script, err := utils.FetchConfigureScript(dataFile, func(data string) string {
+		data = strings.ReplaceAll(data, "{{CONTAINERD_PULL_REFS}}", os.Getenv("CONTAINERD_PULL_REFS"))
+		return data
+	})
 	if err != nil {
 		return "", fmt.Errorf("unable to fetch script : %w", err)
 	}

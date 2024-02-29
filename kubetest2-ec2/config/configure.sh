@@ -125,14 +125,12 @@ if [ "${CONTAINERD_TEST:-"false"}"  != "true" ]; then
 else
   deploy_path=${CONTAINERD_DEPLOY_PATH:-"cri-containerd-staging"}
 
-  # TODO(upodroid) Revisit pull_refs
-  # PULL_REFS_METADATA is the metadata key of PULL_REFS from prow.
-  # PULL_REFS_METADATA="PULL_REFS"
-  # pull_refs=$(fetch_metadata "${PULL_REFS_METADATA}")
-  # if [ ! -z "${pull_refs}" ]; then
-  #   deploy_dir=$(echo "${pull_refs}" | sha1sum | awk '{print $1}')
-  #   deploy_path="${deploy_path}/containerd/${deploy_dir}"
-  # fi
+  pull_refs="{{CONTAINERD_PULL_REFS}}"
+  if [ ! -z "${pull_refs}" ]; then
+    pkg_prefix="containerd-cni"
+    deploy_dir=$(echo "${pull_refs}" | sha1sum | awk '{print $1}')
+    deploy_path="k8s-staging-cri-tools/containerd/${deploy_dir}"
+  fi
 
   # TODO(random-liu): Put version into the metadata instead of
   # deciding it in cloud init. This may cause issue to reboot test.

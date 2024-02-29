@@ -43,7 +43,7 @@ func gzipAndBase64Encode(fileBytes []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(buffer.Bytes()), nil
 }
 
-func FetchConfigureScript(userDataFile string) (string, error) {
+func FetchConfigureScript(userDataFile string, replace func(string) string) (string, error) {
 	var scriptBytes []byte
 	var err error
 	if userDataFile != "" {
@@ -61,6 +61,7 @@ func FetchConfigureScript(userDataFile string) (string, error) {
 			return "", fmt.Errorf("error reading configure script file: %w", err)
 		}
 	}
+	scriptBytes = []byte(replace(string(scriptBytes)))
 	return gzipAndBase64Encode(scriptBytes)
 }
 
