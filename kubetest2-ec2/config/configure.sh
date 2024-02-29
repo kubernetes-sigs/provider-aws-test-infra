@@ -126,7 +126,8 @@ else
   deploy_path=${CONTAINERD_DEPLOY_PATH:-"cri-containerd-staging"}
 
   pull_refs="{{CONTAINERD_PULL_REFS}}"
-  if [ ! -z "${pull_refs}" ]; then
+  echo "pull_refs: $pull_refs"
+  if [ -n "${pull_refs}" ]; then
     pkg_prefix="containerd-cni"
     deploy_dir=$(echo "${pull_refs}" | sha1sum | awk '{print $1}')
     deploy_path="k8s-staging-cri-tools/containerd/${deploy_dir}"
