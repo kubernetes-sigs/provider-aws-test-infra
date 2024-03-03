@@ -125,6 +125,8 @@ type deployer struct {
 	WorkerUserDataFile string `flag:"worker-user-data-file" desc:"Path to user data to pass to worker node instances (aws)"`
 	KubeadmInitFile    string `desc:"custom kubeadm-init config file (aws)"`
 	KubeadmJoinFile    string `desc:"custom kubeadm-join config file (aws)"`
+	RuntimeConfig      string `desc:"If set, API versions can be turned on or off while bringing up the API server."`
+	FeatureGates       string `desc:"A set of key=value pairs that describe feature gates for alpha/experimental features."`
 	InstanceProfile    string `desc:"The name of the instance profile to assign to the node (aws)"`
 	RoleName           string `desc:"The name of the role assign to the node (aws)"`
 	Ec2InstanceConnect bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
