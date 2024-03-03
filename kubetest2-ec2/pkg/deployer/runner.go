@@ -367,6 +367,8 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 
 	yamlString, err := utils.FetchKubeadmInitYaml(a.deployer.KubeadmInitFile, func(data string) string {
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
+		data = strings.ReplaceAll(data, "{{RUNTIME_CONFIG}}", a.deployer.RuntimeConfig)
+		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		return data
 	})
 	if err != nil {
