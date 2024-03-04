@@ -409,6 +409,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_LOAD_BALANCER}}", "false")
 	}
 
+	if a.deployer.DevicePluginNvidia {
+		userdata = strings.ReplaceAll(userdata, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "true")
+	} else {
+		userdata = strings.ReplaceAll(userdata, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "false")
+	}
+
 	scriptString, err = utils.FetchRunPostInstallSH(func(data string) string {
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
@@ -419,6 +425,13 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		} else {
 			data = strings.ReplaceAll(data, "{{EXTERNAL_LOAD_BALANCER}}", "false")
 		}
+
+		if a.deployer.DevicePluginNvidia {
+			data = strings.ReplaceAll(data, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "true")
+		} else {
+			data = strings.ReplaceAll(data, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "false")
+		}
+
 		return data
 	})
 	if err != nil {
