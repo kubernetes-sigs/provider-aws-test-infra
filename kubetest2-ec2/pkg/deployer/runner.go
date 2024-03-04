@@ -378,6 +378,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 
 	yamlString, err = utils.FetchKubeadmJoinYaml(a.deployer.KubeadmJoinFile, func(data string) string {
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
+		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		return data
 	})
 	if err != nil {
@@ -398,6 +399,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 	}
 	userdata = strings.ReplaceAll(userdata, "{{RUN_KUBEADM_SH}}", scriptString)
 
+	userdata = strings.ReplaceAll(userdata, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
 
@@ -408,6 +410,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 	}
 
 	scriptString, err = utils.FetchRunPostInstallSH(func(data string) string {
+		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
 
