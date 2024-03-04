@@ -9,6 +9,7 @@ nodeRegistration:
   criSocket: unix:///run/containerd/containerd.sock
   name: {{HOSTNAME_OVERRIDE}}
   kubeletExtraArgs:
+    feature-gates: {{FEATURE_GATES}}
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     provider-id: {{PROVIDER_ID}}
     node-ip: {{NODE_IP}}
