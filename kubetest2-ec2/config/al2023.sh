@@ -117,8 +117,10 @@ systemctl stop containerd
 rm -f /etc/containerd/config.toml
 sed -i 's|LimitNOFILE=.*|LimitNOFILE=1048576|' /usr/lib/systemd/system/containerd.service
 
-# one of the CRI tests needs an extra "test-handler" so add that at the end
-cat <<EOF >> /etc/containerd/config.toml
+if [[ -f "/etc/eks/containerd/containerd-config.toml" ]]; then
+  cp /etc/eks/containerd/containerd-config.toml /etc/containerd/config.toml
+else
+cat <<EOF > /etc/containerd/config.toml
 version = 2
 root = "/var/lib/containerd"
 state = "/run/containerd"
@@ -149,12 +151,25 @@ SystemdCgroup = true
 [plugins."io.containerd.grpc.v1.cri".cni]
 bin_dir = "/opt/cni/bin"
 conf_dir = "/etc/cni/net.d"
+EOF
 
+# one of the CRI tests needs an extra "test-handler" so append that at the end
+cat <<EOF >> /etc/containerd/config.toml
 # Setup a runtime with the magic name ("test-handler") used for Kubernetes
 # runtime class tests ...
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.test-handler]
   runtime_type = "io.containerd.runc.v2"
 EOF
+fi
+
+# fix up sandbox_image if not set properly
+sed -i "s/SANDBOX_IMAGE/registry.k8s.io\/pause:3.8/" /etc/containerd/config.toml
+
+# enable nvidia driver if present
+if command -v nvidia-ctk; then
+  nvidia-ctk runtime configure --runtime=containerd
+  sed -i 's/default_runtime_name = .*/default_runtime_name = "nvidia"/' /etc/containerd/config.toml
+fi
 
 systemctl start containerd
 /usr/bin/containerd --version
