@@ -100,6 +100,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=admissionregistration.k8s.io, Version=v1
 	case v1.SchemeGroupVersion.WithResource("mutatingwebhookconfigurations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Admissionregistration().V1().MutatingWebhookConfigurations().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("validatingadmissionpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Admissionregistration().V1().ValidatingAdmissionPolicies().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("validatingadmissionpolicybindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Admissionregistration().V1().ValidatingAdmissionPolicyBindings().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("validatingwebhookconfigurations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Admissionregistration().V1().ValidatingWebhookConfigurations().Informer()}, nil
 
@@ -362,10 +366,16 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().PodSchedulingContexts().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("resourceclaims"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().ResourceClaims().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("resourceclaimparameters"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().ResourceClaimParameters().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("resourceclaimtemplates"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().ResourceClaimTemplates().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("resourceclasses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().ResourceClasses().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("resourceclassparameters"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().ResourceClassParameters().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("resourceslices"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1alpha2().ResourceSlices().Informer()}, nil
 
 		// Group=scheduling.k8s.io, Version=v1
 	case schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"):
