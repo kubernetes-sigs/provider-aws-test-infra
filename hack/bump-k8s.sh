@@ -23,4 +23,5 @@ go mod vendor
 sed -i 's|k8s.io/kubernetes v.* =>|k8s.io/kubernetes v0.0.0 =>|' vendor/modules.txt
 sed -i 's|k8s.io/kubernetes v.*|k8s.io/kubernetes v0.0.0|' go.mod
 
+git add -f .
 git status
