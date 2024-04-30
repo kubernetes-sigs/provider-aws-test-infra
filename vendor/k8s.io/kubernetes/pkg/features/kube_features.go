@@ -135,13 +135,6 @@ const (
 	// Allow the usage of options to fine-tune the cpumanager policies.
 	CPUManagerPolicyOptions featuregate.Feature = "CPUManagerPolicyOptions"
 
-	// owner: @mfordjody
-	// alpha: v1.26
-	//
-	// Bypasses obsolete validation that GCP volumes are read-only when used in
-	// Deployments.
-	SkipReadOnlyValidationGCE featuregate.Feature = "SkipReadOnlyValidationGCE"
-
 	// owner: @trierra
 	// alpha: v1.23
 	//
@@ -193,15 +186,6 @@ const (
 	// beta: v1.28
 	// Set the scheduled time as an annotation in the job.
 	CronJobsScheduledAnnotation featuregate.Feature = "CronJobsScheduledAnnotation"
-
-	// owner: @thockin
-	// deprecated: v1.28
-	//
-	// Changes when the default value of PodSpec.containers[].ports[].hostPort
-	// is assigned.  The default is to only set a default value in Pods.
-	// Enabling this means a default will be assigned even to embeddedPodSpecs
-	// (e.g. in a Deployment), which is the historical default.
-	DefaultHostNetworkHostPortsInPodTemplates featuregate.Feature = "DefaultHostNetworkHostPortsInPodTemplates"
 
 	// owner: @elezar
 	// kep: http://kep.k8s.io/4009
@@ -532,6 +516,7 @@ const (
 	// owner: @danwinship
 	// kep: https://kep.k8s.io/3866
 	// alpha: v1.29
+	// beta: v1.31
 	//
 	// Allows running kube-proxy with `--mode nftables`.
 	NFTablesProxyMode featuregate.Feature = "NFTablesProxyMode"
@@ -1038,8 +1023,6 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	CSIVolumeHealth: {Default: false, PreRelease: featuregate.Alpha},
 
-	SkipReadOnlyValidationGCE: {Default: true, PreRelease: featuregate.Deprecated}, // remove in 1.31
-
 	CloudControllerManagerWebhook: {Default: false, PreRelease: featuregate.Alpha},
 
 	ContainerCheckpoint: {Default: true, PreRelease: featuregate.Beta},
@@ -1047,8 +1030,6 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	ConsistentHTTPGetHandlers: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
 
 	CronJobsScheduledAnnotation: {Default: true, PreRelease: featuregate.Beta},
-
-	DefaultHostNetworkHostPortsInPodTemplates: {Default: false, PreRelease: featuregate.Deprecated},
 
 	DisableCloudProviders: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1140,7 +1121,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	NewVolumeManagerReconstruction: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.32
 
-	NFTablesProxyMode: {Default: false, PreRelease: featuregate.Alpha},
+	NFTablesProxyMode: {Default: true, PreRelease: featuregate.Beta},
 
 	NodeLogQuery: {Default: false, PreRelease: featuregate.Beta},
 
