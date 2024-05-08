@@ -176,12 +176,6 @@ const (
 	// Enables container Checkpoint support in the kubelet
 	ContainerCheckpoint featuregate.Feature = "ContainerCheckpoint"
 
-	// owner: @bhcleek @wzshiming
-	// GA: v1.25
-	//
-	// Normalize HttpGet URL and Header passing for lifecycle handlers with probers.
-	ConsistentHTTPGetHandlers featuregate.Feature = "ConsistentHTTPGetHandlers"
-
 	// owner: @helayoty
 	// beta: v1.28
 	// Set the scheduled time as an annotation in the job.
@@ -198,6 +192,7 @@ const (
 	// owner: @andrewsykim
 	// alpha: v1.22
 	// beta: v1.29
+	// GA: v1.31
 	//
 	// Disable any functionality in kube-apiserver, kube-controller-manager and kubelet related to the `--cloud-provider` component flag.
 	DisableCloudProviders featuregate.Feature = "DisableCloudProviders"
@@ -1027,13 +1022,11 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	ContainerCheckpoint: {Default: true, PreRelease: featuregate.Beta},
 
-	ConsistentHTTPGetHandlers: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.31
-
 	CronJobsScheduledAnnotation: {Default: true, PreRelease: featuregate.Beta},
 
-	DisableCloudProviders: {Default: true, PreRelease: featuregate.Beta},
+	DisableCloudProviders: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 
-	DisableKubeletCloudCredentialProviders: {Default: true, PreRelease: featuregate.Beta},
+	DisableKubeletCloudCredentialProviders: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 
 	DisableNodeKubeProxyVersion: {Default: false, PreRelease: featuregate.Alpha},
 
@@ -1045,7 +1038,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	ExecProbeTimeout: {Default: true, PreRelease: featuregate.GA}, // lock to default and remove after v1.22 based on KEP #1972 update
 
-	RetryGenerateName: {Default: false, PreRelease: featuregate.Alpha},
+	RetryGenerateName: {Default: true, PreRelease: featuregate.Beta},
 
 	GracefulNodeShutdown: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1299,7 +1292,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	apiextensionsfeatures.CRDValidationRatcheting: {Default: true, PreRelease: featuregate.Beta},
 
-	apiextensionsfeatures.CustomResourceFieldSelectors: {Default: false, PreRelease: featuregate.Alpha},
+	apiextensionsfeatures.CustomResourceFieldSelectors: {Default: true, PreRelease: featuregate.Beta},
 
 	// features that enable backwards compatibility but are scheduled to be removed
 	// ...
