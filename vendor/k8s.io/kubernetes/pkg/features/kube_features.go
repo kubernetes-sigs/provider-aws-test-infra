@@ -170,6 +170,7 @@ const (
 	// kep: http://kep.k8s.io/4009
 	// alpha: v1.28
 	// beta: v1.29
+	// GA: v1.30
 	//
 	// Add support for CDI Device IDs in the Device Plugin API.
 	DevicePluginCDIDevices featuregate.Feature = "DevicePluginCDIDevices"
@@ -698,6 +699,7 @@ const (
 	// owner: @munnerz
 	// kep: http://kep.k8s.io/4193
 	// alpha: v1.29
+	// beta: v1.31
 	//
 	// Controls whether the apiserver supports binding service account tokens to Node objects.
 	ServiceAccountTokenNodeBinding featuregate.Feature = "ServiceAccountTokenNodeBinding"
@@ -933,6 +935,13 @@ const (
 	//
 	// Allows recursive read-only mounts.
 	RecursiveReadOnlyMounts featuregate.Feature = "RecursiveReadOnlyMounts"
+
+	// owner: @everpeace
+	// kep: https://kep.k8s.io/3619
+	// alpha: v1.31
+	//
+	// Enable SupplementalGroupsPolicy feature in PodSecurityContext
+	SupplementalGroupsPolicy featuregate.Feature = "SupplementalGroupsPolicy"
 )
 
 func init() {
@@ -997,7 +1006,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	DisableNodeKubeProxyVersion: {Default: true, PreRelease: featuregate.Beta},
 
-	DevicePluginCDIDevices: {Default: true, PreRelease: featuregate.Beta},
+	DevicePluginCDIDevices: {Default: true, PreRelease: featuregate.GA},
 
 	DynamicResourceAllocation: {Default: false, PreRelease: featuregate.Alpha},
 
@@ -1131,7 +1140,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	ServiceAccountTokenPodNodeInfo: {Default: true, PreRelease: featuregate.Beta},
 
-	ServiceAccountTokenNodeBinding: {Default: false, PreRelease: featuregate.Alpha},
+	ServiceAccountTokenNodeBinding: {Default: true, PreRelease: featuregate.Beta},
 
 	ServiceAccountTokenNodeBindingValidation: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1186,6 +1195,8 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	UserNamespacesPodSecurityStandards: {Default: false, PreRelease: featuregate.Alpha},
 
 	SELinuxMount: {Default: false, PreRelease: featuregate.Alpha},
+
+	SupplementalGroupsPolicy: {Default: false, PreRelease: featuregate.Alpha},
 
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
