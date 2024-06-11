@@ -348,6 +348,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 	if w.eventHandler != nil {
 		w.eventHandler(wcEvent)
 	}
+	metrics.RecordResourceVersion(w.groupResource.String(), resourceVersion)
 	return nil
 }
 
@@ -430,6 +431,7 @@ func (w *watchCache) UpdateResourceVersion(resourceVersion string) {
 		}
 		w.eventHandler(wcEvent)
 	}
+	metrics.RecordResourceVersion(w.groupResource.String(), rv)
 }
 
 // List returns list of pointers to <storeElement> objects.
@@ -629,7 +631,9 @@ func (w *watchCache) Replace(objs []interface{}, resourceVersion string) error {
 		w.onReplace()
 	}
 	w.cond.Broadcast()
-	klog.V(3).Infof("Replace watchCache (rev: %v) ", resourceVersion)
+
+	metrics.RecordResourceVersion(w.groupResource.String(), version)
+	klog.V(3).Infof("Replaced watchCache (rev: %v) ", resourceVersion)
 	return nil
 }
 
@@ -644,10 +648,10 @@ func (w *watchCache) Resync() error {
 	return nil
 }
 
-func (w *watchCache) getResourceVersion() uint64 {
+func (w *watchCache) getListResourceVersion() uint64 {
 	w.RLock()
 	defer w.RUnlock()
-	return w.resourceVersion
+	return w.listResourceVersion
 }
 
 func (w *watchCache) currentCapacity() int {
@@ -712,9 +716,10 @@ func (w *watchCache) isIndexValidLocked(index int) bool {
 // getAllEventsSinceLocked returns a watchCacheInterval that can be used to
 // retrieve events since a certain resourceVersion. This function assumes to
 // be called under the watchCache lock.
-func (w *watchCache) getAllEventsSinceLocked(resourceVersion uint64, opts storage.ListOptions) (*watchCacheInterval, error) {
+func (w *watchCache) getAllEventsSinceLocked(resourceVersion uint64, key string, opts storage.ListOptions) (*watchCacheInterval, error) {
+	_, matchesSingle := opts.Predicate.MatchesSingle()
 	if opts.SendInitialEvents != nil && *opts.SendInitialEvents {
-		return w.getIntervalFromStoreLocked()
+		return w.getIntervalFromStoreLocked(key, matchesSingle)
 	}
 
 	size := w.endIndex - w.startIndex
@@ -743,7 +748,7 @@ func (w *watchCache) getAllEventsSinceLocked(resourceVersion uint64, opts storag
 			// current state and only then start watching from that point.
 			//
 			// TODO: In v2 api, we should stop returning the current state - #13969.
-			return w.getIntervalFromStoreLocked()
+			return w.getIntervalFromStoreLocked(key, matchesSingle)
 		}
 		// SendInitialEvents = false and resourceVersion = 0
 		// means that the request would like to start watching
@@ -769,8 +774,8 @@ func (w *watchCache) getAllEventsSinceLocked(resourceVersion uint64, opts storag
 // getIntervalFromStoreLocked returns a watchCacheInterval
 // that covers the entire storage state.
 // This function assumes to be called under the watchCache lock.
-func (w *watchCache) getIntervalFromStoreLocked() (*watchCacheInterval, error) {
-	ci, err := newCacheIntervalFromStore(w.resourceVersion, w.store, w.getAttrsFunc)
+func (w *watchCache) getIntervalFromStoreLocked(key string, matchesSingle bool) (*watchCacheInterval, error) {
+	ci, err := newCacheIntervalFromStore(w.resourceVersion, w.store, w.getAttrsFunc, key, matchesSingle)
 	if err != nil {
 		return nil, err
 	}
