@@ -395,6 +395,7 @@ const (
 	// kep: http://kep.k8s.io/3836
 	// alpha: v1.28
 	// beta: v1.30
+	// stable: v1.31
 	//
 	// Implement connection draining for terminating nodes for
 	// `externalTrafficPolicy: Cluster` services.
@@ -419,6 +420,7 @@ const (
 	// owner: @damemi
 	// alpha: v1.21
 	// beta: v1.22
+	// GA: v1.31
 	//
 	// Enables scaling down replicas via logarithmic comparison of creation/ready timestamps
 	LogarithmicScaleDown featuregate.Feature = "LogarithmicScaleDown"
@@ -600,6 +602,7 @@ const (
 	// owner: @seans3
 	// kep: http://kep.k8s.io/4006
 	// alpha: v1.30
+	// beta: v1.31
 	//
 	// Enables PortForward to be proxied with a websocket client
 	PortForwardWebsockets featuregate.Feature = "PortForwardWebsockets"
@@ -805,6 +808,7 @@ const (
 
 	// owner: @seans3
 	// kep: http://kep.k8s.io/4006
+	// alpha: v1.29
 	// beta: v1.30
 	//
 	// Enables StreamTranslator proxy to handle WebSockets upgrade requests for the
@@ -1054,13 +1058,13 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	KubeletTracing: {Default: true, PreRelease: featuregate.Beta},
 
-	KubeProxyDrainingTerminatingNodes: {Default: true, PreRelease: featuregate.Beta},
+	KubeProxyDrainingTerminatingNodes: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.31; remove in 1.33
 
 	LegacyServiceAccountTokenCleanUp: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.30; remove in 1.32
 
 	LocalStorageCapacityIsolationFSQuotaMonitoring: {Default: false, PreRelease: featuregate.Alpha},
 
-	LogarithmicScaleDown: {Default: true, PreRelease: featuregate.Beta},
+	LogarithmicScaleDown: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 
 	MatchLabelKeysInPodAffinity: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1104,7 +1108,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	PodSchedulingReadiness: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.30; remove in 1.32
 
-	PortForwardWebsockets: {Default: false, PreRelease: featuregate.Alpha},
+	PortForwardWebsockets: {Default: true, PreRelease: featuregate.Beta},
 
 	ProcMountType: {Default: false, PreRelease: featuregate.Alpha},
 
