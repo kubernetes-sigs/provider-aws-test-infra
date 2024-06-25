@@ -201,7 +201,7 @@ curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CN
     | tar xfz - -C ${cni_bin_dir}
 
 # Use systemd cgroup if specified in env
-systemdCgroup="${CONTAINERD_SYSTEMD_CGROUP:-"false"}"
+systemdCgroup="${CONTAINERD_SYSTEMD_CGROUP:-"true"}"
 
 log_level="${CONTAINERD_LOG_LEVEL:-"info"}"
 max_container_log_line="${CONTAINERD_MAX_CONTAINER_LOG_LINE:-16384}"
