@@ -29,5 +29,9 @@ apiServer:
 controllerManager:
   extraArgs:
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
+    feature-gates: {{FEATURE_GATES}}
+scheduler:
+  extraArgs:
+    feature-gates: {{FEATURE_GATES}}
 networking:
   podSubnet: {{POD_CIDR}}
