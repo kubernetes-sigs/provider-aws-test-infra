@@ -26,19 +26,19 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     fi
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k ./cloud-provider-aws/
     # Install the AWS EBS CSI driver
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.25"
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.32"
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments ebs-csi-controller
   fi
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_LOAD_BALANCER}}" == "true" ]]; then
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.1/cert-manager.yaml
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n cert-manager --all deployments
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/download/v2.6.2/v2_6_2_full.yaml
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/download/v2.8.1/v2_8_1_full.yaml
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments aws-load-balancer-controller
   fi
   # shellcheck disable=SC2050
   if [[ "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}" == "true" ]]; then
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.5/nvidia-device-plugin.yml
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.1/nvidia-device-plugin.yml
     kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset nvidia-device-plugin-daemonset -n kube-system --timeout=2m
   fi
 fi
