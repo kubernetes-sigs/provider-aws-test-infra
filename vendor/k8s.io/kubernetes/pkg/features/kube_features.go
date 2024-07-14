@@ -336,6 +336,7 @@ const (
 	// kep: https://kep.k8s.io/3329
 	// alpha: v1.25
 	// beta: v1.26
+	// stable: v1.31
 	//
 	// Allow users to specify handling of pod failures based on container exit codes
 	// and pod conditions.
@@ -544,6 +545,7 @@ const (
 	// kep: https://kep.k8s.io/3762
 	// alpha: v1.28
 	// beta: v1.29
+	// GA: v1.31
 	//
 	// Adds a new field to persistent volumes which holds a timestamp of when the volume last transitioned its phase.
 	PersistentVolumeLastPhaseTransitionTime featuregate.Feature = "PersistentVolumeLastPhaseTransitionTime"
@@ -1060,7 +1062,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	JobManagedBy: {Default: false, PreRelease: featuregate.Alpha},
 
-	JobPodFailurePolicy: {Default: true, PreRelease: featuregate.Beta},
+	JobPodFailurePolicy: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.33
 
 	JobPodReplacementPolicy: {Default: true, PreRelease: featuregate.Beta},
 
@@ -1112,7 +1114,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	PDBUnhealthyPodEvictionPolicy: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.33
 
-	PersistentVolumeLastPhaseTransitionTime: {Default: true, PreRelease: featuregate.Beta},
+	PersistentVolumeLastPhaseTransitionTime: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.33
 
 	PodAndContainerStatsFromCRI: {Default: false, PreRelease: featuregate.Alpha},
 
@@ -1144,7 +1146,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	RuntimeClassInImageCriAPI: {Default: false, PreRelease: featuregate.Alpha},
 
-	ElasticIndexedJob: {Default: true, PreRelease: featuregate.Beta},
+	ElasticIndexedJob: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.31, remove in 1.32
 
 	SchedulerQueueingHints: {Default: false, PreRelease: featuregate.Beta},
 
