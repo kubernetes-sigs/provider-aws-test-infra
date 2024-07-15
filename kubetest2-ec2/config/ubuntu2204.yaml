@@ -17,7 +17,6 @@ packages:
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
-      # valid keys are containerd-env, and extra_init
       containerd-env: https://raw.githubusercontent.com/kubernetes/test-infra/master/jobs/e2e_node/containerd/containerd-main/env
   - path: /etc/systemd/system/containerd-installation.service
     permissions: 0644
@@ -50,8 +49,6 @@ write_files:
       KillMode=process
       OOMScoreAdjust=-999
       LimitNOFILE=1048576
-      # Having non-zero Limit*s causes performance problems due to accounting overhead
-      # in the kernel. We recommend using cgroups to do container-local accounting.
       LimitNPROC=infinity
       LimitCORE=infinity
       TasksMax=infinity
@@ -94,7 +91,6 @@ write_files:
     permissions: 0644
     owner: root
     content: |
-      # Note: This dropin only works with kubeadm and kubelet v1.11+
       [Service]
       Environment="KUBELET_EXTRA_ARGS=--image-credential-provider-bin-dir=/usr/local/bin --image-credential-provider-config=/etc/kubernetes/credential-provider.yaml"
       Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -151,11 +147,24 @@ runcmd:
   - systemctl stop apparmor
   - systemctl disable apparmor
   - iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
-  # Ensure instance-id resolves to the ip address of the host
   - "TOKEN=$(curl --request PUT 'http://169.254.169.254/latest/api/token' --header 'X-aws-ec2-metadata-token-ttl-seconds: 3600' -s) && echo \"$(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/local-ipv4 --header 'X-aws-ec2-metadata-token: '$TOKEN) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/ --header 'X-aws-ec2-metadata-token: '$TOKEN)\" | sudo tee -a /etc/hosts"
   - "sed -i \"s/^#ReadEtcHosts/ReadEtcHosts/\" /etc/systemd/resolved.conf"
-  # Fix issues with no networking from pods
   - "sed -i \"s/^MACAddressPolicy=.*/MACAddressPolicy=none/\" /usr/lib/systemd/network/99-default.link"
+  - iptables -w -t nat -N IP-MASQ
+  - iptables -w -t nat -A POSTROUTING -m addrtype ! --dst-type LOCAL -j IP-MASQ
+  - iptables -w -t nat -A IP-MASQ -d 169.254.0.0/16 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 10.0.0.0/8 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 172.16.0.0/12 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 192.168.0.0/16 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 240.0.0.0/4 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 192.0.2.0/24 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 198.51.100.0/24 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 203.0.113.0/24 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 100.64.0.0/10 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 198.18.0.0/15 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 192.0.0.0/24 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -d 192.88.99.0/24 -j RETURN
+  - iptables -w -t nat -A IP-MASQ -j MASQUERADE
   - systemctl restart systemd-resolved
   - rm /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
   - systemctl restart systemd-logind
