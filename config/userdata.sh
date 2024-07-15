@@ -26,7 +26,7 @@ cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
       "type": "bridge",
       "bridge": "cni0",
       "isGateway": true,
-      "ipMasq": true,
+      "ipMasq": false,
       "ipam": {
         "type": "host-local",
         "subnet": "10.22.0.0/16",
