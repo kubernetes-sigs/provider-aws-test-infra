@@ -6,6 +6,9 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true
   kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system MINIMUM_IP_TARGET=80
   kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system WARM_IP_TARGET=10
+
+  kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/kubernetes-sigs/ip-masq-agent/master/ip-masq-agent.yaml
+
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
     files=(
