@@ -68,7 +68,6 @@ write_files:
     permissions: 0644
     owner: root
     content: |
-      net.ipv4.ip_forward=1
       net.bridge.bridge-nf-call-ip6tables = 1
       net.bridge.bridge-nf-call-iptables = 1
   - path: /etc/kubernetes/credential-provider.yaml
