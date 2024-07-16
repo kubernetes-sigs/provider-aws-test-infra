@@ -1,14 +1,15 @@
 #!/bin/bash
 set -xeu
 if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
-  CNI_VERSION=$(curl -s https://api.github.com/repos/aws/amazon-vpc-cni-k8s/releases/latest | jq -r ".name")
-  kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/${CNI_VERSION}/config/master/aws-k8s-cni.yaml
-  kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true
-  kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system MINIMUM_IP_TARGET=80
-  kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system WARM_IP_TARGET=10
-  kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system AWS_VPC_K8S_CNI_EXTERNALSNAT=true
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
+    CNI_VERSION=$(curl -s https://api.github.com/repos/aws/amazon-vpc-cni-k8s/releases/latest | jq -r ".name")
+    kubectl --kubeconfig /etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/${CNI_VERSION}/config/master/aws-k8s-cni.yaml
+    kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true
+    kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system MINIMUM_IP_TARGET=80
+    kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system WARM_IP_TARGET=10
+    kubectl --kubeconfig /etc/kubernetes/admin.conf set env daemonset aws-node -n kube-system AWS_VPC_K8S_CNI_EXCLUDE_SNAT_CIDRS=10.0.0.0/8
+
     files=(
       "kustomization.yaml"
       "apiserver-authentication-reader-role-binding.yaml"
@@ -29,6 +30,8 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     # Install the AWS EBS CSI driver
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.32"
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments ebs-csi-controller
+  else
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f "https://raw.githubusercontent.com/aojea/kindnet/main/install-kindnet.yaml"
   fi
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_LOAD_BALANCER}}" == "true" ]]; then
