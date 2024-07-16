@@ -45,20 +45,6 @@ cd "${CONTAINERD_HOME}"
 # KUBE_HOME is the directory for kubernetes.
 KUBE_HOME="/home/kubernetes"
 
-# TODO(upodroid) remove this function after you have resolved the pull-refs below
-# fetch_metadata fetches metadata from GCE metadata server.
-# Var set:
-# 1. Metadata key: key of the metadata.
-fetch_metadata() {
-  local -r key=$1
-  local -r attributes="http://metadata.google.internal/computeMetadata/v1/instance/attributes"
-  if curl --fail --retry 5 --retry-delay 3 --silent --show-error -H "X-Google-Metadata-Request: True" "${attributes}/" | \
-    grep -q "^${key}$"; then
-    curl --fail --retry 5 --retry-delay 3 --silent --show-error -H "X-Google-Metadata-Request: True" \
-      "${attributes}/${key}"
-  fi
-}
-
 case $(uname -m) in
 	aarch64)	ARCH="arm64";;
 	x86_64)		ARCH="amd64";;

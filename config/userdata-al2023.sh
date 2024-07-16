@@ -16,30 +16,6 @@ curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CN
 
 # install a CNI
 sudo mkdir -p /etc/cni/net.d/
-cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
-{
-  "cniVersion": "0.3.1",
-  "name": "testcni",
-  "plugins": [
-    {
-      "name": "testnet",
-      "type": "bridge",
-      "bridge": "cni0",
-      "isGateway": true,
-      "ipMasq": false,
-      "ipam": {
-        "type": "host-local",
-        "subnet": "10.22.0.0/16",
-        "routes": [
-          {
-            "dst": "0.0.0.0/0"
-          }
-        ]
-      }
-    }
-  ]
-}
-__ECNI__
 
 # one of the CRI tests needs an extra "test-handler" so add that at the end
 cat <<EOF > /etc/containerd/config.toml
