@@ -45,20 +45,6 @@ cd "${CONTAINERD_HOME}"
 # KUBE_HOME is the directory for kubernetes.
 KUBE_HOME="/home/kubernetes"
 
-# TODO(upodroid) remove this function after you have resolved the pull-refs below
-# fetch_metadata fetches metadata from GCE metadata server.
-# Var set:
-# 1. Metadata key: key of the metadata.
-fetch_metadata() {
-  local -r key=$1
-  local -r attributes="http://metadata.google.internal/computeMetadata/v1/instance/attributes"
-  if curl --fail --retry 5 --retry-delay 3 --silent --show-error -H "X-Google-Metadata-Request: True" "${attributes}/" | \
-    grep -q "^${key}$"; then
-    curl --fail --retry 5 --retry-delay 3 --silent --show-error -H "X-Google-Metadata-Request: True" \
-      "${attributes}/${key}"
-  fi
-}
-
 case $(uname -m) in
 	aarch64)	ARCH="arm64";;
 	x86_64)		ARCH="amd64";;
@@ -125,17 +111,6 @@ if [ "${CONTAINERD_TEST:-"false"}"  != "true" ]; then
 else
   deploy_path=${CONTAINERD_DEPLOY_PATH:-"cri-containerd-staging"}
 
-  # TODO(upodroid) Revisit pull_refs
-  # PULL_REFS_METADATA is the metadata key of PULL_REFS from prow.
-  # PULL_REFS_METADATA="PULL_REFS"
-  # pull_refs=$(fetch_metadata "${PULL_REFS_METADATA}")
-  # if [ ! -z "${pull_refs}" ]; then
-  #   deploy_dir=$(echo "${pull_refs}" | sha1sum | awk '{print $1}')
-  #   deploy_path="${deploy_path}/containerd/${deploy_dir}"
-  # fi
-
-  # TODO(random-liu): Put version into the metadata instead of
-  # deciding it in cloud init. This may cause issue to reboot test.
   if [ ${ARCH} == "arm64" ]; then
     version=$(curl -f --ipv4 --retry 6 --retry-delay 3 --silent --show-error \
       -H "Accept: application/vnd.github.v3+json" \
