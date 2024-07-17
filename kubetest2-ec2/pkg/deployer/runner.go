@@ -151,6 +151,13 @@ func (a *AWSRunner) Validate() error {
 func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstance, error) {
 	instanceRunning := false
 	createdSSHKey := false
+	klog.Infof("waiting for %s to start", testInstance.instanceID)
+	err := a.ec2Service.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
+		InstanceIds: []*string{&testInstance.instanceID},
+	})
+	if err != nil {
+		return testInstance, fmt.Errorf("instance %s did not start running", testInstance.instanceID)
+	}
 	for i := 0; i < 30 && !instanceRunning; i++ {
 		if i > 0 {
 			time.Sleep(time.Second * 15)
@@ -166,6 +173,22 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 		if *instance.State.Name != ec2.InstanceStateNameRunning {
 			continue
 		}
+		if len(instance.NetworkInterfaces) == 0 {
+			klog.Infof("instance %s does not have network interfaces yet", testInstance.instanceID)
+			continue
+		}
+		sourceDestCheck := instance.NetworkInterfaces[0].SourceDestCheck
+		if sourceDestCheck != nil && *sourceDestCheck == true {
+			networkInterfaceID := instance.NetworkInterfaces[0].NetworkInterfaceId
+			modifyInput := &ec2.ModifyNetworkInterfaceAttributeInput{
+				NetworkInterfaceId: networkInterfaceID,
+				SourceDestCheck:    &ec2.AttributeBooleanValue{Value: aws.Bool(false)},
+			}
+			_, err = a.ec2Service.ModifyNetworkInterfaceAttribute(modifyInput)
+			if err != nil {
+				klog.Infof("unable to set SourceDestCheck on instance %s", testInstance.instanceID)
+			}
+        }
 		testInstance.publicIP = *instance.PublicIpAddress
 		testInstance.privateIP = *instance.PrivateIpAddress
 

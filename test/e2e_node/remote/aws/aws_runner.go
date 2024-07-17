@@ -304,6 +304,14 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 		instance:   instance,
 	}
 
+	klog.Infof("waiting for %s to start", testInstance.instanceID)
+	err = a.ec2Service.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
+		InstanceIds: []*string{&testInstance.instanceID},
+	})
+	if err != nil {
+		return testInstance, fmt.Errorf("instance %s did not start running", testInstance.instanceID)
+	}
+
 	instanceRunning := false
 	createdSSHKey := false
 	for i := 0; i < 50 && !instanceRunning; i++ {
@@ -322,6 +330,24 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 		if *instance.State.Name != ec2.InstanceStateNameRunning {
 			continue
 		}
+
+		if len(instance.NetworkInterfaces) == 0 {
+			klog.Infof("instance %s does not have network interfaces yet", testInstance.instanceID)
+			continue
+		}
+		sourceDestCheck := instance.NetworkInterfaces[0].SourceDestCheck
+		if sourceDestCheck != nil && *sourceDestCheck == true {
+			networkInterfaceID := instance.NetworkInterfaces[0].NetworkInterfaceId
+			modifyInput := &ec2.ModifyNetworkInterfaceAttributeInput{
+				NetworkInterfaceId: networkInterfaceID,
+				SourceDestCheck:    &ec2.AttributeBooleanValue{Value: aws.Bool(false)},
+			}
+			_, err = a.ec2Service.ModifyNetworkInterfaceAttribute(modifyInput)
+			if err != nil {
+				klog.Infof("unable to set SourceDestCheck on instance %s", testInstance.instanceID)
+			}
+        }
+
 		testInstance.publicIP = *instance.PublicIpAddress
 
 		// generate a temporary SSH key and send it to the node via instance-connect
