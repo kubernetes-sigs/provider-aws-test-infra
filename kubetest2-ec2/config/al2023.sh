@@ -28,6 +28,8 @@ if [ "$os" == "amzn2023" ]; then
 fi
 
 mkdir -p /etc/kubernetes/
+mkdir -p /etc/kubernetes/manifests
+
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: JoinConfiguration

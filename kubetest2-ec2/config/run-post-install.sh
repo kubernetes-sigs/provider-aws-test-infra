@@ -32,6 +32,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments ebs-csi-controller
   else
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f "https://raw.githubusercontent.com/aojea/kindnet/main/install-kindnet.yaml"
+    kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset kindnet -n kube-system --timeout=2m
   fi
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_LOAD_BALANCER}}" == "true" ]]; then
