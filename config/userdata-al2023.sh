@@ -8,6 +8,30 @@ esac
 
 # Download and configure CNI
 cni_bin_dir="/opt/cni/bin"
+cat << __ECNI__ | sudo tee /etc/cni/net.d/10-testcni.conflist
+{
+  "cniVersion": "0.3.1",
+  "name": "testcni",
+  "plugins": [
+    {
+      "name": "testnet",
+      "type": "bridge",
+      "bridge": "cni0",
+      "isGateway": true,
+      "ipMasq": false,
+      "ipam": {
+        "type": "host-local",
+        "subnet": "10.22.0.0/16",
+        "routes": [
+          {
+            "dst": "0.0.0.0/0"
+          }
+        ]
+      }
+    }
+  ]
+}
+__ECNI__
 
 CNI_VERSION=v1.2.0 &&\
 mkdir -p ${cni_bin_dir} &&\
