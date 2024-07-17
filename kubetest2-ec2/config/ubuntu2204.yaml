@@ -158,5 +158,6 @@ runcmd:
   - systemctl enable containerd.service
   - systemctl enable containerd.target
   - systemctl start containerd.target
+  - mkdir -p /etc/kubernetes/manifests
   - KUBEADM_CONTROL_PLANE="{{KUBEADM_CONTROL_PLANE}}" KUBEADM_CONTROL_PLANE_IP="{{KUBEADM_CONTROL_PLANE_IP}}" /usr/local/bin/run-kubeadm.sh
   - KUBEADM_CONTROL_PLANE="{{KUBEADM_CONTROL_PLANE}}" /usr/local/bin/run-post-install.sh
