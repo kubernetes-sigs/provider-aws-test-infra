@@ -163,6 +163,7 @@ func (d *deployer) Up() error {
 	}
 
 	d.waitForKubectlNodes()
+	d.waitForKubectlNodesToBeReady()
 	if d.ExternalCloudProvider {
 		d.waitForExternalProviderPods()
 	}
