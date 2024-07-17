@@ -220,6 +220,37 @@ func (d *deployer) waitForKubectlNodes() {
 	}
 }
 
+func (d *deployer) waitForKubectlNodesToBeReady() {
+	if d.kubectlPath == "" {
+		klog.Warningf("kubectl not found, cannot wait for all worker nodes to come up")
+		return
+	}
+	if d.KubeconfigPath == "" {
+		klog.Warningf("KUBECONFIG is not set, cannot wait for all worker nodes to come up")
+		return
+	}
+	args := []string{
+		d.kubectlPath,
+		"--kubeconfig",
+		d.KubeconfigPath,
+		"wait",
+		"--for=condition=Ready",
+		"nodes",
+		"--all",
+		"--timeout=300s",
+	}
+	klog.Infof("Running kubectl command %v", args)
+
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.SetStderr(os.Stderr)
+	lines, err := exec.OutputLines(cmd)
+	if err != nil {
+		klog.Errorf("unable to wait for nodes to be ready: %s\n%s\n", err, lines)
+		return
+	}
+}
+
+
 func (d *deployer) waitForExternalProviderPods() {
 	if d.kubectlPath == "" {
 		klog.Warningf("kubectl not found, cannot wait for all worker nodes to come up")
