@@ -20,6 +20,7 @@ os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
 if [ "$os" == "amzn2023" ]; then
 
   # Fix issues with networking from pods
+  sed -i "s/^.*ReadEtcHosts.*/ReadEtcHosts=no/" /etc/systemd/resolved.conf
   sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
   systemctl restart systemd-resolved
 
