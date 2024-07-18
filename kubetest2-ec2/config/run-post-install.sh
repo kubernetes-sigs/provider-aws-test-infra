@@ -1,10 +1,6 @@
 #!/bin/bash
 set -xeu
 if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
-  # remove coredns loop plugin
-  kubectl --kubeconfig /etc/kubernetes/admin.conf get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' | sed '/loop/d' | \
-    kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap coredns --from-file=Corefile=/dev/stdin -n kube-system -o yaml --dry-run=client | \
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f -
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
     CNI_VERSION=$(curl -s https://api.github.com/repos/aws/amazon-vpc-cni-k8s/releases/latest | jq -r ".name")
