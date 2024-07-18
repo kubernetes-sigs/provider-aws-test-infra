@@ -46,8 +46,11 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.1/nvidia-device-plugin.yml
     kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset nvidia-device-plugin-daemonset -n kube-system --timeout=2m
   fi
-  kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready pods --timeout=2m --namespace=kube-system -l k8s-app=kube-dns
   # remove coredns loop plugin
-  kubectl get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' | sed '/loop/d' | kubectl create configmap coredns --from-file=Corefile=/dev/stdin -n kube-system -o yaml --dry-run=client | kubectl apply -f -
-  kubectl rollout restart deployment coredns -n kube-system
+  kubectl --kubeconfig /etc/kubernetes/admin.conf get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' | sed '/loop/d' | \
+    kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap coredns --from-file=Corefile=/dev/stdin -n kube-system -o yaml --dry-run=client | \
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f -
+  kubectl --kubeconfig /etc/kubernetes/admin.conf rollout restart deployment coredns -n kube-system
+  kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status deployment coredns -n kube-system
+  kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=ready pods --timeout=5m --namespace=kube-system -l k8s-app=kube-dns
 fi
