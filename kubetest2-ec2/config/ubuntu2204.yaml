@@ -148,7 +148,7 @@ runcmd:
   - systemctl disable apparmor
   - iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
   - "TOKEN=$(curl --request PUT 'http://169.254.169.254/latest/api/token' --header 'X-aws-ec2-metadata-token-ttl-seconds: 3600' -s) && echo \"$(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/local-ipv4 --header 'X-aws-ec2-metadata-token: '$TOKEN) $(curl -s -f -m 1 http://169.254.169.254/latest/meta-data/instance-id/ --header 'X-aws-ec2-metadata-token: '$TOKEN)\" | sudo tee -a /etc/hosts"
-  - "sed -i \"s/^#ReadEtcHosts/ReadEtcHosts/\" /etc/systemd/resolved.conf"
+  - "sed -i \"s/^.*ReadEtcHosts.*/ReadEtcHosts=no/\" /etc/systemd/resolved.conf"
   - "sed -i \"s/^MACAddressPolicy=.*/MACAddressPolicy=none/\" /usr/lib/systemd/network/99-default.link"
   - systemctl restart systemd-resolved
   - rm /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
