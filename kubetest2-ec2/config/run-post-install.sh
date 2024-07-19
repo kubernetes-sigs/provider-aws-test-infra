@@ -1,6 +1,7 @@
 #!/bin/bash
 set -xeu
 if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
+  kubectl --kubeconfig /etc/kubernetes/admin.conf scale -n kube-system --replicas=1 deployment coredns --timeout=2m
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
     CNI_VERSION=$(curl -s https://api.github.com/repos/aws/amazon-vpc-cni-k8s/releases/latest | jq -r ".name")
@@ -32,7 +33,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments ebs-csi-controller
   else
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f "https://raw.githubusercontent.com/aojea/kindnet/main/install-kindnet.yaml"
-    kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset kindnet -n kube-system --timeout=2m
+    kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset kindnet -n kube-system --timeout=5m
   fi
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_LOAD_BALANCER}}" == "true" ]]; then
@@ -45,5 +46,9 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   if [[ "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}" == "true" ]]; then
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.1/nvidia-device-plugin.yml
     kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset nvidia-device-plugin-daemonset -n kube-system --timeout=2m
+  fi
+  if ! kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app=kube-dns -n kube-system --timeout=2m ; then
+    kubectl --kubeconfig /etc/kubernetes/admin.conf scale -n kube-system --replicas=0 deployment coredns --timeout=2m
+    kubectl --kubeconfig /etc/kubernetes/admin.conf scale -n kube-system --replicas=1 deployment coredns --timeout=2m
   fi
 fi

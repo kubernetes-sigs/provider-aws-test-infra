@@ -49,11 +49,15 @@ func FetchConfigureScript(userDataFile string, replace func(string) string) (str
 	if userDataFile != "" {
 		scriptFile := filepath.Dir(userDataFile) + "/" + "configure.sh"
 		if _, err = os.Stat(scriptFile); errors.Is(err, os.ErrNotExist) {
-			return "", nil
-		}
-		scriptBytes, err = os.ReadFile(scriptFile)
-		if err != nil {
-			return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
+			scriptBytes, err = config.ConfigFS.ReadFile("configure.sh")
+			if err != nil {
+				return "", fmt.Errorf("error reading configure script file: %w", err)
+			}
+		} else {
+			scriptBytes, err = os.ReadFile(scriptFile)
+			if err != nil {
+				return "", fmt.Errorf("reading configure script file %q, %w", scriptFile, err)
+			}
 		}
 	} else {
 		scriptBytes, err = config.ConfigFS.ReadFile("configure.sh")

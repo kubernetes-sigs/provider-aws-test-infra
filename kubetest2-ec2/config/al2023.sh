@@ -3,8 +3,71 @@
 set -o xtrace
 set -xeuo pipefail
 
-# one of the ci job tests needs git
-yum install git -y
+os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
+
+# Set the maximum number of retries
+MAX_RETRIES=5
+
+# Function to run DNF/yum command with retries
+install_packages_with_retry() {
+    set +e
+    local attempt=1
+
+    EXTRAS=""
+    if [ "$os" == "amzn2023" ]; then
+      EXTRAS="iptables-nft"
+    fi
+
+    while [ $attempt -le $MAX_RETRIES ]; do
+        echo "Attempt $attempt of $MAX_RETRIES"
+
+        # Run the DNF command
+        DNF=""
+        DNF_ARGS=""
+        if command -v dnf; then
+          DNF="dnf"
+        else
+          DNF="yum"
+          DNF_ARGS="--enablerepo=amzn2extra-docker"
+        fi
+
+        $DNF clean all
+        $DNF makecache
+        $DNF update -y
+
+        $DNF $DNF_ARGS install -y \
+          runc \
+          containerd \
+          git \
+          aws-cfn-bootstrap \
+          chrony \
+          conntrack \
+          ec2-instance-connect \
+          ethtool \
+          ipvsadm \
+          jq \
+          nfs-utils \
+          socat \
+          unzip \
+          wget \
+          mdadm \
+          pigz $EXTRAS
+
+        # Check if the command was successful
+        if [ $? -eq 0 ]; then
+            echo "DNF/YUM command succeeded"
+            return 0
+        else
+            echo "DNF/YUM command failed. Retrying in 5 seconds..."
+            sleep 5
+            ((attempt++))
+        fi
+    done
+
+    echo "DNF/YUM command failed after $MAX_RETRIES attempts"
+    set -e
+    return 1
+}
 
 # Start with a clean slate
 # Note that the `iptables -P FORWARD ACCEPT` piece is load bearing! https://github.com/search?q=repo%3Aawslabs%2Famazon-eks-ami+%22iptables+-P%22&type=code
@@ -30,6 +93,7 @@ fi
 
 mkdir -p /etc/kubernetes/
 mkdir -p /etc/kubernetes/manifests
+mkdir -p /etc/eks/image-credential-provider/
 
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
 apiVersion: kubeadm.k8s.io/v1beta3
@@ -96,7 +160,19 @@ RELEASE_VERSION="v0.16.4"
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/krel/templates/latest/kubelet/kubelet.service" | sed "s:/usr/bin:/bin:g" | sudo tee /etc/systemd/system/kubelet.service
 sudo mkdir -p /etc/systemd/system/kubelet.service.d
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:/bin:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-systemctl enable --now kubelet
+
+VERSION="v1.27.1"
+curl -sSLo /usr/local/bin/ecr-credential-provider --fail --retry 5 "https://artifacts.k8s.io/binaries/cloud-provider-aws/$VERSION/linux/$ARCH/ecr-credential-provider-linux-$ARCH"
+chmod +x /usr/local/bin/ecr-credential-provider
+ln -s /usr/local/bin/ecr-credential-provider /etc/eks/image-credential-provider/
+
+# Download and configure CNI
+cni_bin_dir="/opt/cni/bin"
+
+CNI_VERSION=v1.2.0 &&\
+mkdir -p ${cni_bin_dir} &&\
+curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${ARCH}-${CNI_VERSION}.tgz \
+    | tar xfz - -C ${cni_bin_dir}
 
 # shellcheck disable=SC2050
 if [[ "{{STAGING_BUCKET}}" =~ ^s3.*  ]]; then
@@ -109,12 +185,16 @@ fi
 
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
 cp ./kubernetes/server/bin/* /usr/local/bin/
+find /usr/local/bin/ -type f -executable -exec ln -s {} /usr/bin \; || true
 
-if command -v dnf; then
-  dnf reinstall runc containerd -y --allowerasing
-else
-  yum reinstall runc containerd -y
-fi
+install_packages_with_retry
+
+cat << EOF | sudo tee -a /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+EOF
+sysctl --system
 
 systemctl stop containerd
 rm -f /etc/containerd/config.toml
