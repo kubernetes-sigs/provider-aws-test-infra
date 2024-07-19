@@ -64,6 +64,7 @@ func (d *deployer) dumpKubeletLogs() {
 }
 
 func (d *deployer) dumpCloudInitLogs() {
+	d.dumpRemoteLogs("cloud-init", "cat", "/var/log/cloud-init.log")
 	d.dumpRemoteLogs("cloud-init-output", "cat", "/var/log/cloud-init-output.log")
 }
 
@@ -113,7 +114,17 @@ func (d *deployer) dumpVPCCNILogs() {
 		}
 		output, err = remote.SCP(instance.instanceID, "/var/log/eks*.tar.gz", destDir)
 		if err != nil {
-			klog.Errorf("error scp from /var/log/eks*.tar.gz failed: %s", instance.instanceID, output)
+			klog.Errorf("error scp from /var/log/eks*.tar.gz failed: %s", instance.instanceID)
+		}
+		destDir = filepath.Join(d.logsDir, instance.instanceID, "pods")
+		err = os.MkdirAll(destDir, os.ModePerm)
+		if err != nil {
+			klog.Errorf("failed to create %s: %s", destDir, err)
+			continue
+		}
+		output, err = remote.SCP(instance.instanceID, "/var/log/containers/*.log", destDir)
+		if err != nil {
+			klog.Errorf("error scp from /var/log/containers/*.log failed: %s", instance.instanceID)
 		}
 	}
 }

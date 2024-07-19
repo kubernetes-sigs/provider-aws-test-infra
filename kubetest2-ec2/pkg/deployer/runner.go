@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -64,6 +65,12 @@ type awsInstance struct {
 	sshPublicKeyFile string
 }
 
+var operatingSystems = []string{
+	"ubuntu",
+	"al2023",
+	"al2",
+}
+
 func (a *AWSRunner) Validate() error {
 	_, err := a.InitializeServices()
 	if err != nil {
@@ -81,11 +88,42 @@ func (a *AWSRunner) Validate() error {
 		}
 	}
 
-	if a.deployer.Image == "" {
+	if a.deployer.Image == "" || slices.Contains(operatingSystems, a.deployer.Image) {
 		arch := strings.Split(a.deployer.BuildOptions.CommonBuildOptions.TargetBuildArch, "/")[1]
-		path := "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
-		klog.Infof("image was not specified, looking up latest image in SSM:")
+
+		path := ""
+		switch a.deployer.Image {
+		case "al2023":
+			if arch == "amd64" {
+				path = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+			} else {
+				path = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-" + arch
+			}
+			if a.deployer.UserDataFile == "" {
+				a.deployer.UserDataFile = "al2023.sh"
+			}
+		case "al2":
+			if arch == "amd64" {
+				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+			} else {
+				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-" + arch + "-gp2"
+			}
+			if a.deployer.UserDataFile == "" {
+				// this is intentional, same file works on both al2 and al2023 and the al2.sh is
+				// symlinked to al2023.sh
+				a.deployer.UserDataFile = "al2023.sh"
+			}
+		case "ubuntu", "":
+			path = "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
+			if a.deployer.UserDataFile == "" {
+				a.deployer.UserDataFile = "ubuntu2204.yaml"
+			}
+		default:
+			return fmt.Errorf("unrecognized parameter --image : %s", a.deployer.Image)
+		}
+		klog.Infof("looking up latest image in SSM:")
 		klog.Infof("%s", path)
+
 		id, err := utils.GetSSMImage(a.ssmService, path)
 		if err == nil {
 			klog.Infof("using image id from ssm %s", id)
@@ -109,10 +147,40 @@ func (a *AWSRunner) Validate() error {
 		return fmt.Errorf("invalid AMI id format for %q", a.deployer.Image)
 	}
 
-	if a.deployer.WorkerImage == "" {
+	if a.deployer.WorkerImage == "" || slices.Contains(operatingSystems, a.deployer.WorkerImage) {
 		arch := strings.Split(a.deployer.BuildOptions.CommonBuildOptions.TargetBuildArch, "/")[1]
-		path := "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
-		klog.Infof("image was not specified, looking up latest image in SSM:")
+
+		path := ""
+		switch a.deployer.WorkerImage {
+		case "al2023":
+			if arch == "amd64" {
+				path = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+			} else {
+				path = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-" + arch
+			}
+			if a.deployer.WorkerUserDataFile == "" {
+				a.deployer.WorkerUserDataFile = "al2023.sh"
+			}
+		case "al2":
+			if arch == "amd64" {
+				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+			} else {
+				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-" + arch + "-gp2"
+			}
+			if a.deployer.WorkerUserDataFile == "" {
+				// this is intentional, same file works on both al2 and al2023 and the al2.sh is
+				// symlinked to al2023.sh
+				a.deployer.WorkerUserDataFile = "al2023.sh"
+			}
+		case "ubuntu", "":
+			path = "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
+			if a.deployer.WorkerUserDataFile == "" {
+				a.deployer.WorkerUserDataFile = "ubuntu2204.yaml"
+			}
+		default:
+			return fmt.Errorf("unrecognized parameter --worker-image : %s", a.deployer.WorkerImage)
+		}
+		klog.Infof("looking up latest image in SSM:")
 		klog.Infof("%s", path)
 		id, err := utils.GetSSMImage(a.ssmService, path)
 		if err == nil {
@@ -349,16 +417,29 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bool) (string, error) {
 	var userdata string
 	if dataFile != "" {
-		userDataBytes, err := os.ReadFile(dataFile)
-		if err != nil {
-			return "", fmt.Errorf("error reading userdata file %q, %w", dataFile, err)
+		_, err := config.ConfigFS.Open(dataFile)
+		if err == nil {
+			userDataBytes, err := config.ConfigFS.ReadFile(dataFile)
+			if err == nil {
+				klog.Infof("loading user data from embedded file: %s", dataFile)
+				userdata = string(userDataBytes)
+			}
 		}
-		userdata = string(userDataBytes)
+
+		if userdata == "" {
+			userDataBytes, err := os.ReadFile(dataFile)
+			if err != nil {
+				return "", fmt.Errorf("error reading userdata file %q, %w", dataFile, err)
+			}
+			klog.Infof("loading user data from file on disk: %s", dataFile)
+			userdata = string(userDataBytes)
+		}
 	} else {
 		userDataBytes, err := config.ConfigFS.ReadFile("ubuntu2204.yaml")
 		if err != nil {
 			return "", fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
 		}
+		klog.Infof("loading user data from embedded file: ubuntu2204.yaml")
 		userdata = string(userDataBytes)
 	}
 

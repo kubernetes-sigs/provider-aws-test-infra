@@ -80,6 +80,17 @@ kubetest2 ec2 \
   --up
 ```
 
+Here's an example of how to start latest tip of kubernetes master with a AL2023 worker image: 
+```bash
+kubetest2 ec2 \
+ --stage https://dl.k8s.io/ci/fast/ \
+ --version $(curl -Ls https://dl.k8s.io/ci/fast/latest-fast.txt) \
+ --region us-east-1 \
+ --target-build-arch linux/amd64 \
+ --worker-image al2023 \
+ --up
+```
+
 So you can see that a lot of things have defaults and/or picked up from the environment (like the AWS credentials)
 
 Some important CLI parameters are:
