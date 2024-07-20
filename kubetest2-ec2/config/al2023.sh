@@ -167,7 +167,7 @@ curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSIO
 VERSION="v1.27.1"
 curl -sSLo /usr/local/bin/ecr-credential-provider --fail --retry 5 "https://artifacts.k8s.io/binaries/cloud-provider-aws/$VERSION/linux/$ARCH/ecr-credential-provider-linux-$ARCH"
 chmod +x /usr/local/bin/ecr-credential-provider
-ln -s /usr/local/bin/ecr-credential-provider /etc/eks/image-credential-provider/
+ln -s /usr/local/bin/ecr-credential-provider /etc/eks/image-credential-provider/ || true
 
 # Download and configure CNI
 cni_bin_dir="/opt/cni/bin"
