@@ -47,6 +47,7 @@ func (d *deployer) DumpClusterLogs() error {
 	d.dumpCloudInitLogs()
 	d.dumpKubeletLogs()
 	d.kubectlDump()
+	d.dumpJournalLogs()
 
 	return nil
 }
@@ -61,6 +62,10 @@ func (d *deployer) dumpContainerdLogs() {
 
 func (d *deployer) dumpKubeletLogs() {
 	d.dumpRemoteLogs("kubelet", "journalctl", "-u", "kubelet", "--no-pager")
+}
+
+func (d *deployer) dumpJournalLogs() {
+	d.dumpRemoteLogs("journal", "journalctl", "--no-pager")
 }
 
 func (d *deployer) dumpCloudInitLogs() {
