@@ -89,6 +89,9 @@ if [ "$os" == "amzn2023" ]; then
 
   # Remove duplicate lines in /etc/resolv.conf
   awk -i inplace '!seen[$0]++'  /etc/resolv.conf || true
+  RESOLVE_CONF=/run/systemd/resolve/resolv.conf
+else
+  RESOLVE_CONF=/etc/resolv.conf
 fi
 
 mkdir -p /etc/kubernetes/
@@ -114,7 +117,7 @@ nodeRegistration:
     hostname-override: {{HOSTNAME_OVERRIDE}}
     image-credential-provider-bin-dir: /etc/eks/image-credential-provider/
     image-credential-provider-config: /etc/eks/image-credential-provider/config.json
-    resolv-conf: /etc/resolv.conf
+    resolv-conf: $RESOLVE_CONF
 EOF
 
 cat <<EOF > /etc/eks/image-credential-provider/config.json

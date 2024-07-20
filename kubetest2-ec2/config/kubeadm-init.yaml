@@ -15,6 +15,7 @@ nodeRegistration:
     hostname-override: {{HOSTNAME_OVERRIDE}}
     image-credential-provider-bin-dir: /usr/local/bin
     image-credential-provider-config: /etc/kubernetes/credential-provider.yaml
+    resolv-conf: /run/systemd/resolve/resolv.conf
 ---
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
