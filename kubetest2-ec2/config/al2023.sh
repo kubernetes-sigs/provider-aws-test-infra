@@ -97,6 +97,10 @@ fi
 mkdir -p /etc/kubernetes/
 mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/eks/image-credential-provider/
+mkdir -p /var/log/pods/
+chmod -R g+s /var/log/pods/
+mkdir -p /var/log/containers/
+chmod -R g+s /var/log/containers/
 
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
 apiVersion: kubeadm.k8s.io/v1beta3
