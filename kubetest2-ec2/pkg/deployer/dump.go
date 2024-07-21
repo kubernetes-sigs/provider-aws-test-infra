@@ -131,7 +131,7 @@ func (d *deployer) dumpVPCCNILogs() {
 			klog.Errorf("failed to create %s: %s", destDir, err)
 			continue
 		}
-		output, err = remote.SCP(instance.instanceID, "/var/log/pods/", destDir)
+		output, err = remote.SCP(instance.instanceID, "/var/log/pods/", d.logsDir)
 		if err != nil {
 			klog.Errorf("error scp from /var/log/pods/ failed: %s", instance.instanceID)
 		}
