@@ -125,13 +125,13 @@ func (d *deployer) dumpVPCCNILogs() {
 		if err != nil {
 			klog.Errorf("error chmod for pod logs : %s", instance.instanceID, output)
 		}
-		destDir = filepath.Join(d.logsDir, instance.instanceID, "pods")
+		destDir = filepath.Join(d.logsDir, instance.instanceID)
 		err = os.MkdirAll(destDir, os.ModePerm)
 		if err != nil {
 			klog.Errorf("failed to create %s: %s", destDir, err)
 			continue
 		}
-		output, err = remote.SCP(instance.instanceID, "/var/log/pods/", d.logsDir)
+		output, err = remote.SCP(instance.instanceID, "/var/log/pods/", destDir)
 		if err != nil {
 			klog.Errorf("error scp from /var/log/pods/ failed: %s", instance.instanceID)
 		}
