@@ -31,7 +31,14 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     kubectl --kubeconfig /etc/kubernetes/admin.conf apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.32"
     kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Available --timeout=2m -n kube-system deployments ebs-csi-controller
   else
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f "https://raw.githubusercontent.com/aojea/kindnet/main/install-kindnet.yaml"
+    META_URL=http://169.254.169.254/latest/meta-data
+    TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
+    MAC=$(curl -s $META_URL/network/interfaces/macs/ -s --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
+    POD_CIDRS=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks --header "X-aws-ec2-metadata-token: $TOKEN" | sed -z 's/\n/,/g')
+    wget https://raw.githubusercontent.com/aojea/kindnet/main/install-kindnet.yaml
+    yq e '(select(has("spec")) | .spec.template.spec.containers[0].env += {"name": "POD_SUBNET", "value": "'$POD_CIDRS'"}) // .' install-kindnet.yaml > install-kindnet-with-pod-subnet.yaml
+
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f install-kindnet-with-pod-subnet.yaml
     kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset kindnet -n kube-system --timeout=5m
   fi
   # shellcheck disable=SC2050
