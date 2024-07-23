@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"k8s.io/klog/v2"
 
+	"sigs.k8s.io/kubetest2/pkg/fs"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/config"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/remote"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
@@ -323,6 +325,9 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 		if a.controlPlaneIP == *testInstance.instance.PrivateIpAddress {
 			if a.deployer.KubeconfigPath == "" {
 				a.deployer.KubeconfigPath = downloadKubeConfig(testInstance.instanceID, testInstance.publicIP)
+				klog.Infof("Updating $HOME/.kube/config")
+				home, _ := os.UserHomeDir()
+				_ = fs.CopyFile(a.deployer.KubeconfigPath, filepath.Join(home, ".kube", "config"))
 			}
 		}
 	}

@@ -29,6 +29,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/kubetest2/pkg/exec"
+	"sigs.k8s.io/kubetest2/pkg/fs"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/remote"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 )
@@ -58,6 +59,9 @@ func (d *deployer) IsUp() (up bool, err error) {
 		klog.Infof("found instance2 id: %s", instance2.instanceID)
 		if d.KubeconfigPath == "" {
 			d.KubeconfigPath = downloadKubeConfig(instance2.instanceID, instance2.publicIP)
+			klog.Infof("Updating $HOME/.kube/config")
+			home, _ := os.UserHomeDir()
+			_ = fs.CopyFile(d.KubeconfigPath, filepath.Join(home, ".kube", "config"))
 		}
 		break
 	}
