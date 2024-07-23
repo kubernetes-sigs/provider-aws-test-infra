@@ -56,6 +56,7 @@ type AWSRunner struct {
 	token              string
 	certificateKey     string
 	controlPlaneIP     string
+	subnetID           string
 }
 
 type awsInstance struct {
@@ -570,13 +571,23 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		}
 	}
 
+	if a.subnetID == "" {
+		var err error
+		var vpcID string
+		a.subnetID, vpcID, err = utils.PickSubnetID(a.ec2Service)
+		if err != nil {
+			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, vpcID)
+		}
+	}
+
 	var instance *ec2.Instance
 	newInstance, err := utils.LaunchNewInstance(
 		a.ec2Service,
 		a.iamService,
 		a.deployer.ClusterID,
 		a.controlPlaneIP,
-		img)
+		img,
+		a.subnetID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to launch instance : %w", err)
 	}

@@ -3,8 +3,11 @@ package utils
 import (
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
+
+	"k8s.io/klog/v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -23,7 +26,7 @@ type InternalAWSImage struct {
 }
 
 func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
-	clusterID string, controlPlaneIP string, img InternalAWSImage) (*ec2.Instance, error) {
+	clusterID string, controlPlaneIP string, img InternalAWSImage, subnetID string) (*ec2.Instance, error) {
 	images, err := ec2Service.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&img.AmiID}})
 	if err != nil {
 		return nil, fmt.Errorf("describing images: %w in region (%s)", err, *ec2Service.Config.Region)
@@ -41,6 +44,7 @@ func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
 		},
 		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
 			{
+				SubnetId:                 aws.String(subnetID),
 				AssociatePublicIpAddress: aws.Bool(true),
 				DeviceIndex:              aws.Int64(0),
 			},
@@ -119,4 +123,72 @@ func WaitForInstanceToRun(ec2Service *ec2.EC2, instance *ec2.Instance) *ec2.Inst
 		}
 	}
 	return instance
+}
+
+func PickSubnetID(svc *ec2.EC2) (string, string, error) {
+	defaultVpcID, err := getDefaultVPC(svc)
+	if err != nil {
+		return "", "", fmt.Errorf("Failed to get default VPC: %v", err)
+	}
+	klog.Infof("Default VPC ID: %s\n", defaultVpcID)
+
+	// Get subnet IDs for the default VPC
+	subnetIDs, err := getSubnetIDs(svc, defaultVpcID)
+	if err != nil {
+		return "", "", fmt.Errorf("Failed to get subnet IDs: %v", err)
+	}
+
+	// Print the results
+	klog.Infof("Subnet IDs: %v", subnetIDs)
+	if len(subnetIDs) == 0 {
+		return "", "", fmt.Errorf("No subnets found in the default VPC: %s", defaultVpcID)
+	}
+	randomSubnetID := subnetIDs[rand.Intn(len(subnetIDs))]
+	klog.Infof("Randomly picked subnet ID: %s\n", randomSubnetID)
+	return randomSubnetID, defaultVpcID, nil
+}
+
+func getDefaultVPC(svc *ec2.EC2) (string, error) {
+	input := &ec2.DescribeVpcsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("isDefault"),
+				Values: []*string{aws.String("true")},
+			},
+		},
+	}
+
+	result, err := svc.DescribeVpcs(input)
+	if err != nil {
+		return "", err
+	}
+
+	if len(result.Vpcs) == 0 {
+		return "", fmt.Errorf("no default VPC found")
+	}
+
+	return *result.Vpcs[0].VpcId, nil
+}
+
+func getSubnetIDs(svc *ec2.EC2, vpcID string) ([]string, error) {
+	input := &ec2.DescribeSubnetsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []*string{aws.String(vpcID)},
+			},
+		},
+	}
+
+	result, err := svc.DescribeSubnets(input)
+	if err != nil {
+		return nil, err
+	}
+
+	var subnetIDs []string
+	for _, subnet := range result.Subnets {
+		subnetIDs = append(subnetIDs, *subnet.SubnetId)
+	}
+
+	return subnetIDs, nil
 }
