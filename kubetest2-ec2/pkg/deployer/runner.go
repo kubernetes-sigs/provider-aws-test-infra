@@ -259,7 +259,7 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 			if err != nil {
 				klog.Infof("unable to set SourceDestCheck on instance %s", testInstance.instanceID)
 			}
-        }
+		}
 		testInstance.publicIP = *instance.PublicIpAddress
 		testInstance.privateIP = *instance.PrivateIpAddress
 
@@ -612,10 +612,22 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 // assignNewSSHKey generates a new SSH key-pair and assigns it to the EC2 instance using EC2-instance connect. It then
 // connects via SSH and makes the key permanent by writing it to ~/.ssh/authorized_keys
 func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
-	// create our new key
-	key, err := utils.GenerateSSHKeypair()
-	if err != nil {
-		return fmt.Errorf("creating SSH key, %w", err)
+	var key *utils.TemporarySSHKey
+	var err error
+
+	if utils.LocalSSHKeyExists() {
+			klog.Info("loading existing id_ed25519 key")
+			key, err = utils.LoadExistingSSHKey()
+			if err != nil {
+				return fmt.Errorf("error loading existing SSH key, %w", err)
+			}
+	}
+	if key == nil {
+		// create our new key
+		key, err = utils.GenerateSSHKeypair()
+		if err != nil {
+			return fmt.Errorf("creating SSH key, %w", err)
+		}
 	}
 	testInstance.sshKey = key
 	_, err = a.ec2icService.SendSSHPublicKey(&ec2instanceconnect.SendSSHPublicKeyInput{
@@ -649,20 +661,23 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 		return fmt.Errorf("registering SSH key, %w", err)
 	}
 
-	// write our Private SSH key to disk and register it
-	f, err := os.CreateTemp("", ".ssh-key-*")
-	if err != nil {
-		return fmt.Errorf("creating SSH key, %w", err)
-	}
-	sshKeyFile := f.Name()
-	if err = os.Chmod(sshKeyFile, 0400); err != nil {
-		return fmt.Errorf("chmod'ing SSH key, %w", err)
-	}
+	if testInstance.sshKey.PrivateKeyPath == "" {
+		// write our Private SSH key to disk and register it
+		f, err := os.CreateTemp("", ".ssh-key-*")
+		if err != nil {
+			return fmt.Errorf("creating SSH key, %w", err)
+		}
+		sshKeyFile := f.Name()
+		if err = os.Chmod(sshKeyFile, 0400); err != nil {
+			return fmt.Errorf("chmod'ing SSH key, %w", err)
+		}
 
-	if _, err = f.Write(testInstance.sshKey.Private); err != nil {
-		return fmt.Errorf("writing SSH key, %w", err)
+		if _, err = f.Write(testInstance.sshKey.Private); err != nil {
+			return fmt.Errorf("writing SSH key, %w", err)
+		}
+		testInstance.sshKey.PrivateKeyPath = sshKeyFile
 	}
-	remote.AddSSHKey(testInstance.instanceID, sshKeyFile)
-	testInstance.sshPublicKeyFile = sshKeyFile
+	remote.AddSSHKey(testInstance.instanceID, testInstance.sshKey.PrivateKeyPath)
+	testInstance.sshPublicKeyFile = testInstance.sshKey.PrivateKeyPath
 	return nil
 }
