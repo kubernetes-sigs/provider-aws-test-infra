@@ -197,6 +197,7 @@ type VolumeSource struct {
 	// The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
 	// The volume will be mounted read-only (ro) and non-executable files (noexec).
 	// Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+	// The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
 	// +featureGate=ImageVolume
 	// +optional
 	Image *ImageVolumeSource
@@ -357,7 +358,7 @@ type PersistentVolumeSpec struct {
 	// after a volume has been updated successfully to a new class.
 	// For an unbound PersistentVolume, the volumeAttributesClassName will be matched with unbound
 	// PersistentVolumeClaims during the binding process.
-	// This is an alpha field and requires enabling VolumeAttributesClass feature.
+	// This is a beta field and requires enabling VolumeAttributesClass feature (off by default).
 	// +featureGate=VolumeAttributesClass
 	// +optional
 	VolumeAttributesClassName *string
@@ -523,7 +524,7 @@ type PersistentVolumeClaimSpec struct {
 	// set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
 	// exists.
 	// More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
-	// (Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.
+	// (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
 	// +featureGate=VolumeAttributesClass
 	// +optional
 	VolumeAttributesClassName *string
@@ -548,15 +549,27 @@ type TypedObjectReference struct {
 }
 
 // PersistentVolumeClaimConditionType defines the condition of PV claim.
-// Valid values are either "Resizing" or "FileSystemResizePending".
+// Valid values are:
+//   - "Resizing", "FileSystemResizePending"
+//
+// If RecoverVolumeExpansionFailure feature gate is enabled, then following additional values can be expected:
+//   - "ControllerResizeError", "NodeResizeError"
+//
+// If VolumeAttributesClass feature gate is enabled, then following additional values can be expected:
+//   - "ModifyVolumeError", "ModifyingVolume"
 type PersistentVolumeClaimConditionType string
 
-// These are valid conditions of Pvc
+// These are valid conditions of PVC
 const (
 	// An user trigger resize of pvc has been started
 	PersistentVolumeClaimResizing PersistentVolumeClaimConditionType = "Resizing"
 	// PersistentVolumeClaimFileSystemResizePending - controller resize is finished and a file system resize is pending on node
 	PersistentVolumeClaimFileSystemResizePending PersistentVolumeClaimConditionType = "FileSystemResizePending"
+
+	// PersistentVolumeClaimControllerResizeError indicates an error while resizing volume for size in the controller
+	PersistentVolumeClaimControllerResizeError PersistentVolumeClaimConditionType = "ControllerResizeError"
+	// PersistentVolumeClaimNodeResizeError indicates an error while resizing volume for size in the node.
+	PersistentVolumeClaimNodeResizeError PersistentVolumeClaimConditionType = "NodeResizeError"
 
 	// Applying the target VolumeAttributesClass encountered an error
 	PersistentVolumeClaimVolumeModifyVolumeError PersistentVolumeClaimConditionType = "ModifyVolumeError"
@@ -574,18 +587,19 @@ const (
 	// State set when resize controller starts resizing the volume in control-plane
 	PersistentVolumeClaimControllerResizeInProgress ClaimResourceStatus = "ControllerResizeInProgress"
 
-	// State set when resize has failed in resize controller with a terminal error.
+	// State set when resize has failed in resize controller with a terminal unrecoverable error.
 	// Transient errors such as timeout should not set this status and should leave allocatedResourceStatus
 	// unmodified, so as resize controller can resume the volume expansion.
-	PersistentVolumeClaimControllerResizeFailed ClaimResourceStatus = "ControllerResizeFailed"
+	PersistentVolumeClaimControllerResizeInfeasible ClaimResourceStatus = "ControllerResizeInfeasible"
 
 	// State set when resize controller has finished resizing the volume but further resizing of volume
 	// is needed on the node.
 	PersistentVolumeClaimNodeResizePending ClaimResourceStatus = "NodeResizePending"
 	// State set when kubelet starts resizing the volume.
 	PersistentVolumeClaimNodeResizeInProgress ClaimResourceStatus = "NodeResizeInProgress"
-	// State set when resizing has failed in kubelet with a terminal error. Transient errors don't set NodeResizeFailed
-	PersistentVolumeClaimNodeResizeFailed ClaimResourceStatus = "NodeResizeFailed"
+	// State set when resizing has failed in kubelet with a terminal unrecoverable error. Transient errors
+	// shouldn't set this status
+	PersistentVolumeClaimNodeResizeInfeasible ClaimResourceStatus = "NodeResizeInfeasible"
 )
 
 // +enum
@@ -713,13 +727,13 @@ type PersistentVolumeClaimStatus struct {
 	AllocatedResourceStatuses map[ResourceName]ClaimResourceStatus
 	// currentVolumeAttributesClassName is the current name of the VolumeAttributesClass the PVC is using.
 	// When unset, there is no VolumeAttributeClass applied to this PersistentVolumeClaim
-	// This is an alpha field and requires enabling VolumeAttributesClass feature.
+	// This is a beta field and requires enabling VolumeAttributesClass feature (off by default).
 	// +featureGate=VolumeAttributesClass
 	// +optional
 	CurrentVolumeAttributesClassName *string
 	// ModifyVolumeStatus represents the status object of ControllerModifyVolume operation.
 	// When this is unset, there is no ModifyVolume operation being attempted.
-	// This is an alpha field and requires enabling VolumeAttributesClass feature.
+	// This is a beta field and requires enabling VolumeAttributesClass feature (off by default).
 	// +featureGate=VolumeAttributesClass
 	// +optional
 	ModifyVolumeStatus *ModifyVolumeStatus
@@ -5799,6 +5813,8 @@ const (
 	ResourceLimitsMemory ResourceName = "limits.memory"
 	// Local ephemeral storage limit, in bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024)
 	ResourceLimitsEphemeralStorage ResourceName = "limits.ephemeral-storage"
+	// resource.k8s.io devices requested with a certain DeviceClass, number
+	ResourceClaimsPerClass string = ".deviceclass.resource.k8s.io/devices"
 )
 
 // The following identify resource prefix for Kubernetes object types

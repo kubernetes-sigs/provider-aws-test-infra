@@ -2399,7 +2399,9 @@ func ValidatePersistentVolumeClaimUpdate(newPvc, oldPvc *core.PersistentVolumeCl
 		newPvcClone.Spec.Resources.Requests["storage"] = oldPvc.Spec.Resources.Requests["storage"] // +k8s:verify-mutation:reason=clone
 	}
 	// lets make sure volume attributes class name is same.
-	newPvcClone.Spec.VolumeAttributesClassName = oldPvcClone.Spec.VolumeAttributesClassName // +k8s:verify-mutation:reason=clone
+	if newPvc.Status.Phase == core.ClaimBound && newPvcClone.Spec.VolumeAttributesClassName != nil {
+		newPvcClone.Spec.VolumeAttributesClassName = oldPvcClone.Spec.VolumeAttributesClassName // +k8s:verify-mutation:reason=clone
+	}
 
 	oldSize := oldPvc.Spec.Resources.Requests["storage"]
 	newSize := newPvc.Spec.Resources.Requests["storage"]
@@ -2489,10 +2491,10 @@ func validatePersistentVolumeClaimResourceKey(value string, fldPath *field.Path)
 }
 
 var resizeStatusSet = sets.New(core.PersistentVolumeClaimControllerResizeInProgress,
-	core.PersistentVolumeClaimControllerResizeFailed,
+	core.PersistentVolumeClaimControllerResizeInfeasible,
 	core.PersistentVolumeClaimNodeResizePending,
 	core.PersistentVolumeClaimNodeResizeInProgress,
-	core.PersistentVolumeClaimNodeResizeFailed)
+	core.PersistentVolumeClaimNodeResizeInfeasible)
 
 // ValidatePersistentVolumeClaimStatusUpdate validates an update to status of a PersistentVolumeClaim
 func ValidatePersistentVolumeClaimStatusUpdate(newPvc, oldPvc *core.PersistentVolumeClaim, validationOpts PersistentVolumeClaimSpecValidationOptions) field.ErrorList {
@@ -4793,9 +4795,6 @@ func ValidateAppArmorProfileFormat(profile string) error {
 
 // validateAppArmorAnnotationsAndFieldsMatchOnCreate validates that AppArmor fields and annotations are consistent.
 func validateAppArmorAnnotationsAndFieldsMatchOnCreate(objectMeta metav1.ObjectMeta, podSpec *core.PodSpec, specPath *field.Path) field.ErrorList {
-	if !utilfeature.DefaultFeatureGate.Enabled(features.AppArmorFields) {
-		return nil
-	}
 	if podSpec.OS != nil && podSpec.OS.Name == core.Windows {
 		// Skip consistency check for windows pods.
 		return nil
