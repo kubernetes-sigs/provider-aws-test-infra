@@ -187,6 +187,10 @@ func getSubnetIDs(svc *ec2.EC2, vpcID string) ([]string, error) {
 
 	var subnetIDs []string
 	for _, subnet := range result.Subnets {
+		// skip known AZ where instance types we need are not available
+		if *subnet.AvailabilityZone == "us-east-1e" {
+			continue
+		}
 		subnetIDs = append(subnetIDs, *subnet.SubnetId)
 	}
 
