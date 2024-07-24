@@ -22,14 +22,16 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"os"
 
 	"golang.org/x/crypto/ssh"
 )
 
 type TemporarySSHKey struct {
-	Public  []byte
-	Private []byte
-	Signer  ssh.Signer
+	Public         []byte
+	Private        []byte
+	Signer         ssh.Signer
+	PrivateKeyPath string
 }
 
 func GenerateSSHKeypair() (*TemporarySSHKey, error) {
@@ -63,5 +65,43 @@ func GenerateSSHKeypair() (*TemporarySSHKey, error) {
 		Public:  pubKey,
 		Private: privatePEM,
 		Signer:  signer,
+	}, nil
+}
+
+var keyPrefix = "id_ed25519"
+
+func LocalSSHKeyExists() bool {
+	home := os.Getenv("HOME")
+	if _, err := os.Stat(home + "/.ssh/" + keyPrefix); err == nil {
+		if _, err := os.Stat(home + "/.ssh/" + keyPrefix + ".pub"); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func LoadExistingSSHKey() (*TemporarySSHKey, error) {
+	home := os.Getenv("HOME")
+	publicBytes, err := os.ReadFile(home + "/.ssh/" + keyPrefix + ".pub")
+	if err != nil {
+		return nil, fmt.Errorf("error loading public key bytes: %w", err)
+	}
+	privateBytes, err := os.ReadFile(home + "/.ssh/" + keyPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("error loading private key bytes: %w", err)
+	}
+	privateKey, err := ssh.ParseRawPrivateKey(privateBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing private key bytes: %w", err)
+	}
+	privateKeySigner, err := ssh.NewSignerFromKey(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("error new signer for private key bytes: %w", err)
+	}
+	return &TemporarySSHKey{
+		Public:  publicBytes,
+		Private: privateBytes,
+		Signer:  privateKeySigner,
+		PrivateKeyPath: home + "/.ssh/" + keyPrefix,
 	}, nil
 }
