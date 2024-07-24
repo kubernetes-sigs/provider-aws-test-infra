@@ -195,7 +195,7 @@ func downloadKubeConfig(instanceID string, publicIp string) string {
 		klog.Fatalf("creating KUBECONFIG file, %w", err)
 	}
 	kubeconfigFile := f.Name()
-	if err = os.Chmod(kubeconfigFile, 0400); err != nil {
+	if err = os.Chmod(kubeconfigFile, 0600); err != nil {
 		klog.Fatalf("chmod'ing KUBECONFIG file, %w", err)
 	}
 
