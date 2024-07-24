@@ -68,9 +68,7 @@ func GenerateSSHKeypair() (*TemporarySSHKey, error) {
 	}, nil
 }
 
-var keyPrefix = "id_ed25519"
-
-func LocalSSHKeyExists() bool {
+func LocalSSHKeyExists(keyPrefix string) bool {
 	home := os.Getenv("HOME")
 	if _, err := os.Stat(home + "/.ssh/" + keyPrefix); err == nil {
 		if _, err := os.Stat(home + "/.ssh/" + keyPrefix + ".pub"); err == nil {
@@ -80,7 +78,7 @@ func LocalSSHKeyExists() bool {
 	return false
 }
 
-func LoadExistingSSHKey() (*TemporarySSHKey, error) {
+func LoadExistingSSHKey(keyPrefix string) (*TemporarySSHKey, error) {
 	home := os.Getenv("HOME")
 	publicBytes, err := os.ReadFile(home + "/.ssh/" + keyPrefix + ".pub")
 	if err != nil {

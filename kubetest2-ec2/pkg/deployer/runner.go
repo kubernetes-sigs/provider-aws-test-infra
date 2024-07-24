@@ -615,11 +615,18 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	var key *utils.TemporarySSHKey
 	var err error
 
-	if utils.LocalSSHKeyExists() {
-			klog.Info("loading existing id_ed25519 key")
-			key, err = utils.LoadExistingSSHKey()
+	if utils.LocalSSHKeyExists("id_rsa") {
+			klog.Info("loading existing id_rsa key")
+			key, err = utils.LoadExistingSSHKey("id_rsa")
 			if err != nil {
-				return fmt.Errorf("error loading existing SSH key, %w", err)
+				return fmt.Errorf("error loading existing id_rsa SSH key, %w", err)
+			}
+	}
+	if key == nil && utils.LocalSSHKeyExists("id_ed25519") {
+			klog.Info("loading existing id_ed25519 key")
+			key, err = utils.LoadExistingSSHKey("id_ed25519")
+			if err != nil {
+				return fmt.Errorf("error loading existing id_ed25519 SSH key, %w", err)
 			}
 	}
 	if key == nil {
