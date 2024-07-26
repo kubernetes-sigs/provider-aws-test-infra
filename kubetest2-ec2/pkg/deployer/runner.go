@@ -638,6 +638,7 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	}
 	if key == nil {
 		// create our new key
+		klog.Infof("assigning new SSH key-pair for %s@%s", a.deployer.SSHUser, testInstance.publicIP)
 		key, err = utils.GenerateSSHKeypair()
 		if err != nil {
 			return fmt.Errorf("creating SSH key, %w", err)
@@ -653,6 +654,7 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	if err != nil {
 		return fmt.Errorf("sending SSH Public key for serial console access for %s, %w", a.deployer.SSHUser, err)
 	}
+	klog.Infof("dialing ssh %s@%s", a.deployer.SSHUser, testInstance.publicIP)
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", testInstance.publicIP), &ssh.ClientConfig{
 		User:            a.deployer.SSHUser,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
