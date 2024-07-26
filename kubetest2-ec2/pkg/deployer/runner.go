@@ -345,7 +345,6 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 func (a *AWSRunner) InitializeServices() (*awsv2.Config, error) {
 
 	cfg, err := configv2.LoadDefaultConfig(context.TODO(),
-		configv2.WithSharedConfigProfile("default"), // or specify your profile name
 		configv2.WithRegion(a.deployer.Region),
 	)
 	if err != nil {
