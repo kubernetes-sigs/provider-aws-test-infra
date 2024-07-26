@@ -17,6 +17,7 @@ limitations under the License.
 package aws
 
 import (
+	"context"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -29,11 +30,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+
 	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh"
 	"k8s.io/klog/v2"
@@ -58,9 +61,9 @@ const amiIDTag = "Node-E2E-Test"
 
 type AWSRunner struct {
 	cfg               remote.Config
-	ec2Service        *ec2.EC2
-	ec2icService      *ec2instanceconnect.EC2InstanceConnect
-	ssmService        *ssm.SSM
+	ec2Service        *ec2.Client
+	ec2icService      *ec2instanceconnect.Client
+	ssmService        *ssm.Client
 	internalAWSImages []internalAWSImage
 }
 
@@ -81,13 +84,16 @@ func (a *AWSRunner) Validate() error {
 			return fmt.Errorf("invalid AMI id format for %q", img)
 		}
 	}
-	sess, err := session.NewSession(&aws.Config{Region: region})
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(*region),
+	)
 	if err != nil {
-		klog.Fatalf("Unable to create AWS session, %s", err)
+		klog.Fatalf("Unable to load AWS default config, %s", err)
 	}
-	a.ec2Service = ec2.New(sess)
-	a.ec2icService = ec2instanceconnect.New(sess)
-	a.ssmService = ssm.New(sess)
+	a.ec2Service = ec2.NewFromConfig(cfg)
+	a.ec2icService = ec2instanceconnect.NewFromConfig(cfg)
+	a.ssmService = ssm.NewFromConfig(cfg)
 	if a.internalAWSImages, err = a.prepareAWSImages(); err != nil {
 		klog.Fatalf("While preparing AWS images: %v", err)
 	}
@@ -259,8 +265,8 @@ func (a *AWSRunner) testAWSImage(suite remote.TestSuite, archivePath string, ima
 
 func (a *AWSRunner) deleteAWSInstance(instanceID string) {
 	klog.Infof("Terminating instance %q", instanceID)
-	_, err := a.ec2Service.TerminateInstances(&ec2.TerminateInstancesInput{
-		InstanceIds: []*string{&instanceID},
+	_, err := a.ec2Service.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
+		InstanceIds: []string{instanceID},
 	})
 	if err != nil {
 		klog.Errorf("Error terminating instance %q: %v", instanceID, err)
@@ -269,15 +275,15 @@ func (a *AWSRunner) deleteAWSInstance(instanceID string) {
 
 func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 	// first see if we have an instance already running the desired image
-	existing, err := a.ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
+	existing, err := a.ec2Service.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+		Filters: []types.Filter{
 			{
 				Name:   aws.String("instance-state-name"),
-				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
+				Values: []string{string(types.InstanceStateNameRunning)},
 			},
 			{
 				Name:   aws.String(fmt.Sprintf("tag:%s", amiIDTag)),
-				Values: []*string{aws.String(img.amiID)},
+				Values: []string{img.amiID},
 			},
 		},
 	})
@@ -285,9 +291,9 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 		return nil, err
 	}
 
-	var instance *ec2.Instance
+	var instance *types.Instance
 	if *reuseInstances && len(existing.Reservations) > 0 && len(existing.Reservations[0].Instances) > 0 {
-		instance = existing.Reservations[0].Instances[0]
+		instance = &existing.Reservations[0].Instances[0]
 		klog.Infof("reusing existing instance %s", *instance.InstanceId)
 	} else {
 		// no existing instance running that image, so we need to launch a new instance
@@ -304,10 +310,12 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 		instance:   instance,
 	}
 
-	klog.Infof("waiting for %s to start", testInstance.instanceID)
-	err = a.ec2Service.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
-		InstanceIds: []*string{&testInstance.instanceID},
-	})
+	klog.Infof("waiting for %s to start (5 mins)", testInstance.instanceID)
+	err = ec2.NewInstanceRunningWaiter(a.ec2Service).Wait(context.TODO(),
+		&ec2.DescribeInstancesInput{
+			InstanceIds: []string{testInstance.instanceID},
+		}, 5*time.Minute)
+
 	if err != nil {
 		return testInstance, fmt.Errorf("instance %s did not start running", testInstance.instanceID)
 	}
@@ -320,14 +328,14 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 		}
 
 		var op *ec2.DescribeInstancesOutput
-		op, err = a.ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-			InstanceIds: []*string{&testInstance.instanceID},
+		op, err = a.ec2Service.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+			InstanceIds: []string{testInstance.instanceID},
 		})
 		if err != nil {
 			continue
 		}
 		instance := op.Reservations[0].Instances[0]
-		if *instance.State.Name != ec2.InstanceStateNameRunning {
+		if instance.State.Name != types.InstanceStateNameRunning {
 			continue
 		}
 
@@ -340,13 +348,13 @@ func (a *AWSRunner) getAWSInstance(img internalAWSImage) (*awsInstance, error) {
 			networkInterfaceID := instance.NetworkInterfaces[0].NetworkInterfaceId
 			modifyInput := &ec2.ModifyNetworkInterfaceAttributeInput{
 				NetworkInterfaceId: networkInterfaceID,
-				SourceDestCheck:    &ec2.AttributeBooleanValue{Value: aws.Bool(false)},
+				SourceDestCheck:    &types.AttributeBooleanValue{Value: aws.Bool(false)},
 			}
-			_, err = a.ec2Service.ModifyNetworkInterfaceAttribute(modifyInput)
+			_, err = a.ec2Service.ModifyNetworkInterfaceAttribute(context.TODO(), modifyInput)
 			if err != nil {
 				klog.Infof("unable to set SourceDestCheck on instance %s", testInstance.instanceID)
 			}
-        }
+		}
 
 		testInstance.publicIP = *instance.PublicIpAddress
 
@@ -395,12 +403,13 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 		return fmt.Errorf("creating SSH key, %w", err)
 	}
 	testInstance.sshKey = key
-	_, err = a.ec2icService.SendSSHPublicKey(&ec2instanceconnect.SendSSHPublicKeyInput{
-		InstanceId:       aws.String(testInstance.instanceID),
-		InstanceOSUser:   aws.String(remote.GetSSHUser()),
-		SSHPublicKey:     aws.String(string(key.public)),
-		AvailabilityZone: testInstance.instance.Placement.AvailabilityZone,
-	})
+	_, err = a.ec2icService.SendSSHPublicKey(context.TODO(),
+		&ec2instanceconnect.SendSSHPublicKeyInput{
+			InstanceId:       aws.String(testInstance.instanceID),
+			InstanceOSUser:   aws.String(remote.GetSSHUser()),
+			SSHPublicKey:     aws.String(string(key.public)),
+			AvailabilityZone: testInstance.instance.Placement.AvailabilityZone,
+		})
 	if err != nil {
 		return fmt.Errorf("sending SSH public key for serial console access, %w", err)
 	}
@@ -444,27 +453,28 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	return nil
 }
 
-func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, error) {
-	images, err := a.ec2Service.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&img.amiID}})
+func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*types.Instance, error) {
+	images, err := a.ec2Service.DescribeImages(context.TODO(),
+		&ec2.DescribeImagesInput{ImageIds: []string{img.amiID}})
 	if err != nil {
 		return nil, fmt.Errorf("describing images, %w", err)
 	}
 
 	input := &ec2.RunInstancesInput{
-		InstanceType: &img.instanceType,
+		InstanceType: types.InstanceType(img.instanceType),
 		ImageId:      &img.amiID,
-		MinCount:     aws.Int64(1),
-		MaxCount:     aws.Int64(1),
-		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
+		MinCount:     aws.Int32(1),
+		MaxCount:     aws.Int32(1),
+		NetworkInterfaces: []types.InstanceNetworkInterfaceSpecification{
 			{
 				AssociatePublicIpAddress: aws.Bool(true),
-				DeviceIndex:              aws.Int64(0),
+				DeviceIndex:              aws.Int32(0),
 			},
 		},
-		TagSpecifications: []*ec2.TagSpecification{
+		TagSpecifications: []types.TagSpecification{
 			{
-				ResourceType: aws.String(ec2.ResourceTypeInstance),
-				Tags: []*ec2.Tag{
+				ResourceType: types.ResourceTypeInstance,
+				Tags: []types.Tag{
 					{
 						Key:   aws.String("Name"),
 						Value: aws.String(a.cfg.InstanceNamePrefix + img.imageDesc),
@@ -477,8 +487,8 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 				},
 			},
 			{
-				ResourceType: aws.String(ec2.ResourceTypeVolume),
-				Tags: []*ec2.Tag{
+				ResourceType: types.ResourceTypeVolume,
+				Tags: []types.Tag{
 					{
 						Key:   aws.String("Name"),
 						Value: aws.String(a.cfg.InstanceNamePrefix + img.imageDesc),
@@ -486,12 +496,12 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 				},
 			},
 		},
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+		BlockDeviceMappings: []types.BlockDeviceMapping{
 			{
 				DeviceName: aws.String(*images.Images[0].RootDeviceName),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(50),
-					VolumeType: aws.String("gp3"),
+				Ebs: &types.EbsBlockDevice{
+					VolumeSize: aws.Int32(50),
+					VolumeType: "gp3",
 				},
 			},
 		},
@@ -500,21 +510,21 @@ func (a *AWSRunner) launchNewInstance(img internalAWSImage) (*ec2.Instance, erro
 		input.UserData = aws.String(base64.StdEncoding.EncodeToString(img.userData))
 	}
 	if img.instanceProfile != "" {
-		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
+		input.IamInstanceProfile = &types.IamInstanceProfileSpecification{
 			Name: &img.instanceProfile,
 		}
 	}
 
-	rsv, err := a.ec2Service.RunInstances(input)
+	rsv, err := a.ec2Service.RunInstances(context.TODO(), input)
 	if err != nil {
 		return nil, fmt.Errorf("creating instance, %w", err)
 	}
 
-	return rsv.Instances[0], nil
+	return &rsv.Instances[0], nil
 }
 
 func (a *AWSRunner) getSSMImage(path string) (string, error) {
-	rsp, err := a.ssmService.GetParameter(&ssm.GetParameterInput{
+	rsp, err := a.ssmService.GetParameter(context.TODO(), &ssm.GetParameterInput{
 		Name: &path,
 	})
 	if err != nil {
@@ -524,7 +534,7 @@ func (a *AWSRunner) getSSMImage(path string) (string, error) {
 }
 
 type awsInstance struct {
-	instance         *ec2.Instance
+	instance         *types.Instance
 	instanceID       string
 	sshKey           *temporarySSHKey
 	publicIP         string
