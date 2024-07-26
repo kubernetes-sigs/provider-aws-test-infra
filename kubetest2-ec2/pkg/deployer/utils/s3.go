@@ -17,23 +17,24 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"golang.org/x/exp/maps"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"golang.org/x/exp/maps"
 )
 
-func ValidateS3Bucket(s3Service *s3.S3, stageLocation string, stageVersion string, version string) error {
+func ValidateS3Bucket(s3Service *s3v2.Client, stageLocation string, stageVersion string, version string) error {
 	if strings.Contains(stageLocation, "://") {
 		return nil
 	}
 
-	results, err := s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: aws.String(stageLocation),
-		Prefix: aws.String(version),
+	results, err := s3Service.ListObjectsV2(context.TODO(), &s3v2.ListObjectsV2Input{
+		Bucket: awsv2.String(stageLocation),
+		Prefix: awsv2.String(version),
 	})
 	if err != nil {
 		return fmt.Errorf("version %s is missing from bucket %s: %w",
@@ -41,9 +42,9 @@ func ValidateS3Bucket(s3Service *s3.S3, stageLocation string, stageVersion strin
 			stageLocation,
 			err)
 	} else if results.KeyCount == nil || *results.KeyCount == 0 {
-		results, _ = s3Service.ListObjectsV2(&s3.ListObjectsV2Input{
-			Bucket: aws.String(stageLocation),
-			Prefix: aws.String("v"),
+		results, _ = s3Service.ListObjectsV2(context.TODO(), &s3v2.ListObjectsV2Input{
+			Bucket: awsv2.String(stageLocation),
+			Prefix: awsv2.String("v"),
 		})
 
 		availableVersions := map[string]string{}

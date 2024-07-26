@@ -17,13 +17,14 @@ limitations under the License.
 package deployer
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"k8s.io/klog/v2"
 
@@ -39,10 +40,11 @@ func (d *deployer) Build() error {
 		return fmt.Errorf("unable to initialize AWS services : %w", err)
 	}
 
-	s3Uploader := s3manager.NewUploaderWithClient(d.runner.s3Service, func(u *s3manager.Uploader) {
-		u.PartSize = 10 * 1024 * 1024 // 50 mb
+	s3Uploader := s3managerv2.NewUploader(d.runner.s3Service, func(u *s3managerv2.Uploader) {
+		u.PartSize = 10 * 1024 * 1024 // 10 MB
 		u.Concurrency = 10
 	})
+
 	d.BuildOptions.CommonBuildOptions.S3Uploader = s3Uploader
 	d.BuildOptions.CommonBuildOptions.RepoRoot = d.RepoRoot
 
@@ -64,7 +66,7 @@ func (d *deployer) Build() error {
 		if strings.Contains(d.BuildOptions.CommonBuildOptions.StageLocation, "://") {
 			return fmt.Errorf("unsupported stage location, please specify the name of the s3 bucket (without s3:// prefix)")
 		}
-		_, err := d.runner.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+		_, err := d.runner.s3Service.HeadBucket(context.TODO(), &s3v2.HeadBucketInput{Bucket: awsv2.String(bucket)})
 		if err != nil {
 			return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
 		}

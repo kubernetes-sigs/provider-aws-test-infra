@@ -17,6 +17,7 @@ limitations under the License.
 package deployer
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -25,14 +26,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	configv2 "github.com/aws/aws-sdk-go-v2/config"
+	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	ec2v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2typesv2 "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	ec2instanceconnectv2 "github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect"
+	iamv2 "github.com/aws/aws-sdk-go-v2/service/iam"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
+	ssmv2 "github.com/aws/aws-sdk-go-v2/service/ssm"
 
 	"golang.org/x/crypto/ssh"
 	"k8s.io/klog/v2"
@@ -45,11 +47,11 @@ import (
 
 type AWSRunner struct {
 	deployer           *deployer
-	ec2Service         *ec2.EC2
-	ec2icService       *ec2instanceconnect.EC2InstanceConnect
-	ssmService         *ssm.SSM
-	iamService         *iam.IAM
-	s3Service          *s3.S3
+	ec2Service         *ec2v2.Client
+	ec2icService       *ec2instanceconnectv2.Client
+	ssmService         *ssmv2.Client
+	iamService         *iamv2.Client
+	s3Service          *s3v2.Client
 	instanceNamePrefix string
 	internalAWSImages  []utils.InternalAWSImage
 	instances          []*awsInstance
@@ -60,7 +62,7 @@ type AWSRunner struct {
 }
 
 type awsInstance struct {
-	instance         *ec2.Instance
+	instance         *ec2typesv2.Instance
 	instanceID       string
 	sshKey           *utils.TemporarySSHKey
 	publicIP         string
@@ -85,7 +87,8 @@ func (a *AWSRunner) Validate() error {
 		return fmt.Errorf("please specify --stage with the s3 bucket")
 	}
 	if !strings.Contains(bucket, "://") {
-		_, err = a.s3Service.HeadBucket(&s3.HeadBucketInput{Bucket: aws.String(bucket)})
+		_, err = a.s3Service.HeadBucket(context.TODO(),
+			&s3v2.HeadBucketInput{Bucket: awsv2.String(bucket)})
 		if err != nil {
 			return fmt.Errorf("unable to find bucket %q, %v", bucket, err)
 		}
@@ -222,10 +225,12 @@ func (a *AWSRunner) Validate() error {
 func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstance, error) {
 	instanceRunning := false
 	createdSSHKey := false
-	klog.Infof("waiting for %s to start", testInstance.instanceID)
-	err := a.ec2Service.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
-		InstanceIds: []*string{&testInstance.instanceID},
-	})
+	klog.Infof("waiting for %s to start (5 mins)", testInstance.instanceID)
+
+	err := ec2v2.NewInstanceRunningWaiter(a.ec2Service).Wait(context.TODO(), &ec2v2.DescribeInstancesInput{
+		InstanceIds: []string{testInstance.instanceID},
+	}, 5*time.Minute)
+
 	if err != nil {
 		return testInstance, fmt.Errorf("instance %s did not start running", testInstance.instanceID)
 	}
@@ -234,14 +239,15 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 			time.Sleep(time.Second * 15)
 		}
 
-		op, err := a.ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-			InstanceIds: []*string{&testInstance.instanceID},
-		})
+		op, err := a.ec2Service.DescribeInstances(context.TODO(),
+			&ec2v2.DescribeInstancesInput{
+				InstanceIds: []string{testInstance.instanceID},
+			})
 		if err != nil {
 			continue
 		}
 		instance := op.Reservations[0].Instances[0]
-		if *instance.State.Name != ec2.InstanceStateNameRunning {
+		if instance.State.Name != ec2typesv2.InstanceStateNameRunning {
 			continue
 		}
 		if len(instance.NetworkInterfaces) == 0 {
@@ -251,11 +257,11 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 		sourceDestCheck := instance.NetworkInterfaces[0].SourceDestCheck
 		if sourceDestCheck != nil && *sourceDestCheck == true {
 			networkInterfaceID := instance.NetworkInterfaces[0].NetworkInterfaceId
-			modifyInput := &ec2.ModifyNetworkInterfaceAttributeInput{
+			modifyInput := &ec2v2.ModifyNetworkInterfaceAttributeInput{
 				NetworkInterfaceId: networkInterfaceID,
-				SourceDestCheck:    &ec2.AttributeBooleanValue{Value: aws.Bool(false)},
+				SourceDestCheck:    &ec2typesv2.AttributeBooleanValue{Value: awsv2.Bool(false)},
 			}
-			_, err = a.ec2Service.ModifyNetworkInterfaceAttribute(modifyInput)
+			_, err = a.ec2Service.ModifyNetworkInterfaceAttribute(context.TODO(), modifyInput)
 			if err != nil {
 				klog.Infof("unable to set SourceDestCheck on instance %s", testInstance.instanceID)
 			}
@@ -336,24 +342,26 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 	return testInstance, nil
 }
 
-func (a *AWSRunner) InitializeServices() (*session.Session, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Config:            aws.Config{Region: &a.deployer.Region},
-	})
+func (a *AWSRunner) InitializeServices() (*awsv2.Config, error) {
+
+	cfg, err := configv2.LoadDefaultConfig(context.TODO(),
+		configv2.WithSharedConfigProfile("default"), // or specify your profile name
+		configv2.WithRegion(a.deployer.Region),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create AWS session, %w", err)
+		return nil, fmt.Errorf("unable to load default config, %w", err)
 	}
-	a.ec2Service = ec2.New(sess)
-	a.ec2icService = ec2instanceconnect.New(sess)
-	a.ssmService = ssm.New(sess)
-	a.iamService = iam.New(sess)
-	a.s3Service = s3.New(sess)
-	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3manager.NewUploaderWithClient(a.s3Service, func(u *s3manager.Uploader) {
-		u.PartSize = 10 * 1024 * 1024 // 50 mb
+
+	a.ec2Service = ec2v2.NewFromConfig(cfg)
+	a.ec2icService = ec2instanceconnectv2.NewFromConfig(cfg)
+	a.ssmService = ssmv2.NewFromConfig(cfg)
+	a.iamService = iamv2.NewFromConfig(cfg)
+	a.s3Service = s3v2.NewFromConfig(cfg)
+	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3managerv2.NewUploader(a.s3Service, func(u *s3managerv2.Uploader) {
+		u.PartSize = 10 * 1024 * 1024 // 10 MB
 		u.Concurrency = 10
 	})
-	return sess, nil
+	return &cfg, nil
 }
 
 func (a *AWSRunner) ensureInstanceProfileAndRole() error {
@@ -580,7 +588,7 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		}
 	}
 
-	var instance *ec2.Instance
+	var instance *ec2typesv2.Instance
 	newInstance, err := utils.LaunchNewInstance(
 		a.ec2Service,
 		a.iamService,
@@ -593,7 +601,7 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 	}
 	instance = newInstance
 	klog.Infof("launched new instance %s with ami-id: %s on instance type: %s",
-		*instance.InstanceId, *instance.ImageId, *instance.InstanceType)
+		*instance.InstanceId, *instance.ImageId, instance.InstanceType)
 
 	if instance.PublicIpAddress == nil {
 		return nil, fmt.Errorf("missing public ip address for instance id : %s", *instance.InstanceId)
@@ -616,18 +624,18 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 	var err error
 
 	if utils.LocalSSHKeyExists("id_rsa") {
-			klog.Info("loading existing id_rsa key")
-			key, err = utils.LoadExistingSSHKey("id_rsa")
-			if err != nil {
-				return fmt.Errorf("error loading existing id_rsa SSH key, %w", err)
-			}
+		klog.Info("loading existing id_rsa key")
+		key, err = utils.LoadExistingSSHKey("id_rsa")
+		if err != nil {
+			return fmt.Errorf("error loading existing id_rsa SSH key, %w", err)
+		}
 	}
 	if key == nil && utils.LocalSSHKeyExists("id_ed25519") {
-			klog.Info("loading existing id_ed25519 key")
-			key, err = utils.LoadExistingSSHKey("id_ed25519")
-			if err != nil {
-				return fmt.Errorf("error loading existing id_ed25519 SSH key, %w", err)
-			}
+		klog.Info("loading existing id_ed25519 key")
+		key, err = utils.LoadExistingSSHKey("id_ed25519")
+		if err != nil {
+			return fmt.Errorf("error loading existing id_ed25519 SSH key, %w", err)
+		}
 	}
 	if key == nil {
 		// create our new key
@@ -637,10 +645,10 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 		}
 	}
 	testInstance.sshKey = key
-	_, err = a.ec2icService.SendSSHPublicKey(&ec2instanceconnect.SendSSHPublicKeyInput{
-		InstanceId:       aws.String(testInstance.instanceID),
-		InstanceOSUser:   aws.String(a.deployer.SSHUser),
-		SSHPublicKey:     aws.String(string(key.Public)),
+	_, err = a.ec2icService.SendSSHPublicKey(context.TODO(), &ec2instanceconnectv2.SendSSHPublicKeyInput{
+		InstanceId:       awsv2.String(testInstance.instanceID),
+		InstanceOSUser:   awsv2.String(a.deployer.SSHUser),
+		SSHPublicKey:     awsv2.String(string(key.Public)),
 		AvailabilityZone: testInstance.instance.Placement.AvailabilityZone,
 	})
 	if err != nil {

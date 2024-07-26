@@ -17,13 +17,13 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/aws/aws-sdk-go/service/ssm"
+	ssmv2 "github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-func GetSSMImage(ssmService *ssm.SSM, path string) (string, error) {
-	rsp, err := ssmService.GetParameter(&ssm.GetParameterInput{
+func GetSSMImage(ssmService *ssmv2.Client, path string) (string, error) {
+	rsp, err := ssmService.GetParameter(context.TODO(), &ssmv2.GetParameterInput{
 		Name: &path,
 	})
 	if err != nil {

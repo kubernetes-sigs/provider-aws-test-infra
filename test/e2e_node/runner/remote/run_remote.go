@@ -28,7 +28,7 @@ import (
 
 	"k8s.io/kubernetes/test/e2e_node/remote"
 	"k8s.io/kubernetes/test/e2e_node/system"
-        _ "sigs.k8s.io/provider-aws-test-infra/test/e2e_node/remote/aws"
+	_ "sigs.k8s.io/provider-aws-test-infra/test/e2e_node/remote/aws"
 )
 
 var testSuite = flag.String("test-suite", "default", "Test suite the runner initializes with. Currently support default|cadvisor|conformance")
