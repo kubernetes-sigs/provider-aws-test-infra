@@ -97,9 +97,9 @@ func LoadExistingSSHKey(keyPrefix string) (*TemporarySSHKey, error) {
 		return nil, fmt.Errorf("error new signer for private key bytes: %w", err)
 	}
 	return &TemporarySSHKey{
-		Public:  publicBytes,
-		Private: privateBytes,
-		Signer:  privateKeySigner,
+		Public:         publicBytes,
+		Private:        privateBytes,
+		Signer:         privateKeySigner,
 		PrivateKeyPath: home + "/.ssh/" + keyPrefix,
 	}, nil
 }

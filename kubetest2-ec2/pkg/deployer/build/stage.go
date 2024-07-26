@@ -18,13 +18,15 @@ package build
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"strings"
 
 	"k8s.io/klog/v2"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type Stager interface {
@@ -43,7 +45,7 @@ func (n *NoopStager) Stage(string) error {
 
 type S3Stager struct {
 	StageLocation   string
-	s3Uploader      *s3manager.Uploader
+	s3Uploader      *s3managerv2.Uploader
 	TargetBuildArch string
 	RepoRoot        string
 }
@@ -52,7 +54,7 @@ var _ Stager = &S3Stager{}
 
 func (n *S3Stager) Stage(version string) error {
 	tgzFile := "kubernetes-server-" + strings.ReplaceAll(n.TargetBuildArch, "/", "-") + ".tar.gz"
-	destinationKey := aws.String(version + "/" + tgzFile)
+	destinationKey := awsv2.String(version + "/" + tgzFile)
 	klog.Infof("uploading %s to s3://%s/%s", tgzFile, n.StageLocation, *destinationKey)
 
 	f, err := os.Open(n.RepoRoot + "/_output/release-tars/" + tgzFile)
@@ -64,12 +66,12 @@ func (n *S3Stager) Stage(version string) error {
 	reader := bufio.NewReader(f)
 
 	// Upload the file to S3.
-	input := &s3manager.UploadInput{
-		Bucket: aws.String(n.StageLocation),
+	input := &s3v2.PutObjectInput{
+		Bucket: awsv2.String(n.StageLocation),
 		Key:    destinationKey,
 		Body:   reader,
 	}
-	_, err = n.s3Uploader.Upload(input)
+	_, err = n.s3Uploader.Upload(context.TODO(), input)
 
 	return err
 }

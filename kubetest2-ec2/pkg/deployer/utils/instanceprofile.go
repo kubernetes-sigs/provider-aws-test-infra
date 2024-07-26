@@ -1,19 +1,19 @@
 package utils
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
-
 	"k8s.io/klog/v2"
+
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	iamv2 "github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
-func GetInstanceProfileArn(svc *iam.IAM, instanceProfileName string) (string, error) {
-	listInstanceProfilesInput := &iam.ListInstanceProfilesInput{
-		PathPrefix: aws.String("/kubetest2/"),
+func GetInstanceProfileArn(svc *iamv2.Client, instanceProfileName string) (string, error) {
+	listInstanceProfilesInput := &iamv2.ListInstanceProfilesInput{
+		PathPrefix: awsv2.String("/kubetest2/"),
 	}
-	listInstanceProfilesResult, err := svc.ListInstanceProfiles(listInstanceProfilesInput)
+	listInstanceProfilesResult, err := svc.ListInstanceProfiles(context.TODO(), listInstanceProfilesInput)
 	if err != nil {
 		return "", err
 	}
@@ -27,13 +27,13 @@ func GetInstanceProfileArn(svc *iam.IAM, instanceProfileName string) (string, er
 	return "", fmt.Errorf("unable to find Arn for %s instance profile", instanceProfileName)
 }
 
-func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName string) error {
+func EnsureInstanceProfile(svc *iamv2.Client, instanceProfileName string, roleName string) error {
 
-	listInstanceProfilesInput := &iam.ListInstanceProfilesInput{
-		PathPrefix: aws.String("/kubetest2/"),
+	listInstanceProfilesInput := &iamv2.ListInstanceProfilesInput{
+		PathPrefix: awsv2.String("/kubetest2/"),
 	}
 
-	listInstanceProfilesResult, err := svc.ListInstanceProfiles(listInstanceProfilesInput)
+	listInstanceProfilesResult, err := svc.ListInstanceProfiles(context.TODO(), listInstanceProfilesInput)
 	if err != nil {
 		return err
 	}
@@ -48,19 +48,19 @@ func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName st
 		klog.Infof("did not find any pre-existing %s. creating %s...\n", instanceProfileName, instanceProfileName)
 	}
 
-	createInput := &iam.CreateInstanceProfileInput{
-		InstanceProfileName: aws.String(instanceProfileName),
-		Path:                aws.String("/kubetest2/"),
+	createInput := &iamv2.CreateInstanceProfileInput{
+		InstanceProfileName: awsv2.String(instanceProfileName),
+		Path:                awsv2.String("/kubetest2/"),
 	}
 
-	createResult, err := svc.CreateInstanceProfile(createInput)
+	createResult, err := svc.CreateInstanceProfile(context.TODO(), createInput)
 	if err != nil {
 		return fmt.Errorf("unable to create instance profile : %w", err)
 	}
 	klog.Infof("created instance profile: %v\n", *createResult.InstanceProfile.Arn)
 
-	listProfilesForRoleInput := &iam.ListInstanceProfilesForRoleInput{RoleName: aws.String(roleName)}
-	listProfilesForRoleResult, err := svc.ListInstanceProfilesForRole(listProfilesForRoleInput)
+	listProfilesForRoleInput := &iamv2.ListInstanceProfilesForRoleInput{RoleName: awsv2.String(roleName)}
+	listProfilesForRoleResult, err := svc.ListInstanceProfilesForRole(context.TODO(), listProfilesForRoleInput)
 	if err != nil {
 		return fmt.Errorf("unable to list instance profile for role: %w", err)
 	}
@@ -69,11 +69,11 @@ func EnsureInstanceProfile(svc *iam.IAM, instanceProfileName string, roleName st
 		return nil
 	}
 
-	addInput := &iam.AddRoleToInstanceProfileInput{
-		InstanceProfileName: aws.String(instanceProfileName),
-		RoleName:            aws.String(roleName),
+	addInput := &iamv2.AddRoleToInstanceProfileInput{
+		InstanceProfileName: awsv2.String(instanceProfileName),
+		RoleName:            awsv2.String(roleName),
 	}
-	_, err = svc.AddRoleToInstanceProfile(addInput)
+	_, err = svc.AddRoleToInstanceProfile(context.TODO(), addInput)
 	if err != nil {
 		return fmt.Errorf("unable to add role to instance profile : %w", err)
 	}

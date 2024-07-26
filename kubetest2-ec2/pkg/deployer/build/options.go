@@ -17,7 +17,7 @@ limitations under the License.
 package build
 
 import (
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 )
 
 type Options struct {
@@ -25,7 +25,7 @@ type Options struct {
 	RepoRoot        string `flag:"-"`
 	StageVersion    string `flag:"~version" desc:"Specify version already in s3 bucket"`
 	TargetBuildArch string `flag:"~target-build-arch" desc:"Target architecture for the test artifacts"`
-	S3Uploader      *s3manager.Uploader
+	S3Uploader      *s3managerv2.Uploader
 	Builder
 	Stager
 }

@@ -18,6 +18,7 @@ limitations under the License.
 package deployer
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -26,10 +27,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/google/uuid"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/pflag"
+
+	ec2v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 
 	"k8s.io/klog/v2"
 
@@ -148,8 +150,8 @@ func (d *deployer) Down() error {
 		klog.Warningf("Dumping cluster logs at the start of Down() failed: %s", err)
 	}
 	for _, instance := range d.runner.instances {
-		_, err := d.runner.ec2Service.TerminateInstances(&ec2.TerminateInstancesInput{
-			InstanceIds: []*string{&instance.instanceID},
+		_, err := d.runner.ec2Service.TerminateInstances(context.TODO(), &ec2v2.TerminateInstancesInput{
+			InstanceIds: []string{instance.instanceID},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to delete instance %s : %w", instance.instanceID, err)
@@ -249,7 +251,6 @@ func (d *deployer) waitForKubectlNodesToBeReady() {
 		return
 	}
 }
-
 
 func (d *deployer) waitForExternalProviderPods() {
 	if d.kubectlPath == "" {

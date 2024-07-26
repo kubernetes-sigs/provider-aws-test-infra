@@ -17,21 +17,20 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
-
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	iamv2 "github.com/aws/aws-sdk-go-v2/service/iam"
 	"k8s.io/klog/v2"
 )
 
-func EnsureRole(svc *iam.IAM, roleName string) error {
-	listRolesInput := &iam.ListRolesInput{
-		PathPrefix: aws.String("/kubetest2/"),
+func EnsureRole(svc *iamv2.Client, roleName string) error {
+	listRolesInput := &iamv2.ListRolesInput{
+		PathPrefix: awsv2.String("/kubetest2/"),
 	}
 
-	listRolesResult, err := svc.ListRoles(listRolesInput)
+	listRolesResult, err := svc.ListRoles(context.TODO(), listRolesInput)
 	if err != nil {
 		return err
 	}
@@ -70,12 +69,12 @@ func EnsureRole(svc *iam.IAM, roleName string) error {
 		return err
 	}
 
-	createRoleInput := iam.CreateRoleInput{
-		RoleName:                 aws.String(roleName),
-		Path:                     aws.String("/kubetest2/"),
-		AssumeRolePolicyDocument: aws.String(string(rolePolicy)),
+	createRoleInput := iamv2.CreateRoleInput{
+		RoleName:                 awsv2.String(roleName),
+		Path:                     awsv2.String("/kubetest2/"),
+		AssumeRolePolicyDocument: awsv2.String(string(rolePolicy)),
 	}
-	result, err := svc.CreateRole(&createRoleInput)
+	result, err := svc.CreateRole(context.TODO(), &createRoleInput)
 	if err != nil {
 		return err
 	}
@@ -93,9 +92,9 @@ func EnsureRole(svc *iam.IAM, roleName string) error {
 	}
 
 	for _, policy := range policies {
-		_, err = svc.AttachRolePolicy(&iam.AttachRolePolicyInput{
-			PolicyArn: aws.String(policy),
-			RoleName:  aws.String(roleName),
+		_, err = svc.AttachRolePolicy(context.TODO(), &iamv2.AttachRolePolicyInput{
+			PolicyArn: awsv2.String(policy),
+			RoleName:  awsv2.String(roleName),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to attach policy : %w", err)

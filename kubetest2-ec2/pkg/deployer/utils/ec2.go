@@ -1,17 +1,19 @@
 package utils
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	ec2v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2typesv2 "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	iamv2 "github.com/aws/aws-sdk-go-v2/service/iam"
 	"math/rand"
 	"strings"
 	"time"
 
 	"k8s.io/klog/v2"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/google/uuid"
 )
 
@@ -25,107 +27,107 @@ type InternalAWSImage struct {
 	InstanceProfile string
 }
 
-func LaunchNewInstance(ec2Service *ec2.EC2, iamService *iam.IAM,
-	clusterID string, controlPlaneIP string, img InternalAWSImage, subnetID string) (*ec2.Instance, error) {
-	images, err := ec2Service.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&img.AmiID}})
+func LaunchNewInstance(ec2Service *ec2v2.Client, iamService *iamv2.Client,
+	clusterID string, controlPlaneIP string, img InternalAWSImage, subnetID string) (*ec2typesv2.Instance, error) {
+	images, err := ec2Service.DescribeImages(context.TODO(), &ec2v2.DescribeImagesInput{ImageIds: []string{img.AmiID}})
 	if err != nil {
-		return nil, fmt.Errorf("describing images: %w in region (%s)", err, *ec2Service.Config.Region)
+		return nil, fmt.Errorf("describing images: %w", err)
 	}
 
 	name := clusterID + uuid.New().String()[:8]
-	input := &ec2.RunInstancesInput{
-		InstanceType: &img.InstanceType,
+	input := &ec2v2.RunInstancesInput{
+		InstanceType: ec2typesv2.InstanceType(img.InstanceType),
 		ImageId:      &img.AmiID,
-		MinCount:     aws.Int64(1),
-		MaxCount:     aws.Int64(1),
-		MetadataOptions: &ec2.InstanceMetadataOptionsRequest{
-			HttpEndpoint: aws.String("enabled"),
-			HttpTokens:   aws.String("required"),
+		MinCount:     awsv2.Int32(1),
+		MaxCount:     awsv2.Int32(1),
+		MetadataOptions: &ec2typesv2.InstanceMetadataOptionsRequest{
+			HttpEndpoint: "enabled",
+			HttpTokens:   "required",
 		},
-		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
+		NetworkInterfaces: []ec2typesv2.InstanceNetworkInterfaceSpecification{
 			{
-				SubnetId:                 aws.String(subnetID),
-				AssociatePublicIpAddress: aws.Bool(true),
-				DeviceIndex:              aws.Int64(0),
+				SubnetId:                 awsv2.String(subnetID),
+				AssociatePublicIpAddress: awsv2.Bool(true),
+				DeviceIndex:              awsv2.Int32(0),
 			},
 		},
-		TagSpecifications: []*ec2.TagSpecification{
+		TagSpecifications: []ec2typesv2.TagSpecification{
 			{
-				ResourceType: aws.String(ec2.ResourceTypeInstance),
-				Tags: []*ec2.Tag{
+				ResourceType: ec2typesv2.ResourceTypeInstance,
+				Tags: []ec2typesv2.Tag{
 					{
-						Key:   aws.String("Name"),
-						Value: aws.String(name),
+						Key:   awsv2.String("Name"),
+						Value: awsv2.String(name),
 					},
 					{
-						Key:   aws.String("kubernetes.io/cluster/" + clusterID),
-						Value: aws.String("owned"),
-					},
-				},
-			},
-			{
-				ResourceType: aws.String(ec2.ResourceTypeVolume),
-				Tags: []*ec2.Tag{
-					{
-						Key:   aws.String("Name"),
-						Value: aws.String(name),
+						Key:   awsv2.String("kubernetes.io/cluster/" + clusterID),
+						Value: awsv2.String("owned"),
 					},
 				},
 			},
-		},
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
 			{
-				DeviceName: aws.String(*images.Images[0].RootDeviceName),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(50),
-					VolumeType: aws.String("gp3"),
+				ResourceType: ec2typesv2.ResourceTypeVolume,
+				Tags: []ec2typesv2.Tag{
+					{
+						Key:   awsv2.String("Name"),
+						Value: awsv2.String(name),
+					},
+				},
+			},
+		},
+		BlockDeviceMappings: []ec2typesv2.BlockDeviceMapping{
+			{
+				DeviceName: awsv2.String(*images.Images[0].RootDeviceName),
+				Ebs: &ec2typesv2.EbsBlockDevice{
+					VolumeSize: awsv2.Int32(50),
+					VolumeType: "gp3",
 				},
 			},
 		},
 	}
 	if len(img.UserData) > 0 {
 		data := strings.ReplaceAll(img.UserData, "{{KUBEADM_CONTROL_PLANE_IP}}", controlPlaneIP)
-		input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(data)))
+		input.UserData = awsv2.String(base64.StdEncoding.EncodeToString([]byte(data)))
 	}
 	if img.InstanceProfile != "" {
 		arn, err := GetInstanceProfileArn(iamService, img.InstanceProfile)
 		if err != nil {
 			return nil, fmt.Errorf("getting instance profile arn, %w", err)
 		}
-		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
-			Arn: aws.String(arn),
+		input.IamInstanceProfile = &ec2typesv2.IamInstanceProfileSpecification{
+			Arn: awsv2.String(arn),
 		}
 	}
 
-	rsv, err := ec2Service.RunInstances(input)
+	rsv, err := ec2Service.RunInstances(context.TODO(), input)
 	if err != nil {
 		return nil, fmt.Errorf("creating instance, %w", err)
 	}
 
-	return WaitForInstanceToRun(ec2Service, rsv.Instances[0]), nil
+	return WaitForInstanceToRun(ec2Service, &rsv.Instances[0]), nil
 }
 
-func WaitForInstanceToRun(ec2Service *ec2.EC2, instance *ec2.Instance) *ec2.Instance {
+func WaitForInstanceToRun(ec2Service *ec2v2.Client, instance *ec2typesv2.Instance) *ec2typesv2.Instance {
 	for i := 0; i < 30; i++ {
 		if i > 0 {
 			time.Sleep(time.Second * 5)
 		}
 
-		op, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-			InstanceIds: []*string{instance.InstanceId},
+		op, err := ec2Service.DescribeInstances(context.TODO(), &ec2v2.DescribeInstancesInput{
+			InstanceIds: []string{*instance.InstanceId},
 		})
 		if err != nil {
 			continue
 		}
-		instance = op.Reservations[0].Instances[0]
-		if *instance.State.Name == ec2.InstanceStateNameRunning {
+		instance = &op.Reservations[0].Instances[0]
+		if instance.State.Name == ec2typesv2.InstanceStateNameRunning {
 			break
 		}
 	}
 	return instance
 }
 
-func PickSubnetID(svc *ec2.EC2) (string, string, error) {
+func PickSubnetID(svc *ec2v2.Client) (string, string, error) {
 	defaultVpcID, err := getDefaultVPC(svc)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get default VPC: %v", err)
@@ -148,17 +150,17 @@ func PickSubnetID(svc *ec2.EC2) (string, string, error) {
 	return randomSubnetID, defaultVpcID, nil
 }
 
-func getDefaultVPC(svc *ec2.EC2) (string, error) {
-	input := &ec2.DescribeVpcsInput{
-		Filters: []*ec2.Filter{
+func getDefaultVPC(svc *ec2v2.Client) (string, error) {
+	input := &ec2v2.DescribeVpcsInput{
+		Filters: []ec2typesv2.Filter{
 			{
-				Name:   aws.String("isDefault"),
-				Values: []*string{aws.String("true")},
+				Name:   awsv2.String("isDefault"),
+				Values: []string{"true"},
 			},
 		},
 	}
 
-	result, err := svc.DescribeVpcs(input)
+	result, err := svc.DescribeVpcs(context.TODO(), input)
 	if err != nil {
 		return "", err
 	}
@@ -170,17 +172,17 @@ func getDefaultVPC(svc *ec2.EC2) (string, error) {
 	return *result.Vpcs[0].VpcId, nil
 }
 
-func getSubnetIDs(svc *ec2.EC2, vpcID string) ([]string, error) {
-	input := &ec2.DescribeSubnetsInput{
-		Filters: []*ec2.Filter{
+func getSubnetIDs(svc *ec2v2.Client, vpcID string) ([]string, error) {
+	input := &ec2v2.DescribeSubnetsInput{
+		Filters: []ec2typesv2.Filter{
 			{
-				Name:   aws.String("vpc-id"),
-				Values: []*string{aws.String(vpcID)},
+				Name:   awsv2.String("vpc-id"),
+				Values: []string{vpcID},
 			},
 		},
 	}
 
-	result, err := svc.DescribeSubnets(input)
+	result, err := svc.DescribeSubnets(context.TODO(), input)
 	if err != nil {
 		return nil, err
 	}
