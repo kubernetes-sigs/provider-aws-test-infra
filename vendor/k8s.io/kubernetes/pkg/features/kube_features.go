@@ -152,6 +152,13 @@ const (
 	// Allow the usage of options to fine-tune the cpumanager policies.
 	CPUManagerPolicyOptions featuregate.Feature = "CPUManagerPolicyOptions"
 
+	// owner: @jefftree
+	// kep: https://kep.k8s.io/4355
+	// alpha: v1.31
+	//
+	// Enables coordinated leader election in the API server
+	CoordinatedLeaderElection featuregate.Feature = "CoordinatedLeaderElection"
+
 	// owner: @trierra
 	// kep:  http://kep.k8s.io/2589
 	// alpha: v1.23
@@ -221,9 +228,10 @@ const (
 	// owner: @micahhausler
 	// Deprecated: v1.31
 	//
-	// Disable Node Admission plugin validation of CSRs for kubelet signers where CN=system:node:$nodeName.
+	// Setting AllowInsecureKubeletCertificateSigningRequests to true disables node admission validation of CSRs
+	// for kubelet signers where CN=system:node:$nodeName.
 	// Remove in v1.33
-	DisableKubeletCSRAdmissionValidation featuregate.Feature = "DisableKubeletCSRAdmissionValidation"
+	AllowInsecureKubeletCertificateSigningRequests featuregate.Feature = "AllowInsecureKubeletCertificateSigningRequests"
 
 	// owner: @HirazawaUi
 	// kep: http://kep.k8s.io/4004
@@ -429,9 +437,11 @@ const (
 
 	// owner: @RobertKrawitz
 	// alpha: v1.15
+	// beta: v1.31
 	//
 	// Allow use of filesystems for ephemeral storage monitoring.
 	// Only applies if LocalStorageCapacityIsolation is set.
+	// Relies on UserNamespacesSupport feature, and thus should follow it when setting defaults.
 	LocalStorageCapacityIsolationFSQuotaMonitoring featuregate.Feature = "LocalStorageCapacityIsolationFSQuotaMonitoring"
 
 	// owner: @damemi
@@ -1099,7 +1109,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	LegacyServiceAccountTokenCleanUp: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.30; remove in 1.32
 
-	LocalStorageCapacityIsolationFSQuotaMonitoring: {Default: true, PreRelease: featuregate.Beta},
+	LocalStorageCapacityIsolationFSQuotaMonitoring: {Default: false, PreRelease: featuregate.Beta},
 
 	LogarithmicScaleDown: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 
@@ -1250,11 +1260,13 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	genericfeatures.APIServerTracing: {Default: true, PreRelease: featuregate.Beta},
 
-	genericfeatures.APIServingWithRoutine: {Default: true, PreRelease: featuregate.Beta},
+	genericfeatures.APIServingWithRoutine: {Default: false, PreRelease: featuregate.Alpha},
 
 	genericfeatures.AuthorizeWithSelectors: {Default: false, PreRelease: featuregate.Alpha},
 
 	genericfeatures.ConsistentListFromCache: {Default: false, PreRelease: featuregate.Alpha},
+
+	genericfeatures.CoordinatedLeaderElection: {Default: false, PreRelease: featuregate.Alpha},
 
 	genericfeatures.EfficientWatchResumption: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 
@@ -1315,7 +1327,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	// ...
 	HPAScaleToZero: {Default: false, PreRelease: featuregate.Alpha},
 
-	DisableKubeletCSRAdmissionValidation: {Default: false, PreRelease: featuregate.Deprecated}, // remove in 1.33
+	AllowInsecureKubeletCertificateSigningRequests: {Default: false, PreRelease: featuregate.Deprecated}, // remove in 1.33
 
 	StorageNamespaceIndex: {Default: true, PreRelease: featuregate.Beta},
 
