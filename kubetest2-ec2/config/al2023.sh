@@ -69,6 +69,41 @@ install_packages_with_retry() {
     return 1
 }
 
+wait_for_update() {
+    local bucket="$1" key="$2"
+    local previous_etag previous_size
+    previous_etag=$(get_etag "$bucket" "$key")
+    previous_size=$(get_size "$bucket" "$key")
+
+    echo "Monitoring updates for $bucket/$key..."
+    SECONDS=0
+    while ((SECONDS < 300)); do
+        sleep 15
+        local current_etag current_size
+        current_etag=$(get_etag "$bucket" "$key")
+        current_size=$(get_size "$bucket" "$key")
+
+        if [[ "$current_etag" == "$previous_etag" && "$current_size" == "$previous_size" ]]; then
+            echo "File is stable. Ready for download."
+            return 0
+        fi
+
+        previous_etag=$current_etag
+        previous_size=$current_size
+    done
+
+    echo "Timeout reached. File may still be updating."
+    return 2
+}
+
+get_etag() {
+    aws s3api head-object --bucket "$1" --key "$2" --query ETag --output text
+}
+
+get_size() {
+    aws s3api head-object --bucket "$1" --key "$2" --query ContentLength --output text
+}
+
 # Start with a clean slate
 # Note that the `iptables -P FORWARD ACCEPT` piece is load bearing! https://github.com/search?q=repo%3Aawslabs%2Famazon-eks-ami+%22iptables+-P%22&type=code
 iptables -F && iptables -X  && iptables -t nat -F  && iptables -t nat -X && iptables -t mangle -F  && iptables -t mangle -X  && iptables -P INPUT ACCEPT  && iptables -P FORWARD ACCEPT -w 5 && iptables -P OUTPUT ACCEPT -w 5
@@ -181,13 +216,24 @@ mkdir -p ${cni_bin_dir} &&\
 curl -fsSL https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${ARCH}-${CNI_VERSION}.tgz \
     | tar xfz - -C ${cni_bin_dir}
 
+
 # shellcheck disable=SC2050
-if [[ "{{STAGING_BUCKET}}" =~ ^s3.*  ]]; then
-  aws s3 cp "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz"
-elif [[ "{{STAGING_BUCKET}}" =~ ^https.*  ]]; then
+if [[ "{{STAGING_BUCKET}}" =~ ^https.*  ]]; then
   curl -sSLo kubernetes-server-linux-$ARCH.tar.gz --fail --retry 5 "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz"
 else
-  aws s3 cp "s3://{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz"
+  BUCKET="{{STAGING_BUCKET}}"
+  # Strip out 's3://' prefix if it exists
+  if [[ "$BUCKET" =~ ^s3:// ]]; then
+    BUCKET="${BUCKET#s3://}"
+  fi
+  VERSION="{{STAGING_VERSION}}"
+  FILE_NAME="kubernetes-server-linux-$ARCH.tar.gz"
+  KEY="$VERSION/$FILE_NAME"
+
+  echo "Waiting for file s3://$BUCKET/$KEY to be updated..."
+  wait_for_update "$BUCKET" "$KEY"
+
+  aws s3 cp "s3://$BUCKET/$KEY" "$FILE_NAME"
 fi
 
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
