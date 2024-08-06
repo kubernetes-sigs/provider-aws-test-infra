@@ -18,6 +18,7 @@ package build
 
 import (
 	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type Options struct {
@@ -25,6 +26,8 @@ type Options struct {
 	RepoRoot        string `flag:"-"`
 	StageVersion    string `flag:"~version" desc:"Specify version already in s3 bucket"`
 	TargetBuildArch string `flag:"~target-build-arch" desc:"Target architecture for the test artifacts"`
+	RunID           string `flag:"-"`
+	S3Service       *s3v2.Client
 	S3Uploader      *s3managerv2.Uploader
 	Builder
 	Stager
@@ -40,8 +43,10 @@ func (o *Options) implementationFromStrategy() error {
 		TargetBuildArch: o.TargetBuildArch,
 	}
 	o.Stager = &S3Stager{
+		RunID:           o.RunID,
 		RepoRoot:        o.RepoRoot,
 		StageLocation:   o.StageLocation,
+		s3Service:       o.S3Service,
 		s3Uploader:      o.S3Uploader,
 		TargetBuildArch: o.TargetBuildArch,
 	}

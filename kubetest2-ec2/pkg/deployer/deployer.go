@@ -79,6 +79,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		commonOptions:         opts,
 		BuildOptions: &options.BuildOptions{
 			CommonBuildOptions: &build.Options{
+				RunID: opts.RunID(),
 				Builder: &build.MakeBuilder{
 					TargetBuildArch: "linux/amd64",
 				},

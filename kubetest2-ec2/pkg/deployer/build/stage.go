@@ -19,6 +19,7 @@ package build
 import (
 	"bufio"
 	"context"
+	"log"
 	"os"
 	"strings"
 
@@ -45,17 +46,20 @@ func (n *NoopStager) Stage(string) error {
 
 type S3Stager struct {
 	StageLocation   string
+	s3Service       *s3v2.Client
 	s3Uploader      *s3managerv2.Uploader
 	TargetBuildArch string
 	RepoRoot        string
+	RunID           string
 }
 
 var _ Stager = &S3Stager{}
 
 func (n *S3Stager) Stage(version string) error {
 	tgzFile := "kubernetes-server-" + strings.ReplaceAll(n.TargetBuildArch, "/", "-") + ".tar.gz"
+	tempDestinationKey := awsv2.String(n.RunID + "/" + version + "/" + tgzFile)
 	destinationKey := awsv2.String(version + "/" + tgzFile)
-	klog.Infof("uploading %s to s3://%s/%s", tgzFile, n.StageLocation, *destinationKey)
+	klog.Infof("uploading %s to temporary location s3://%s/%s", tgzFile, n.StageLocation, *tempDestinationKey)
 
 	f, err := os.Open(n.RepoRoot + "/_output/release-tars/" + tgzFile)
 	if err != nil {
@@ -63,15 +67,33 @@ func (n *S3Stager) Stage(version string) error {
 	}
 	defer f.Close()
 
+	fileInfo, err := f.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fileSize := fileInfo.Size()
+	klog.Infof("File size: %d bytes\n", fileSize)
+
 	reader := bufio.NewReader(f)
 
 	// Upload the file to S3.
 	input := &s3v2.PutObjectInput{
 		Bucket: awsv2.String(n.StageLocation),
-		Key:    destinationKey,
+		Key:    tempDestinationKey,
 		Body:   reader,
+		ContentLength: awsv2.Int64(fileSize),
 	}
 	_, err = n.s3Uploader.Upload(context.TODO(), input)
+
+	if err != nil {
+		klog.Infof("copying %s to final location s3://%s/%s", tgzFile, n.StageLocation, *destinationKey)
+		_, err = n.s3Service.CopyObject(context.TODO(), &s3v2.CopyObjectInput{
+			Bucket:     awsv2.String(n.StageLocation),
+			CopySource: tempDestinationKey,
+			Key:        destinationKey,
+		})
+	}
 
 	return err
 }

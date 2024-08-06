@@ -1,6 +1,41 @@
 #!/bin/bash
 set -xeu
 
+wait_for_update() {
+    local bucket="$1" key="$2"
+    local previous_etag previous_size
+    previous_etag=$(get_etag "$bucket" "$key")
+    previous_size=$(get_size "$bucket" "$key")
+
+    echo "Monitoring updates for $bucket/$key..."
+    SECONDS=0
+    while ((SECONDS < 300)); do
+        sleep 15
+        local current_etag current_size
+        current_etag=$(get_etag "$bucket" "$key")
+        current_size=$(get_size "$bucket" "$key")
+
+        if [[ "$current_etag" == "$previous_etag" && "$current_size" == "$previous_size" ]]; then
+            echo "File is stable. Ready for download."
+            return 0
+        fi
+
+        previous_etag=$current_etag
+        previous_size=$current_size
+    done
+
+    echo "Timeout reached. File may still be updating."
+    return 2
+}
+
+get_etag() {
+    aws s3api head-object --bucket "$1" --key "$2" --query ETag --output text
+}
+
+get_size() {
+    aws s3api head-object --bucket "$1" --key "$2" --query ContentLength --output text
+}
+
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
   ARCH=arm64
 else
@@ -12,12 +47,22 @@ curl -sSLo /usr/local/bin/ecr-credential-provider --fail --retry 5 "https://arti
 chmod +x /usr/local/bin/ecr-credential-provider
 
 # shellcheck disable=SC2050
-if [[ "{{STAGING_BUCKET}}" =~ ^s3.*  ]]; then
-  aws s3 cp "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz"
-elif [[ "{{STAGING_BUCKET}}" =~ ^https.*  ]]; then
+if [[ "{{STAGING_BUCKET}}" =~ ^https.*  ]]; then
   curl -sSLo kubernetes-server-linux-$ARCH.tar.gz --fail --retry 5 "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz"
 else
-  aws s3 cp "s3://{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz" "kubernetes-server-linux-$ARCH.tar.gz"
+  BUCKET="{{STAGING_BUCKET}}"
+  # Strip out 's3://' prefix if it exists
+  if [[ "$BUCKET" =~ ^s3:// ]]; then
+    BUCKET="${BUCKET#s3://}"
+  fi
+  VERSION="{{STAGING_VERSION}}"
+  FILE_NAME="kubernetes-server-linux-$ARCH.tar.gz"
+  KEY="$VERSION/$FILE_NAME"
+
+  echo "Waiting to see if s3://$BUCKET/$KEY is being updated..."
+  wait_for_update "$BUCKET" "$KEY"
+
+  aws s3 cp --no-progress "s3://$BUCKET/$KEY" "$FILE_NAME"
 fi
 
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
