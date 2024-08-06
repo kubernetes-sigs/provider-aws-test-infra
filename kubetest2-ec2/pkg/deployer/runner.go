@@ -356,6 +356,7 @@ func (a *AWSRunner) InitializeServices() (*awsv2.Config, error) {
 	a.ssmService = ssmv2.NewFromConfig(cfg)
 	a.iamService = iamv2.NewFromConfig(cfg)
 	a.s3Service = s3v2.NewFromConfig(cfg)
+	a.deployer.BuildOptions.CommonBuildOptions.S3Service = a.s3Service
 	a.deployer.BuildOptions.CommonBuildOptions.S3Uploader = s3managerv2.NewUploader(a.s3Service, func(u *s3managerv2.Uploader) {
 		u.PartSize = 10 * 1024 * 1024 // 10 MB
 		u.Concurrency = 10

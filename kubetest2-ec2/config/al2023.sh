@@ -233,7 +233,7 @@ else
   echo "Waiting to see if s3://$BUCKET/$KEY is being updated..."
   wait_for_update "$BUCKET" "$KEY"
 
-  aws s3 cp "s3://$BUCKET/$KEY" "$FILE_NAME"
+  aws s3 cp --no-progress "s3://$BUCKET/$KEY" "$FILE_NAME"
 fi
 
 tar -xvzf kubernetes-server-linux-$ARCH.tar.gz
