@@ -394,7 +394,6 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 
 	err = utils.ValidateS3Bucket(a.s3Service,
 		a.deployer.BuildOptions.CommonBuildOptions.StageLocation,
-		a.deployer.BuildOptions.CommonBuildOptions.StageVersion,
 		version)
 	if err != nil {
 		return nil, fmt.Errorf("unable to validate s3 bucket : %w", err)
