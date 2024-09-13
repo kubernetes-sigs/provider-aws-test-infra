@@ -206,6 +206,7 @@ echo "Kubelet Config File: ${kubelet_config_file}"
 echo "Kubernetes directory: ${KUBE_ROOT}"
 
 export KUBE_STATIC_OVERRIDES=kubelet
+export GOTOOLCHAIN=local
 
 # Invoke the runner
 go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
