@@ -18,6 +18,7 @@ package features
 
 import (
 	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/version"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 )
@@ -55,6 +56,7 @@ const (
 	// owner: @vinayakankugoyal
 	// kep: https://kep.k8s.io/4633
 	// alpha: v1.31
+	// beta: v1.32
 	//
 	// Allows us to enable anonymous auth for only certain apiserver endpoints.
 	AnonymousAuthConfigurableEndpoints featuregate.Feature = "AnonymousAuthConfigurableEndpoints"
@@ -105,16 +107,6 @@ const (
 	// beta: v1.31
 	// Enables concurrent watch object decoding to avoid starving watch cache when conversion webhook is installed.
 	ConcurrentWatchObjectDecode featuregate.Feature = "ConcurrentWatchObjectDecode"
-
-	// owner: @cici37 @jpbetz
-	// kep: http://kep.k8s.io/3488
-	// alpha: v1.26
-	// beta: v1.28
-	// stable: v1.30
-	//
-	// Note: the feature gate can be removed in 1.32
-	// Enables expression validation in Admission Control
-	ValidatingAdmissionPolicy featuregate.Feature = "ValidatingAdmissionPolicy"
 
 	// owner: @jefftree
 	// kep: https://kep.k8s.io/4355
@@ -176,22 +168,6 @@ const (
 	// This prevents watch cache from being starved by other watches.
 	SeparateCacheWatchRPC featuregate.Feature = "SeparateCacheWatchRPC"
 
-	// owner: @apelisse, @lavalamp
-	// alpha: v1.14
-	// beta: v1.16
-	// stable: v1.22
-	//
-	// Server-side apply. Merging happens on the server.
-	ServerSideApply featuregate.Feature = "ServerSideApply"
-
-	// owner: @kevindelgado
-	// kep: https://kep.k8s.io/2885
-	// alpha: v1.23
-	// beta: v1.24
-	//
-	// Enables server-side field validation.
-	ServerSideFieldValidation featuregate.Feature = "ServerSideFieldValidation"
-
 	// owner: @enj
 	// beta: v1.29
 	//
@@ -212,6 +188,7 @@ const (
 
 	// owner: @jpbetz
 	// alpha: v1.30
+	// beta: v1.31
 	// Resource create requests using generateName are retried automatically by the apiserver
 	// if the generated name conflicts with an existing resource name, up to a maximum number of 7 retries.
 	RetryGenerateName featuregate.Feature = "RetryGenerateName"
@@ -323,19 +300,19 @@ func init() {
 // defaultVersionedKubernetesFeatureGates consists of all known Kubernetes-specific feature keys with VersionedSpecs.
 // To add a new feature, define a key for it above and add it here. The features will be
 // available throughout Kubernetes binaries.
+//
+// Entries are alphabetized.
 var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate.VersionedSpecs{
-	// Example:
-	// EmulationVersion: {
-	// 	{Version: version.MustParse("1.30"), Default: false, PreRelease: featuregate.Alpha},
-	// },
+	AnonymousAuthConfigurableEndpoints: {
+		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.32"), Default: true, PreRelease: featuregate.Beta},
+	},
 }
 
 // defaultKubernetesFeatureGates consists of all known Kubernetes-specific feature keys.
 // To add a new feature, define a key for it above and add it here. The features will be
 // available throughout Kubernetes binaries.
 var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-
-	AnonymousAuthConfigurableEndpoints: {Default: false, PreRelease: featuregate.Alpha},
 
 	AggregatedDiscoveryEndpoint: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.33
 
@@ -355,8 +332,6 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	ConcurrentWatchObjectDecode: {Default: false, PreRelease: featuregate.Beta},
 
-	ValidatingAdmissionPolicy: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.32
-
 	CoordinatedLeaderElection: {Default: false, PreRelease: featuregate.Alpha},
 
 	EfficientWatchResumption: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
@@ -372,10 +347,6 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	RetryGenerateName: {Default: true, PreRelease: featuregate.Beta},
 
 	SeparateCacheWatchRPC: {Default: true, PreRelease: featuregate.Beta},
-
-	ServerSideApply: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.29
-
-	ServerSideFieldValidation: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.29
 
 	StorageVersionAPI: {Default: false, PreRelease: featuregate.Alpha},
 
