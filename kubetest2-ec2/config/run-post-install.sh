@@ -43,7 +43,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   fi
   # shellcheck disable=SC2050
   if [[ "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}" == "true" ]]; then
-    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.1/nvidia-device-plugin.yml
+    kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.16.2/deployments/static/nvidia-device-plugin.yml
     kubectl --kubeconfig /etc/kubernetes/admin.conf rollout status daemonset nvidia-device-plugin-daemonset -n kube-system --timeout=2m
   fi
   kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app=kube-dns -n kube-system --timeout=2m
