@@ -78,9 +78,9 @@ func (n *S3Stager) Stage(version string) error {
 
 	// Upload the file to S3.
 	input := &s3v2.PutObjectInput{
-		Bucket: awsv2.String(n.StageLocation),
-		Key:    destinationKey,
-		Body:   reader,
+		Bucket:        awsv2.String(n.StageLocation),
+		Key:           destinationKey,
+		Body:          reader,
 		ContentLength: awsv2.Int64(fileSize),
 	}
 	_, err = n.s3Uploader.Upload(context.TODO(), input)

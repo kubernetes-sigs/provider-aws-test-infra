@@ -143,6 +143,9 @@ func (a *AWSRunner) Validate() error {
 		if a.deployer.InstanceType == defaultAMD64InstanceType && arch == "arm64" {
 			a.deployer.InstanceType = defaultARM64InstanceTYpe
 		}
+		if a.deployer.WorkerInstanceType == defaultAMD64InstanceType && arch == "arm64" {
+			a.deployer.WorkerInstanceType = defaultARM64InstanceTYpe
+		}
 	}
 
 	if len(a.deployer.Image) == 0 {
@@ -200,6 +203,9 @@ func (a *AWSRunner) Validate() error {
 		// pick an equivalent image to t3a.medium which is t4g.medium.
 		if a.deployer.InstanceType == defaultAMD64InstanceType && arch == "arm64" {
 			a.deployer.InstanceType = defaultARM64InstanceTYpe
+		}
+		if a.deployer.WorkerInstanceType == defaultAMD64InstanceType && arch == "arm64" {
+			a.deployer.WorkerInstanceType = defaultARM64InstanceTYpe
 		}
 	}
 
@@ -421,7 +427,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		ret = append(ret, utils.InternalAWSImage{
 			AmiID:           a.deployer.WorkerImage,
 			UserData:        userDataWorkerNode,
-			InstanceType:    a.deployer.InstanceType,
+			InstanceType:    a.deployer.WorkerInstanceType,
 			InstanceProfile: a.deployer.InstanceProfile,
 		})
 	}
