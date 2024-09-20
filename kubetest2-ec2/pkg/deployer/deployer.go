@@ -91,6 +91,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		},
 		Ec2InstanceConnect: true,
 		InstanceType:       defaultAMD64InstanceType,
+		WorkerInstanceType: defaultAMD64InstanceType,
 		SSHUser:            user,
 		SSHEnv:             "aws",
 		Region:             "us-east-1",
@@ -135,9 +136,10 @@ type deployer struct {
 	InstanceProfile    string `desc:"The name of the instance profile to assign to the node (aws)"`
 	RoleName           string `desc:"The name of the role assign to the node (aws)"`
 	Ec2InstanceConnect bool   `desc:"Use EC2 instance connect to generate a one time use key (aws)"`
-	InstanceType       string `desc:"EC2 Instance type to use for test"`
+	InstanceType       string `desc:"EC2 Instance type to use for test control plane"`
 	Image              string `flag:"image" desc:"Ubuntu image to use for test"`
 	WorkerImage        string `flag:"worker-image" desc:"Worker image to use for test"`
+	WorkerInstanceType string `desc:"EC2 Instance type to use for test worker"`
 	SSHUser            string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
 	SSHEnv             string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
 	NumNodes           int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
