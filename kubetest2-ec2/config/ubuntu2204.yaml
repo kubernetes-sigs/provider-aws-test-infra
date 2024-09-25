@@ -1,5 +1,4 @@
 #cloud-config
-# This bootstraps a public ubuntu 2204 image from scratch.
 system_info:
   default_user:
     name: ec2-user
@@ -24,7 +23,6 @@ write_files:
     content: |
       # installed by cloud-init
       [Unit]
-      Description=Download and install containerd binaries and configurations.
       After=network-online.target
       [Service]
       Type=oneshot
@@ -33,16 +31,22 @@ write_files:
       ExecStart=/home/containerd/configure.sh
       [Install]
       WantedBy=containerd.target
+  - path: /etc/systemd/system/runtime.slice
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Before=slices.target
   - path: /etc/systemd/system/containerd.service
     permissions: 0644
     owner: root
     content: |
       # installed by cloud-init
       [Unit]
-      Description=containerd container runtime
       Documentation=https://containerd.io
       After=containerd-installation.service
       [Service]
+      Slice=runtime.slice
       Restart=always
       RestartSec=5
       Delegate=yes
@@ -104,16 +108,19 @@ write_files:
     owner: root
     content: |
       [Unit]
-      Description=kubelet: The Kubernetes Node Agent
       Documentation=https://kubernetes.io/docs/home/
       Wants=network-online.target
       After=network-online.target
 
       [Service]
+      Slice=runtime.slice
       ExecStart=/usr/local/bin/kubelet
       Restart=always
       StartLimitInterval=0
       RestartSec=10
+      KillMode=process
+      CPUAccounting=true
+      MemoryAccounting=true
 
       [Install]
       WantedBy=multi-user.target

@@ -18,6 +18,7 @@ package utils
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"encoding/base64"
 	"errors"
@@ -30,7 +31,10 @@ import (
 
 func gzipAndBase64Encode(fileBytes []byte) (string, error) {
 	var buffer bytes.Buffer
-	gz := gzip.NewWriter(&buffer)
+	gz, err := gzip.NewWriterLevel(&buffer, flate.BestCompression)
+	if err != nil {
+		return "", err
+	}
 	if _, err := gz.Write(fileBytes); err != nil {
 		return "", err
 	}

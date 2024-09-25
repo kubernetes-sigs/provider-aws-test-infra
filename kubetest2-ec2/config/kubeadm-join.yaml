@@ -17,3 +17,7 @@ nodeRegistration:
     image-credential-provider-bin-dir: /usr/local/bin
     image-credential-provider-config: /etc/kubernetes/credential-provider.yaml
     resolv-conf: /run/systemd/resolve/resolv.conf
+    system-cgroups: /system.slice
+    runtime-cgroups: /runtime.slice
+    kubelet-cgroups: /runtime.slice
+    cgroup-root: /

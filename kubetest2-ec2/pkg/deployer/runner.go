@@ -410,9 +410,16 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
 	}
+	if len(userControlPlane) > 16384 { // 16KB
+		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
+	}
+
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load worker user data %s : %w", a.deployer.WorkerUserDataFile, err)
+	}
+	if len(userDataWorkerNode) > 16384 { // 16KB
+		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userDataWorkerNode), userDataWorkerNode)
 	}
 
 	klog.Infof("using %s for control plane image", a.deployer.Image)

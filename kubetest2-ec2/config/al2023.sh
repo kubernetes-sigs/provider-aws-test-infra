@@ -157,6 +157,10 @@ nodeRegistration:
     image-credential-provider-bin-dir: /etc/eks/image-credential-provider/
     image-credential-provider-config: /etc/eks/image-credential-provider/config.json
     resolv-conf: $RESOLVE_CONF
+    system-cgroups: /system.slice
+    runtime-cgroups: /runtime.slice
+    kubelet-cgroups: /runtime.slice
+    cgroup-root: /
 EOF
 
 cat <<EOF > /etc/eks/image-credential-provider/config.json
@@ -198,10 +202,28 @@ echo "$(curl -s -f -m 1 --header "X-aws-ec2-metadata-token: $TOKEN" $META_URL/lo
 VERSION="v1.28.0"
 curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tools/release/$VERSION/crictl-$VERSION-linux-$ARCH.tar.gz | sudo tar -xvzf - -C /usr/local/bin
 
+cat << EOF | sudo tee /etc/systemd/system/runtime.slice
+[Unit]
+Description=Kubernetes and container runtime slice
+Documentation=man:systemd.special(7)
+Before=slices.target
+EOF
+
 RELEASE_VERSION="v0.16.4"
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/krel/templates/latest/kubelet/kubelet.service" | sed "s:/usr/bin:/bin:g" | sudo tee /etc/systemd/system/kubelet.service
 sudo mkdir -p /etc/systemd/system/kubelet.service.d
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:/bin:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+cat << EOF | sudo tee /etc/systemd/system/kubelet.service.d/00-runtime-slice.conf
+[Service]
+Slice=runtime.slice
+Restart=on-failure
+RestartForceExitStatus=SIGPIPE
+RestartSec=5
+KillMode=process
+CPUAccounting=true
+MemoryAccounting=true
+EOF
 
 VERSION="v1.27.1"
 curl -sSLo /usr/local/bin/ecr-credential-provider --fail --retry 5 "https://artifacts.k8s.io/binaries/cloud-provider-aws/$VERSION/linux/$ARCH/ecr-credential-provider-linux-$ARCH"
@@ -251,6 +273,12 @@ sysctl --system
 
 systemctl stop containerd
 rm -f /etc/containerd/config.toml
+
+cat << EOF | sudo tee /etc/systemd/system/containerd.service.d/00-runtime-slice.conf
+[Service]
+Slice=runtime.slice
+EOF
+
 sed -i 's|LimitNOFILE=.*|LimitNOFILE=1048576|' /usr/lib/systemd/system/containerd.service
 
 if [[ -f "/etc/eks/containerd/containerd-config.toml" ]]; then
