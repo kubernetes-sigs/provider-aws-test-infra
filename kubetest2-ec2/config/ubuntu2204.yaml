@@ -18,19 +18,10 @@ write_files:
     content: |
       containerd-env: https://raw.githubusercontent.com/kubernetes/test-infra/master/jobs/e2e_node/containerd/containerd-main/env
   - path: /etc/systemd/system/containerd-installation.service
-    permissions: 0644
+    permissions: '0644'
     owner: root
-    content: |
-      # installed by cloud-init
-      [Unit]
-      After=network-online.target
-      [Service]
-      Type=oneshot
-      RemainAfterExit=yes
-      ExecStartPre=/bin/chmod 544 /home/containerd/configure.sh
-      ExecStart=/home/containerd/configure.sh
-      [Install]
-      WantedBy=containerd.target
+    encoding: gzip+base64
+    content: {{CONTAINERD_INSTALL_SERVICE}}
   - path: /etc/systemd/system/runtime.slice
     permissions: 0644
     owner: root
@@ -38,36 +29,15 @@ write_files:
       [Unit]
       Before=slices.target
   - path: /etc/systemd/system/containerd.service
-    permissions: 0644
+    permissions: '0644'
     owner: root
-    content: |
-      # installed by cloud-init
-      [Unit]
-      Documentation=https://containerd.io
-      After=containerd-installation.service
-      [Service]
-      Slice=runtime.slice
-      Restart=always
-      RestartSec=5
-      Delegate=yes
-      KillMode=process
-      OOMScoreAdjust=-999
-      LimitNOFILE=1048576
-      LimitNPROC=infinity
-      LimitCORE=infinity
-      TasksMax=infinity
-      ExecStartPre=/sbin/modprobe overlay
-      ExecStart=/home/containerd/usr/local/bin/containerd
-      [Install]
-      WantedBy=containerd.target
+    encoding: gzip+base64
+    content: {{CONTAINERD_SERVICE}}
   - path: /etc/systemd/system/containerd.target
-    permissions: 0644
+    permissions: '0644'
     owner: root
-    content: |
-      [Unit]
-      Description=Containerd
-      [Install]
-      WantedBy=multi-user.target
+    encoding: gzip+base64
+    content: {{CONTAINERD_TARGET}}
   - path: /etc/sysctl.d/k8s.conf
     permissions: 0644
     owner: root
@@ -76,54 +46,20 @@ write_files:
       net.bridge.bridge-nf-call-ip6tables = 1
       net.bridge.bridge-nf-call-iptables = 1
   - path: /etc/kubernetes/credential-provider.yaml
-    permissions: 0644
+    permissions: '0644'
     owner: root
-    content: |
-      kind: CredentialProviderConfig
-      apiVersion: kubelet.config.k8s.io/v1
-      providers:
-      - name: ecr-credential-provider
-        apiVersion: credentialprovider.kubelet.k8s.io/v1
-        matchImages:
-        - "*.dkr.ecr.*.amazonaws.com"
-        - "*.dkr.ecr.*.amazonaws.com.cn"
-        - "*.dkr.ecr-fips.*.amazonaws.com"
-        - "*.dkr.ecr.us-iso-east-1.c2s.ic.gov"
-        - "*.dkr.ecr.us-isob-east-1.sc2s.sgov.gov"
-        defaultCacheDuration: 12h
+    encoding: gzip+base64
+    content: {{CREDENTIAL_PROVIDER_YAML}}
   - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-    permissions: 0644
+    permissions: '0644'
     owner: root
-    content: |
-      [Service]
-      Environment="KUBELET_EXTRA_ARGS=--image-credential-provider-bin-dir=/usr/local/bin --image-credential-provider-config=/etc/kubernetes/credential-provider.yaml"
-      Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
-      Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
-      EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
-      EnvironmentFile=-/etc/default/kubelet
-      ExecStart=
-      ExecStart=/usr/local/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
+    encoding: gzip+base64
+    content: {{KUBEADM_CONF}}
   - path: /usr/lib/systemd/system/kubelet.service
-    permissions: 0644
+    permissions: '0644'
     owner: root
-    content: |
-      [Unit]
-      Documentation=https://kubernetes.io/docs/home/
-      Wants=network-online.target
-      After=network-online.target
-
-      [Service]
-      Slice=runtime.slice
-      ExecStart=/usr/local/bin/kubelet
-      Restart=always
-      StartLimitInterval=0
-      RestartSec=10
-      KillMode=process
-      CPUAccounting=true
-      MemoryAccounting=true
-
-      [Install]
-      WantedBy=multi-user.target
+    encoding: gzip+base64
+    content: {{KUBELET_SERVICE}}
   - path: /usr/local/bin/run-kubeadm.sh
     permissions: '0755'
     owner: root

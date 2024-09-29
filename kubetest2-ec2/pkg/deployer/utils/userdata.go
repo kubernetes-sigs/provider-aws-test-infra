@@ -146,3 +146,17 @@ func FetchRunPostInstallSH(replace func(string) string) (string, error) {
 	}
 	return scriptString, nil
 }
+
+func FetchUbuntuFile(fileName string) string {
+	var scriptBytes []byte
+	var err error
+	scriptBytes, err = config.ConfigFS.ReadFile(fileName)
+	if err != nil {
+		panic(fmt.Sprintf("error reading %s: %w", fileName, err))
+	}
+	scriptString, err := gzipAndBase64Encode(scriptBytes)
+	if err != nil {
+		panic(fmt.Sprintf("error encoding %s: %w", fileName, err))
+	}
+	return scriptString
+}

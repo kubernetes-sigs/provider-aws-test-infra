@@ -530,6 +530,13 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 	}
 	userdata = strings.ReplaceAll(userdata, "{{RUN_KUBEADM_SH}}", scriptString)
 
+	userdata = strings.ReplaceAll(userdata, "{{CONTAINERD_INSTALL_SERVICE}}", utils.FetchUbuntuFile("ubuntu/containerd-installation.service"))
+	userdata = strings.ReplaceAll(userdata, "{{CONTAINERD_SERVICE}}", utils.FetchUbuntuFile("ubuntu/containerd.service"))
+	userdata = strings.ReplaceAll(userdata, "{{CONTAINERD_TARGET}}", utils.FetchUbuntuFile("ubuntu/containerd.target"))
+	userdata = strings.ReplaceAll(userdata, "{{KUBEADM_CONF}}", utils.FetchUbuntuFile("ubuntu/10-kubeadm.conf"))
+	userdata = strings.ReplaceAll(userdata, "{{KUBELET_SERVICE}}", utils.FetchUbuntuFile("ubuntu/kubelet.service"))
+	userdata = strings.ReplaceAll(userdata, "{{CREDENTIAL_PROVIDER_YAML}}", utils.FetchUbuntuFile("ubuntu/credential-provider.yaml"))
+
 	userdata = strings.ReplaceAll(userdata, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 	userdata = strings.ReplaceAll(userdata, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)

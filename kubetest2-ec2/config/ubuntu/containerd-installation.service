@@ -1,0 +1,9 @@
+[Unit]
+After=network-online.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/chmod 544 /home/containerd/configure.sh
+ExecStart=/home/containerd/configure.sh
+[Install]
+WantedBy=containerd.target
