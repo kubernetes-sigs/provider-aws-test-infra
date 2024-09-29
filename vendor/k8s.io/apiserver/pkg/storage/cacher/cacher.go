@@ -653,6 +653,8 @@ func (c *Cacher) Watch(ctx context.Context, key string, opts storage.ListOptions
 		return newErrWatcher(err), nil
 	}
 
+	c.setInitialEventsEndBookmarkIfRequested(cacheInterval, opts, c.watchCache.resourceVersion)
+
 	addedWatcher := false
 	func() {
 		c.Lock()
@@ -693,9 +695,15 @@ func (c *Cacher) Watch(ctx context.Context, key string, opts storage.ListOptions
 
 // Get implements storage.Interface.
 func (c *Cacher) Get(ctx context.Context, key string, opts storage.GetOptions, objPtr runtime.Object) error {
+	ctx, span := tracing.Start(ctx, "cacher.Get",
+		attribute.String("audit-id", audit.GetAuditIDTruncated(ctx)),
+		attribute.String("key", key),
+		attribute.String("resource-version", opts.ResourceVersion))
+	defer span.End(500 * time.Millisecond)
 	if opts.ResourceVersion == "" {
 		// If resourceVersion is not specified, serve it from underlying
 		// storage (for backward compatibility).
+		span.AddEvent("About to Get from underlying storage")
 		return c.storage.Get(ctx, key, opts, objPtr)
 	}
 
@@ -703,6 +711,7 @@ func (c *Cacher) Get(ctx context.Context, key string, opts storage.GetOptions, o
 		if !c.ready.check() {
 			// If Cache is not initialized, delegate Get requests to storage
 			// as described in https://kep.k8s.io/4568
+			span.AddEvent("About to Get from underlying storage - cache not initialized")
 			return c.storage.Get(ctx, key, opts, objPtr)
 		}
 	}
@@ -722,6 +731,7 @@ func (c *Cacher) Get(ctx context.Context, key string, opts storage.GetOptions, o
 		if getRV == 0 && !c.ready.check() {
 			// If Cacher is not yet initialized and we don't require any specific
 			// minimal resource version, simply forward the request to storage.
+			span.AddEvent("About to Get from underlying storage - cache not initialized and no resourceVersion set")
 			return c.storage.Get(ctx, key, opts, objPtr)
 		}
 		if err := c.ready.wait(ctx); err != nil {
@@ -734,6 +744,7 @@ func (c *Cacher) Get(ctx context.Context, key string, opts storage.GetOptions, o
 		return err
 	}
 
+	span.AddEvent("About to fetch object from cache")
 	obj, exists, readResourceVersion, err := c.watchCache.WaitUntilFreshAndGet(ctx, getRV, key)
 	if err != nil {
 		return err
@@ -856,7 +867,7 @@ func (c *Cacher) GetList(ctx context.Context, key string, opts storage.ListOptio
 		}
 	}
 
-	ctx, span := tracing.Start(ctx, "cacher list",
+	ctx, span := tracing.Start(ctx, "cacher.GetList",
 		attribute.String("audit-id", audit.GetAuditIDTruncated(ctx)),
 		attribute.Stringer("type", c.groupResource))
 	defer span.End(500 * time.Millisecond)
@@ -1437,6 +1448,26 @@ func (c *Cacher) waitUntilWatchCacheFreshAndForceAllEvents(ctx context.Context, 
 // Wait blocks until the cacher is Ready or Stopped, it returns an error if Stopped.
 func (c *Cacher) Wait(ctx context.Context) error {
 	return c.ready.wait(ctx)
+}
+
+// setInitialEventsEndBookmarkIfRequested sets initialEventsEndBookmark field in watchCacheInterval for watchlist request
+func (c *Cacher) setInitialEventsEndBookmarkIfRequested(cacheInterval *watchCacheInterval, opts storage.ListOptions, currentResourceVersion uint64) {
+	if opts.SendInitialEvents != nil && *opts.SendInitialEvents && opts.Predicate.AllowWatchBookmarks {
+		// We don't need to set the InitialEventsAnnotation for this bookmark event,
+		// because this will be automatically set during event conversion in cacheWatcher.convertToWatchEvent method
+		initialEventsEndBookmark := &watchCacheEvent{
+			Type:            watch.Bookmark,
+			Object:          c.newFunc(),
+			ResourceVersion: currentResourceVersion,
+		}
+
+		if err := c.versioner.UpdateObject(initialEventsEndBookmark.Object, initialEventsEndBookmark.ResourceVersion); err != nil {
+			klog.Errorf("failure to set resourceVersion to %d on initialEventsEndBookmark event %+v for watchlist request and wait for bookmark trigger to send", initialEventsEndBookmark.ResourceVersion, initialEventsEndBookmark.Object)
+			initialEventsEndBookmark = nil
+		}
+
+		cacheInterval.initialEventsEndBookmark = initialEventsEndBookmark
+	}
 }
 
 // errWatcher implements watch.Interface to return a single error
