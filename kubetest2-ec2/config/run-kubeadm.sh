@@ -95,6 +95,9 @@ find ./kubernetes/server/bin -name "*.tar" -print | xargs -L 1 ctr -n k8s.io ima
 # shellcheck disable=SC2016
 ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
 
+  KUBE_LOG_LEVEL=${KUBE_LOG_LEVEL:-4}
+  sed -i "s|{{KUBE_LOG_LEVEL}}|$KUBE_LOG_LEVEL|g" /etc/kubernetes/kubeadm-init.yaml
+
 # {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
 if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)

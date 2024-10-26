@@ -29,14 +29,17 @@ apiServer:
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     feature-gates: {{FEATURE_GATES}}
     runtime-config: {{RUNTIME_CONFIG}}
+    v: {{KUBE_LOG_LEVEL}}
   certSANs:
   - {{EXTRA_SANS}}
 controllerManager:
   extraArgs:
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     feature-gates: {{FEATURE_GATES}}
+    v: {{KUBE_LOG_LEVEL}}
 scheduler:
   extraArgs:
     feature-gates: {{FEATURE_GATES}}
+    v: {{KUBE_LOG_LEVEL}}
 networking:
   podSubnet: {{POD_CIDR}}
