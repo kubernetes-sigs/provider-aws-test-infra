@@ -48,6 +48,13 @@ const (
 	// Allow spec.terminationGracePeriodSeconds to be overridden by MaxPodGracePeriodSeconds in soft evictions.
 	AllowOverwriteTerminationGracePeriodSeconds featuregate.Feature = "AllowOverwriteTerminationGracePeriodSeconds"
 
+	// owner: @thockin
+	// Deprecated: v1.29
+	//
+	// Enables Service.status.ingress.loadBanace to be set on
+	// services of types other than LoadBalancer.
+	AllowServiceLBStatusOnNonLB featuregate.Feature = "AllowServiceLBStatusOnNonLB"
+
 	// owner: @bswartz
 	//
 	// Enables usage of any object for volume data source in PVCs
@@ -140,6 +147,8 @@ const (
 	ContainerCheckpoint featuregate.Feature = "ContainerCheckpoint"
 
 	// owner: @helayoty
+	// kep: https://kep.k8s.io/4026
+	//
 	// Set the scheduled time as an annotation in the job.
 	CronJobsScheduledAnnotation featuregate.Feature = "CronJobsScheduledAnnotation"
 
@@ -749,6 +758,16 @@ const (
 	//
 	// Enables the image volume source.
 	ImageVolume featuregate.Feature = "ImageVolume"
+
+	// owner: @zhifei92
+	// beta: v1.32
+	//
+	// Enables the systemd watchdog for the kubelet. When enabled, the kubelet will
+	// periodically notify the systemd watchdog to indicate that it is still alive.
+	// This can help prevent the system from restarting the kubelet if it becomes
+	// unresponsive. The feature gate is enabled by default, but should only be used
+	// if the system supports the systemd watchdog feature and has it configured properly.
+	SystemdWatchdog = featuregate.Feature("SystemdWatchdog")
 )
 
 func init() {
