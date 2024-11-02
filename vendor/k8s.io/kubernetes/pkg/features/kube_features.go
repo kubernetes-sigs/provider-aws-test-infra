@@ -206,6 +206,18 @@ const (
 	// owner: @pohly
 	// kep: http://kep.k8s.io/4381
 	//
+	// Enables support for requesting admin access in a ResourceClaim.
+	// Admin access is granted even if a device is already in use and,
+	// depending on the DRA driver, may enable additional permissions
+	// when a container uses the allocated device.
+	//
+	// This feature gate is currently defined in KEP #4381. The intent
+	// is to move it into a separate KEP.
+	DRAAdminAccess featuregate.Feature = "DRAAdminAccess"
+
+	// owner: @pohly
+	// kep: http://kep.k8s.io/4381
+	//
 	// Enables support for resources with custom parameters and a lifecycle
 	// that is independent of a Pod. Resource allocation is done by the scheduler
 	// based on "structured parameters".
@@ -465,6 +477,12 @@ const (
 	// Enables SleepAction in container lifecycle hooks
 	PodLifecycleSleepAction featuregate.Feature = "PodLifecycleSleepAction"
 
+	// owner: @sreeram-venkitesh
+	// kep: http://kep.k8s.io/4818
+	//
+	// Allows zero value for sleep duration in SleepAction in container lifecycle hooks
+	PodLifecycleSleepActionAllowZero featuregate.Feature = "PodLifecycleSleepActionAllowZero"
+
 	// owner: @Huang-Wei
 	// kep: https://kep.k8s.io/3521
 	//
@@ -602,6 +620,8 @@ const (
 	// owner: @derekwaynecarr
 	//
 	// Enables kubelet support to size memory backed volumes
+	// This is a kubelet only feature gate.
+	// Code can be removed in 1.35 without any consideration for emulated versions.
 	SizeMemoryBackedVolumes featuregate.Feature = "SizeMemoryBackedVolumes"
 
 	// owner: @mattcary
