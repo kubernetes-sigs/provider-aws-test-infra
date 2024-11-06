@@ -16,7 +16,7 @@ packages:
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
-      containerd-env: https://raw.githubusercontent.com/kubernetes/test-infra/master/jobs/e2e_node/containerd/containerd-main/env
+      containerd-env: https://raw.githubusercontent.com/kubernetes/test-infra/master/jobs/e2e_node/containerd/containerd-release-1.7/env
   - path: /etc/systemd/system/containerd-installation.service
     permissions: '0644'
     owner: root
