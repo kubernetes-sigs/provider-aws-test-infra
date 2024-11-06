@@ -132,11 +132,20 @@ if [ -z "${version}" ]; then
     exit 1
   fi
 else
-  # Download and untar the release tar ball.
-  $(set +x; curl -X GET "${HEADERS[@]}" -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 \
-    --retry-delay 10 "${TARBALL_GCS_PATH}")
-  tar xvf "${TARBALL}"
-  rm -f "${TARBALL}"
+  if [ ${ARCH} == "arm64" ]; then
+    curl -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 --retry-delay 10 \
+	"https://github.com/containerd/containerd/releases/download/v${version}/cri-containerd-${version}-linux-${ARCH}.tar.gz"
+    tar xvf "${TARBALL}"
+    rm -f "${TARBALL}"
+  elif is_preloaded "${TARBALL_GCS_NAME}" "${tar_sha1}"; then
+    echo "${TARBALL_GCS_NAME} is preloaded"
+  else
+    # Download and untar the release tar ball.
+    $(set +x; curl -X GET "${HEADERS[@]}" -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 \
+      --retry-delay 10 "${TARBALL_GCS_PATH}")
+    tar xvf "${TARBALL}"
+    rm -f "${TARBALL}"
+  fi
 fi
 
 # Remove crictl shipped with containerd, use crictl installed
