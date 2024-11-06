@@ -142,6 +142,7 @@ if [ -z "${version}" ]; then
   fi
 else
   if [ ${ARCH} == "arm64" ]; then
+    version=${version%%-*}
     curl -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 --retry-delay 10 \
 	"https://github.com/containerd/containerd/releases/download/v${version}/cri-containerd-${version}-linux-${ARCH}.tar.gz"
     tar xvf "${TARBALL}"
