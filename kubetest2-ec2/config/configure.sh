@@ -119,18 +119,8 @@ else
     deploy_path="k8s-staging-cri-tools/containerd/${deploy_dir}"
   fi
 
-  # TODO(random-liu): Put version into the metadata instead of
-  # deciding it in cloud init. This may cause issue to reboot test.
-  if [ ${ARCH} == "arm64" ]; then
-    version=$(curl -f --ipv4 --retry 6 --retry-delay 3 --silent --show-error \
-      -H "Accept: application/vnd.github.v3+json" \
-      "https://api.github.com/repos/containerd/containerd/releases/latest" \
-      | ${PYTHON} -c "import sys, json; print(json.load(sys.stdin)['tag_name'])" \
-      | sed "s:v::g")
-  else
-    version=$(set +x; curl -X GET "${HEADERS[@]}" -f --ipv4 --retry 6 --retry-delay 3 --silent --show-error \
-      https://storage.googleapis.com/${deploy_path}/latest)
-  fi
+  version=$(set +x; curl -X GET "${HEADERS[@]}" -f --ipv4 --retry 6 --retry-delay 3 --silent --show-error \
+    https://storage.googleapis.com/${deploy_path}/latest)
 fi
 
 TARBALL_GCS_NAME="${pkg_prefix}-${version}.linux-${ARCH}.tar.gz"
