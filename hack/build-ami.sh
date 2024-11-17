@@ -54,6 +54,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json  || true
     cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json  || true
     cat <<< "$(jq --arg instance_profile ${INSTANCE_PROFILE_NAME:-'packer-instance-profile'} '.iam_instance_profile = $instance_profile' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json || true
+    cat <<< "$(jq --arg pause_container_image ${PAUSE_CONTAINER_IMAGE:-'registry.k8s.io/pause:3.10'} '.pause_container_image = $pause_container_image' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json || true
 
     if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
       make transform-al2-to-al2023
@@ -82,11 +83,13 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
     cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
     cat <<< "$(jq --arg instance_profile ${INSTANCE_PROFILE_NAME:-'packer-instance-profile'} '.iam_instance_profile = $instance_profile' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
+    cat <<< "$(jq --arg pause_container_image ${PAUSE_CONTAINER_IMAGE:-'registry.k8s.io/pause:3.10'} '.pause_container_image = $pause_container_image' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
 
     cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
     cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
     cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
     cat <<< "$(jq --arg instance_profile ${INSTANCE_PROFILE_NAME:-'packer-instance-profile'} '.iam_instance_profile = $instance_profile' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
+    cat <<< "$(jq --arg pause_container_image ${PAUSE_CONTAINER_IMAGE:-'registry.k8s.io/pause:3.10'} '.pause_container_image = $pause_container_image' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
 
     make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
       pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"} os_distro=${BUILD_EKS_AMI_OS:-"al2"} || true
