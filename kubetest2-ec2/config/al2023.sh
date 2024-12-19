@@ -302,6 +302,7 @@ discard_unpacked_layers = true
 
 [plugins."io.containerd.grpc.v1.cri"]
 sandbox_image = "registry.k8s.io/pause:3.8"
+enable_cdi = true
 
 [plugins."io.containerd.grpc.v1.cri".registry]
 config_path = "/etc/containerd/certs.d:/etc/docker/certs.d"
