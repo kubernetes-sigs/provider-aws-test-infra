@@ -26,7 +26,6 @@ kind: ClusterConfiguration
 kubernetesVersion: {{KUBERNETES_VERSION}}
 apiServer:
   extraArgs:
-    cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     feature-gates: {{FEATURE_GATES}}
     runtime-config: {{RUNTIME_CONFIG}}
   certSANs:
