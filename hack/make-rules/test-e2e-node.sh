@@ -208,8 +208,14 @@ echo "Kubernetes directory: ${KUBE_ROOT}"
 export KUBE_STATIC_OVERRIDES=kubelet
 export GOTOOLCHAIN=local
 
+source "${KUBE_ROOT}/hack/lib/version.sh"
+source "${KUBE_ROOT}/hack/lib/util.sh"
+
+# Build the runner with
+go build -o e2e_node_runner_remote -ldflags "$(kube::version::ldflags)" ./test/e2e_node/runner/remote
+
 # Invoke the runner
-go run test/e2e_node/runner/remote/run_remote.go  --mode="aws" --vmodule=*=4 \
+./e2e_node_runner_remote --mode="aws" --vmodule=*=4 \
   --ssh-env="aws" --ssh-key="${ssh_key}" --ssh-options="${ssh_options}" --ssh-user="${ssh_user}" \
   --instance-profile="${instance_profile}" --hosts="${hosts}" --cleanup="${cleanup}" \
   --results-dir="${artifacts}" --ginkgo-flags="${ginkgoflags}" --runtime-config="${runtime_config}" \
