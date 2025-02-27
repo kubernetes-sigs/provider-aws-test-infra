@@ -21,6 +21,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	clientfeatures "k8s.io/client-go/features"
 	"k8s.io/component-base/featuregate"
+	zpagesfeatures "k8s.io/component-base/zpages/features"
 )
 
 const (
@@ -36,20 +37,17 @@ const (
 	// across the file.
 
 	// owner: @aojea
-	// Deprecated: v1.31
 	//
 	// Allow kubelet to request a certificate without any Node IP available, only
 	// with DNS names.
 	AllowDNSOnlyNodeCSR featuregate.Feature = "AllowDNSOnlyNodeCSR"
 
 	// owner: @HirazawaUi
-	// Deprecated: v1.32
 	//
 	// Allow spec.terminationGracePeriodSeconds to be overridden by MaxPodGracePeriodSeconds in soft evictions.
 	AllowOverwriteTerminationGracePeriodSeconds featuregate.Feature = "AllowOverwriteTerminationGracePeriodSeconds"
 
 	// owner: @thockin
-	// Deprecated: v1.29
 	//
 	// Enables Service.status.ingress.loadBanace to be set on
 	// services of types other than LoadBalancer.
@@ -63,11 +61,8 @@ const (
 	// owner: @tallclair
 	AppArmor featuregate.Feature = "AppArmor"
 
-	// owner: @tallclair
-	AppArmorFields featuregate.Feature = "AppArmorFields"
-
 	// owner: @liggitt
-	// kep:
+	// kep: https://kep.k8s.io/4601
 	//
 	// Make the Node authorizer use fine-grained selector authorization.
 	// Requires AuthorizeWithSelectors to be enabled.
@@ -158,6 +153,12 @@ const (
 	// Enable usage of Provision of PVCs from snapshots in other namespaces
 	CrossNamespaceVolumeDataSource featuregate.Feature = "CrossNamespaceVolumeDataSource"
 
+	// owner: @atiratree
+	// kep: http://kep.k8s.io/3973
+	//
+	// Deployments and replica sets can now also track terminating pods via .status.terminatingReplicas.
+	DeploymentPodReplacementPolicy featuregate.Feature = "DeploymentPodReplacementPolicy"
+
 	// owner: @elezar
 	// kep: http://kep.k8s.io/4009
 	//
@@ -171,34 +172,19 @@ const (
 	// both allocators. This feature gate disables the dual write on the new Cluster IP allocators.
 	DisableAllocatorDualWrite featuregate.Feature = "DisableAllocatorDualWrite"
 
-	// owner: @andrewsykim
-	//
-	// Disable any functionality in kube-apiserver, kube-controller-manager and kubelet related to the `--cloud-provider` component flag.
-	DisableCloudProviders featuregate.Feature = "DisableCloudProviders"
-
-	// owner: @andrewsykim
-	//
-	// Disable in-tree functionality in kubelet to authenticate to cloud provider container registries for image pull credentials.
-	DisableKubeletCloudCredentialProviders featuregate.Feature = "DisableKubeletCloudCredentialProviders"
-
 	// owner: @micahhausler
-	// Deprecated: v1.31
 	//
 	// Setting AllowInsecureKubeletCertificateSigningRequests to true disables node admission validation of CSRs
 	// for kubelet signers where CN=system:node:$nodeName.
-	// Remove in v1.33
 	AllowInsecureKubeletCertificateSigningRequests featuregate.Feature = "AllowInsecureKubeletCertificateSigningRequests"
 
 	// owner: @hoskeri
-	// Deprecated: v1.32
 	//
 	// Restores previous behavior where Kubelet fails self registration if node create returns 403 Forbidden.
-	// Remove in v1.34
 	KubeletRegistrationGetOnExistsOnly featuregate.Feature = "KubeletRegistrationGetOnExistsOnly"
 
 	// owner: @HirazawaUi
 	// kep: http://kep.k8s.io/4004
-	// Deprecated: v1.31 (default off)
 	//
 	// DisableNodeKubeProxyVersion disable the status.nodeInfo.kubeProxyVersion field of v1.Node
 	DisableNodeKubeProxyVersion featuregate.Feature = "DisableNodeKubeProxyVersion"
@@ -223,6 +209,20 @@ const (
 	// based on "structured parameters".
 	DynamicResourceAllocation featuregate.Feature = "DynamicResourceAllocation"
 
+	// owner: @LionelJouin
+	// kep: http://kep.k8s.io/4817
+	//
+	// Enables support the ResourceClaim.status.devices field and for setting this
+	// status from DRA drivers.
+	DRAResourceClaimDeviceStatus featuregate.Feature = "DRAResourceClaimDeviceStatus"
+
+	// owner: @lauralorenz
+	// kep: https://kep.k8s.io/4603
+	//
+	// Enables support for configurable per-node backoff maximums for restarting
+	// containers (aka containers in CrashLoopBackOff)
+	KubeletCrashLoopBackOffMax featuregate.Feature = "KubeletCrashLoopBackOffMax"
+
 	// owner: @harche
 	// kep: http://kep.k8s.io/3386
 	//
@@ -245,13 +245,6 @@ const (
 	// Make the kubelet use shutdown configuration based on pod priority values for graceful shutdown.
 	GracefulNodeShutdownBasedOnPodPriority featuregate.Feature = "GracefulNodeShutdownBasedOnPodPriority"
 
-	// owner: @arjunrn @mwielgus @josephburnett @sanposhiho
-	// kep: https://kep.k8s.io/1610
-	//
-	// Add support for the HPA to scale based on metrics from individual containers
-	// in target pods
-	HPAContainerMetrics featuregate.Feature = "HPAContainerMetrics"
-
 	// owner: @dxist
 	//
 	// Enables support of HPA scaling to zero pods when an object or custom metric is configured.
@@ -263,6 +256,26 @@ const (
 	// Honor Persistent Volume Reclaim Policy when it is "Delete" irrespective of PV-PVC
 	// deletion ordering.
 	HonorPVReclaimPolicy featuregate.Feature = "HonorPVReclaimPolicy"
+
+	// owner: @vinaykul,@tallclair
+	// kep: http://kep.k8s.io/1287
+	//
+	// Enables In-Place Pod Vertical Scaling
+	InPlacePodVerticalScaling featuregate.Feature = "InPlacePodVerticalScaling"
+
+	// owner: @tallclair
+	// kep: http://kep.k8s.io/1287
+	//
+	// Enables the AllocatedResources field in container status. This feature requires
+	// InPlacePodVerticalScaling also be enabled.
+	InPlacePodVerticalScalingAllocatedStatus featuregate.Feature = "InPlacePodVerticalScalingAllocatedStatus"
+
+	// owner: @tallclair @esotsal
+	//
+	// Allow resource resize for containers in Guaranteed pods with integer CPU requests ( default false ).
+	// Applies only in nodes with InPlacePodVerticalScaling and CPU Manager features enabled, and
+	// CPU Manager Static Policy option set.
+	InPlacePodVerticalScalingExclusiveCPUs featuregate.Feature = "InPlacePodVerticalScalingExclusiveCPUs"
 
 	// owner: @trierra
 	//
@@ -277,8 +290,6 @@ const (
 
 	// owner: @mimowo
 	// kep: https://kep.k8s.io/4368
-	// alpha: v1.30
-	// beta: v1.32
 	//
 	// Allows to delegate reconciliation of a Job object to an external controller.
 	JobManagedBy featuregate.Feature = "JobManagedBy"
@@ -352,12 +363,13 @@ const (
 	// Add support for distributed tracing in the kubelet
 	KubeletTracing featuregate.Feature = "KubeletTracing"
 
-	// owner: @alexanderConstantinescu
-	// kep: http://kep.k8s.io/3836
+	// owner: @gjkim42
 	//
-	// Implement connection draining for terminating nodes for
-	// `externalTrafficPolicy: Cluster` services.
-	KubeProxyDrainingTerminatingNodes featuregate.Feature = "KubeProxyDrainingTerminatingNodes"
+	// Enable legacy code path in pkg/kubelet/kuberuntime that predates the
+	// SidecarContainers feature. This temporary feature gate is disabled by
+	// default and intended to safely remove the redundant code path. This is
+	// only available in v1.33 and will be removed in v1.34.
+	LegacySidecarContainers featuregate.Feature = "LegacySidecarContainers"
 
 	// owner: @RobertKrawitz
 	//
@@ -388,7 +400,8 @@ const (
 	// Enables maxUnavailable for StatefulSet
 	MaxUnavailableStatefulSet featuregate.Feature = "MaxUnavailableStatefulSet"
 
-	// owner: @cynepco3hahue(alukiano) @cezaryzukowski @k-wiatrzyk
+	// owner: @cynepco3hahue(alukiano) @cezaryzukowski @k-wiatrzyk, @Tal-or (only for GA graduation)
+	//
 	// Allows setting memory affinity for a container based on NUMA topology
 	MemoryManager featuregate.Feature = "MemoryManager"
 
@@ -413,7 +426,8 @@ const (
 	// owner: @aravindhp @LorbusChris
 	// kep: http://kep.k8s.io/2271
 	//
-	// Enables querying logs of node services using the /logs endpoint
+	// Enables querying logs of node services using the /logs endpoint. Enabling this feature has security implications.
+	// The recommendation is to enable it on a need basis for debugging purposes and disabling otherwise.
 	NodeLogQuery featuregate.Feature = "NodeLogQuery"
 
 	// owner: @iholder101 @kannon92
@@ -422,11 +436,11 @@ const (
 	// Permits kubelet to run with swap enabled.
 	NodeSwap featuregate.Feature = "NodeSwap"
 
-	// owner: @mortent, @atiratree, @ravig
-	// kep: http://kep.k8s.io/3018
+	// owner: @cici37
+	// kep: https://kep.k8s.io/5080
 	//
-	// Enables PDBUnhealthyPodEvictionPolicy for PodDisruptionBudgets
-	PDBUnhealthyPodEvictionPolicy featuregate.Feature = "PDBUnhealthyPodEvictionPolicy"
+	// Enables ordered namespace deletion.
+	OrderedNamespaceDeletion featuregate.Feature = "OrderedNamespaceDeletion"
 
 	// owner: @RomanBednar
 	// kep: https://kep.k8s.io/3762
@@ -459,17 +473,17 @@ const (
 	// Set pod completion index as a pod label for Indexed Jobs.
 	PodIndexLabel featuregate.Feature = "PodIndexLabel"
 
+	// owner: @knight42
+	// kep: https://kep.k8s.io/3288
+	//
+	// Enables only stdout or stderr of the container to be retrievd.
+	PodLogsQuerySplitStreams featuregate.Feature = "PodLogsQuerySplitStreams"
+
 	// owner: @ddebroy, @kannon92
 	//
 	// Enables reporting of PodReadyToStartContainersCondition condition in pod status after pod
 	// sandbox creation and network configuration completes successfully
 	PodReadyToStartContainersCondition featuregate.Feature = "PodReadyToStartContainersCondition"
-
-	// owner: @wzshiming
-	// kep: http://kep.k8s.io/2681
-	//
-	// Adds pod.status.hostIPs and downward API
-	PodHostIPs featuregate.Feature = "PodHostIPs"
 
 	// owner: @AxeZhan
 	// kep: http://kep.k8s.io/3960
@@ -571,11 +585,25 @@ const (
 	// which benefits to reduce the useless requeueing.
 	SchedulerQueueingHints featuregate.Feature = "SchedulerQueueingHints"
 
+	// owner: @sanposhiho
+	// kep: http://kep.k8s.io/4832
+	//
+	// Running some expensive operation within the scheduler's preemption asynchronously,
+	// which improves the scheduling latency when the preemption involves in.
+	SchedulerAsyncPreemption featuregate.Feature = "SchedulerAsyncPreemption"
+
 	// owner: @atosatto @yuanchen8911
 	// kep: http://kep.k8s.io/3902
 	//
 	// Decouples Taint Eviction Controller, performing taint-based Pod eviction, from Node Lifecycle Controller.
 	SeparateTaintEvictionController featuregate.Feature = "SeparateTaintEvictionController"
+
+	// owner: @aramase
+	// kep: https://kep.k8s.io/4412
+	//
+	// ServiceAccountNodeAudienceRestriction is used to restrict the audience for which the
+	// kubelet can request a service account token for.
+	ServiceAccountNodeAudienceRestriction featuregate.Feature = "ServiceAccountNodeAudienceRestriction"
 
 	// owner: @munnerz
 	// kep: http://kep.k8s.io/4193
@@ -637,6 +665,7 @@ const (
 	// owner: @ahutsunshine
 	//
 	// Allows namespace indexer for namespace scope resources in apiserver cache to accelerate list operations.
+	// Superseded by BtreeWatchCache.
 	StorageNamespaceIndex featuregate.Feature = "StorageNamespaceIndex"
 
 	// owner: @nilekhc
@@ -708,10 +737,22 @@ const (
 	// Allows kube-proxy to create DSR loadbalancers for Windows
 	WinDSR featuregate.Feature = "WinDSR"
 
+	// owner: @zylxjtu
+	// kep: https://kep.k8s.io/4802
+	//
+	// Enables support for graceful shutdown windows node.
+	WindowsGracefulNodeShutdown featuregate.Feature = "WindowsGracefulNodeShutdown"
+
 	// owner: @ksubrmnn
 	//
 	// Allows kube-proxy to run in Overlay mode for Windows
 	WinOverlay featuregate.Feature = "WinOverlay"
+
+	// owner: @jsturtevant
+	// kep: https://kep.k8s.io/4888
+	//
+	// Add CPU and Memory Affinity support to Windows nodes with CPUManager, MemoryManager and Topology manager
+	WindowsCPUAndMemoryAffinity featuregate.Feature = "WindowsCPUAndMemoryAffinity"
 
 	// owner: @marosset
 	// kep: https://kep.k8s.io/3503
@@ -732,12 +773,6 @@ const (
 	// instead of changing each file on the volumes recursively.
 	// Initial implementation focused on ReadWriteOncePod volumes.
 	SELinuxMountReadWriteOncePod featuregate.Feature = "SELinuxMountReadWriteOncePod"
-
-	// owner: @vinaykul
-	// kep: http://kep.k8s.io/1287
-	//
-	// Enables In-Place Pod Vertical Scaling
-	InPlacePodVerticalScaling featuregate.Feature = "InPlacePodVerticalScaling"
 
 	// owner: @Sh4d1,@RyanAoh,@rikatz
 	// kep: http://kep.k8s.io/1860
@@ -780,7 +815,6 @@ const (
 	ImageVolume featuregate.Feature = "ImageVolume"
 
 	// owner: @zhifei92
-	// beta: v1.32
 	//
 	// Enables the systemd watchdog for the kubelet. When enabled, the kubelet will
 	// periodically notify the systemd watchdog to indicate that it is still alive.
@@ -788,11 +822,48 @@ const (
 	// unresponsive. The feature gate is enabled by default, but should only be used
 	// if the system supports the systemd watchdog feature and has it configured properly.
 	SystemdWatchdog = featuregate.Feature("SystemdWatchdog")
+
+	// owner: @jsafrane
+	// kep: https://kep.k8s.io/1710
+	//
+	// Speed up container startup by mounting volumes with the correct SELinux label
+	// instead of changing each file on the volumes recursively.
+	// Enables the SELinuxChangePolicy field in PodSecurityContext before SELinuxMount featgure gate is enabled.
+	SELinuxChangePolicy featuregate.Feature = "SELinuxChangePolicy"
+
+	// owner: @HarshalNeelkamal
+	//
+	// Enables external service account JWT signing and key management.
+	// If enabled, it allows passing --service-account-signing-endpoint flag to configure external signer.
+	ExternalServiceAccountTokenSigner featuregate.Feature = "ExternalServiceAccountTokenSigner"
+
+	// owner: @ndixita
+	// key: https://kep.k8s.io/2837
+	//
+	// Enables specifying resources at pod-level.
+	PodLevelResources featuregate.Feature = "PodLevelResources"
+
+	// owner: @ffromani
+	// beta: v1.33
+	//
+	// Disables CPU Quota for containers which have exclusive CPUs allocated.
+	// Disables pod-Level CPU Quota for pods containing at least one container with exclusive CPUs allocated
+	// Exclusive CPUs for a container (init, application, sidecar) are allocated when:
+	// (1) cpumanager policy is static,
+	// (2) the pod has QoS Guaranteed,
+	// (3) the container has integer cpu request.
+	// The expected behavior is that CPU Quota for containers having exclusive CPUs allocated is disabled.
+	// Because this fix changes a long-established (but incorrect) behavior, users observing
+	// any regressions can use the DisableCPUQuotaWithExclusiveCPUs feature gate (default on) to
+	// restore the old behavior. Please file issues if you hit issues and have to use this Feature Gate.
+	// The Feature Gate will be locked to true and then removed in +2 releases (1.35) if there are no bug reported
+	DisableCPUQuotaWithExclusiveCPUs featuregate.Feature = "DisableCPUQuotaWithExclusiveCPUs"
 )
 
 func init() {
-	runtime.Must(utilfeature.DefaultMutableFeatureGate.Add(defaultKubernetesFeatureGates))
+	runtime.Must(utilfeature.DefaultMutableFeatureGate.Add(defaultKubernetesFeatureGates)) //nolint:forbidigo // TODO(https://github.com/kubernetes/enhancements/tree/master/keps/sig-architecture/4330-compatibility-versions): Remove this once we complete the migration to versioned feature gates
 	runtime.Must(utilfeature.DefaultMutableFeatureGate.AddVersioned(defaultVersionedKubernetesFeatureGates))
+	runtime.Must(zpagesfeatures.AddFeatureGates(utilfeature.DefaultMutableFeatureGate))
 
 	// Register all client-go features with kube's feature gate instance and make all client-go
 	// feature checks use kube's instance. The effect is that for kube binaries, client-go
