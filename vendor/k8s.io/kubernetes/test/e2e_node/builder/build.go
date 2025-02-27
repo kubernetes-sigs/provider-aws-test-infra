@@ -78,6 +78,7 @@ func BuildTargets(cgo bool) error {
 		// Multi-architecture build is only supported in dockerized build
 		cmd = exec.Command(filepath.Join(k8sRoot, "build/run.sh"), "make", fmt.Sprintf("WHAT=%s", what), fmt.Sprintf("KUBE_BUILD_PLATFORMS=%s", GetTargetBuildArch()))
 	}
+	cmd.Dir = k8sRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
