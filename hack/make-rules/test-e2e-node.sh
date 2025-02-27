@@ -206,10 +206,15 @@ echo "Kubelet Config File: ${kubelet_config_file}"
 echo "Kubernetes directory: ${KUBE_ROOT}"
 
 export KUBE_STATIC_OVERRIDES=kubelet
-export GOTOOLCHAIN=local
 
 source "${KUBE_ROOT}/hack/lib/version.sh"
 source "${KUBE_ROOT}/hack/lib/util.sh"
+source "${KUBE_ROOT}/hack/lib/init.sh"
+
+# ensure we use the right golang version
+pushd "${KUBE_ROOT}"
+kube::golang::setup_env
+popd
 
 # Build the runner with
 go build -o e2e_node_runner_remote -ldflags "$(kube::version::ldflags)" ./test/e2e_node/runner/remote
