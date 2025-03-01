@@ -380,6 +380,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	HonorPVReclaimPolicy: {
 		{Version: version.MustParse("1.23"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.36
 	},
 
 	HPAScaleToZero: {
@@ -414,6 +415,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	JobBackoffLimitPerIndex: {
 		{Version: version.MustParse("1.28"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.29"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.36
 	},
 
 	JobManagedBy: {
@@ -739,6 +741,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	StorageVersionMigrator: {
 		{Version: version.MustParse("1.30"), Default: false, PreRelease: featuregate.Alpha},
+	},
+
+	StreamingCollectionEncodingToJSON: {
+		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	SupplementalGroupsPolicy: {
