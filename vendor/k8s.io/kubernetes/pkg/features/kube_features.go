@@ -264,6 +264,13 @@ const (
 	// Lock to default and remove after v1.22 based on user feedback that should be reflected in KEP #1972 update
 	ExecProbeTimeout featuregate.Feature = "ExecProbeTimeout"
 
+	// owner: @vinayakankugoyal @thockin
+	//
+	// Controls if the gitRepo volume plugin is supported or not.
+	// KEP #5040 disables the gitRepo volume plugin by default starting v1.33,
+	// this provides a way for users to override it.
+	GitRepoVolumeDriver featuregate.Feature = "GitRepoVolumeDriver"
+
 	// owner: @bobbypage
 	// Adds support for kubelet to detect node shutdown and gracefully terminate pods prior to the node being shutdown.
 	GracefulNodeShutdown featuregate.Feature = "GracefulNodeShutdown"
@@ -565,6 +572,13 @@ const (
 	// Allows recursive read-only mounts.
 	RecursiveReadOnlyMounts featuregate.Feature = "RecursiveReadOnlyMounts"
 
+	// owner: @lauralorenz
+	// kep: https://kep.k8s.io/4603
+	//
+	// Enables support for a lower internal cluster-wide backoff maximum for restarting
+	// containers (aka containers in CrashLoopBackOff)
+	ReduceDefaultCrashLoopBackOffDecay featuregate.Feature = "ReduceDefaultCrashLoopBackOffDecay"
+
 	// owner: @adrianmoisey
 	// kep: https://kep.k8s.io/4427
 	//
@@ -624,6 +638,13 @@ const (
 	// Running some expensive operation within the scheduler's preemption asynchronously,
 	// which improves the scheduling latency when the preemption involves in.
 	SchedulerAsyncPreemption featuregate.Feature = "SchedulerAsyncPreemption"
+
+	// owner: @macsko
+	// kep: http://kep.k8s.io/5142
+	//
+	// Improves scheduling queue behavior by popping pods from the backoffQ when the activeQ is empty.
+	// This allows to process potentially schedulable pods ASAP, eliminating a penalty effect of the backoff queue.
+	SchedulerPopFromBackoffQ featuregate.Feature = "SchedulerPopFromBackoffQ"
 
 	// owner: @atosatto @yuanchen8911
 	// kep: http://kep.k8s.io/3902
