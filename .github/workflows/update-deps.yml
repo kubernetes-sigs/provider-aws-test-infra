@@ -15,7 +15,7 @@ permissions:
 jobs:
   update-deps:
     if: ${{ github.repository == 'kubernetes-sigs/provider-aws-test-infra' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout provider-aws-test-infra
         uses: actions/checkout@v4

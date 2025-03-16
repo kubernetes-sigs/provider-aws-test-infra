@@ -120,9 +120,9 @@ func (a *AWSRunner) Validate() error {
 				a.deployer.UserDataFile = "al2023.sh"
 			}
 		case "ubuntu", "":
-			path = "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
+			path = "/aws/service/canonical/ubuntu/server/noble/stable/current/" + arch + "/hvm/ebs-gp3/ami-id"
 			if a.deployer.UserDataFile == "" {
-				a.deployer.UserDataFile = "ubuntu2204.yaml"
+				a.deployer.UserDataFile = "ubuntu2404.yaml"
 			}
 		default:
 			return fmt.Errorf("unrecognized parameter --image : %s", a.deployer.Image)
@@ -182,9 +182,9 @@ func (a *AWSRunner) Validate() error {
 				a.deployer.WorkerUserDataFile = "al2023.sh"
 			}
 		case "ubuntu", "":
-			path = "/aws/service/canonical/ubuntu/server/jammy/stable/current/" + arch + "/hvm/ebs-gp2/ami-id"
+			path = "/aws/service/canonical/ubuntu/server/noble/stable/current/" + arch + "/hvm/ebs-gp3/ami-id"
 			if a.deployer.WorkerUserDataFile == "" {
-				a.deployer.WorkerUserDataFile = "ubuntu2204.yaml"
+				a.deployer.WorkerUserDataFile = "ubuntu2404.yaml"
 			}
 		default:
 			return fmt.Errorf("unrecognized parameter --worker-image : %s", a.deployer.WorkerImage)
@@ -462,11 +462,11 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 			userdata = string(userDataBytes)
 		}
 	} else {
-		userDataBytes, err := config.ConfigFS.ReadFile("ubuntu2204.yaml")
+		userDataBytes, err := config.ConfigFS.ReadFile("ubuntu2404.yaml")
 		if err != nil {
-			return "", fmt.Errorf("error reading embedded ubuntu2204.yaml: %w", err)
+			return "", fmt.Errorf("error reading embedded ubuntu2404.yaml: %w", err)
 		}
-		klog.Infof("loading user data from embedded file: ubuntu2204.yaml")
+		klog.Infof("loading user data from embedded file: ubuntu2404.yaml")
 		userdata = string(userDataBytes)
 	}
 
