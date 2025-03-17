@@ -1,5 +1,5 @@
 #cloud-config
-# This bootstraps a public ubuntu 2204 image from scratch.
+# This bootstraps a public ubuntu 24.04 image from scratch.
 system_info:
   default_user:
     name: ec2-user
