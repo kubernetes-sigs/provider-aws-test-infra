@@ -9,7 +9,6 @@ packages:
     - nfs-common
     - socat
     - conntrack
-    - awscli
     - net-tools
     - jq
     - python3
@@ -86,6 +85,7 @@ write_files:
     owner: root
     permissions: '0544'
 runcmd:
+  - snap install aws-cli --classic
   - ufw disable || echo "ufw not installed"
   - systemctl stop apparmor
   - systemctl disable apparmor
