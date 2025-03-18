@@ -143,6 +143,8 @@ else
     --retry-delay 10 "${TARBALL_GCS_PATH}")
   tar xvf "${TARBALL}"
   rm -f "${TARBALL}"
+  # copy `runc` in ${CONTAINERD_HOME} to a directory in PATH as well
+  cp usr/local/sbin/runc /bin/runc || true
 fi
 
 # Remove crictl shipped with containerd, use crictl installed
