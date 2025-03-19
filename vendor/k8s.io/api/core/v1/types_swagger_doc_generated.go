@@ -1335,6 +1335,15 @@ func (NodeStatus) SwaggerDoc() map[string]string {
 	return map_NodeStatus
 }
 
+var map_NodeSwapStatus = map[string]string{
+	"":         "NodeSwapStatus represents swap memory information.",
+	"capacity": "Total amount of swap memory in bytes.",
+}
+
+func (NodeSwapStatus) SwaggerDoc() map[string]string {
+	return map_NodeSwapStatus
+}
+
 var map_NodeSystemInfo = map[string]string{
 	"":                        "NodeSystemInfo is a set of ids/uuids to uniquely identify the node.",
 	"machineID":               "MachineID reported by the node. For unique machine identification in the cluster this field is preferred. Learn more from man(5) machine-id: http://man7.org/linux/man-pages/man5/machine-id.5.html",
@@ -1347,6 +1356,7 @@ var map_NodeSystemInfo = map[string]string{
 	"kubeProxyVersion":        "Deprecated: KubeProxy Version reported by the node.",
 	"operatingSystem":         "The Operating System reported by the node",
 	"architecture":            "The Architecture reported by the node",
+	"swap":                    "Swap Info reported by the node.",
 }
 
 func (NodeSystemInfo) SwaggerDoc() map[string]string {
@@ -1862,7 +1872,7 @@ var map_PodStatus = map[string]string{
 	"containerStatuses":          "Statuses of containers in this pod. Each container in the pod should have at most one status in this list, and all statuses should be for containers in the pod. However this is not enforced. If a status for a non-existent container is present in the list, or the list has duplicate names, the behavior of various Kubernetes components is not defined and those statuses might be ignored. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status",
 	"qosClass":                   "The Quality of Service (QOS) classification assigned to the pod based on resource requirements See PodQOSClass type for available QOS classes More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/#quality-of-service-classes",
 	"ephemeralContainerStatuses": "Statuses for any ephemeral containers that have run in this pod. Each ephemeral container in the pod should have at most one status in this list, and all statuses should be for containers in the pod. However this is not enforced. If a status for a non-existent container is present in the list, or the list has duplicate names, the behavior of various Kubernetes components is not defined and those statuses might be ignored. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status",
-	"resize":                     "Status of resources resize desired for pod's containers. It is empty if no resources resize is pending. Any changes to container resources will automatically set this to \"Proposed\"",
+	"resize":                     "Status of resources resize desired for pod's containers. It is empty if no resources resize is pending. Any changes to container resources will automatically set this to \"Proposed\" Deprecated: Resize status is moved to two pod conditions PodResizePending and PodResizeInProgress. PodResizePending will track states where the spec has been resized, but the Kubelet has not yet allocated the resources. PodResizeInProgress will track in-progress resizes, and should be present whenever allocated resources != acknowledged resources.",
 	"resourceClaimStatuses":      "Status of resource claims.",
 }
 
