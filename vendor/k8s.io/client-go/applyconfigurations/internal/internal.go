@@ -6528,6 +6528,12 @@ var schemaYAML = typed.YAMLObject(`types:
           elementType:
             scalar: string
           elementRelationship: atomic
+- name: io.k8s.api.core.v1.NodeSwapStatus
+  map:
+    fields:
+    - name: capacity
+      type:
+        scalar: numeric
 - name: io.k8s.api.core.v1.NodeSystemInfo
   map:
     fields:
@@ -6567,6 +6573,9 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         scalar: string
       default: ""
+    - name: swap
+      type:
+        namedType: io.k8s.api.core.v1.NodeSwapStatus
     - name: systemUUID
       type:
         scalar: string
@@ -13563,6 +13572,9 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: fsGroupPolicy
       type:
         scalar: string
+    - name: nodeAllocatableUpdatePeriodSeconds
+      type:
+        scalar: numeric
     - name: podInfoOnMount
       type:
         scalar: boolean
@@ -13780,6 +13792,9 @@ var schemaYAML = typed.YAMLObject(`types:
 - name: io.k8s.api.storage.v1.VolumeError
   map:
     fields:
+    - name: errorCode
+      type:
+        scalar: numeric
     - name: message
       type:
         scalar: string
@@ -13906,6 +13921,9 @@ var schemaYAML = typed.YAMLObject(`types:
 - name: io.k8s.api.storage.v1alpha1.VolumeError
   map:
     fields:
+    - name: errorCode
+      type:
+        scalar: numeric
     - name: message
       type:
         scalar: string
@@ -13938,6 +13956,9 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: fsGroupPolicy
       type:
         scalar: string
+    - name: nodeAllocatableUpdatePeriodSeconds
+      type:
+        scalar: numeric
     - name: podInfoOnMount
       type:
         scalar: boolean
@@ -14177,6 +14198,9 @@ var schemaYAML = typed.YAMLObject(`types:
 - name: io.k8s.api.storage.v1beta1.VolumeError
   map:
     fields:
+    - name: errorCode
+      type:
+        scalar: numeric
     - name: message
       type:
         scalar: string

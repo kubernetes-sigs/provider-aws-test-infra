@@ -2872,6 +2872,13 @@ message NodeStatus {
   optional NodeFeatures features = 13;
 }
 
+// NodeSwapStatus represents swap memory information.
+message NodeSwapStatus {
+  // Total amount of swap memory in bytes.
+  // +optional
+  optional int64 capacity = 1;
+}
+
 // NodeSystemInfo is a set of ids/uuids to uniquely identify the node.
 message NodeSystemInfo {
   // MachineID reported by the node. For unique machine identification
@@ -2907,6 +2914,9 @@ message NodeSystemInfo {
 
   // The Architecture reported by the node
   optional string architecture = 10;
+
+  // Swap Info reported by the node.
+  optional NodeSwapStatus swap = 11;
 }
 
 // ObjectFieldSelector selects an APIVersioned field of an object.
@@ -4640,6 +4650,9 @@ message PodStatus {
   // Status of resources resize desired for pod's containers.
   // It is empty if no resources resize is pending.
   // Any changes to container resources will automatically set this to "Proposed"
+  // Deprecated: Resize status is moved to two pod conditions PodResizePending and PodResizeInProgress.
+  // PodResizePending will track states where the spec has been resized, but the Kubelet has not yet allocated the resources.
+  // PodResizeInProgress will track in-progress resizes, and should be present whenever allocated resources != acknowledged resources.
   // +featureGate=InPlacePodVerticalScaling
   // +optional
   optional string resize = 14;
