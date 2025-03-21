@@ -2951,6 +2951,17 @@ const (
 	// DisruptionTarget indicates the pod is about to be terminated due to a
 	// disruption (such as preemption, eviction API or garbage-collection).
 	DisruptionTarget PodConditionType = "DisruptionTarget"
+	// PodResizePending indicates that the pod has been resized, but kubelet has not
+	// yet allocated the resources. If both PodResizePending and PodResizeInProgress
+	// are set, it means that a new resize was requested in the middle of a previous
+	// pod resize that is still in progress.
+	PodResizePending PodConditionType = "PodResizePending"
+	// PodResizeInProgress indicates that a resize is in progress, and is present whenever
+	// the Kubelet has allocated resources for the resize, but has not yet actuated all of
+	// the required changes.
+	// If both PodResizePending and PodResizeInProgress are set, it means that a new resize was
+	// requested in the middle of a previous pod resize that is still in progress.
+	PodResizeInProgress PodConditionType = "PodResizeInProgress"
 )
 
 // PodCondition represents pod's condition
@@ -2970,7 +2981,7 @@ type PodCondition struct {
 	Message string
 }
 
-// PodResizeStatus shows status of desired resize of a pod's containers.
+// Deprecated: PodResizeStatus shows status of desired resize of a pod's containers.
 type PodResizeStatus string
 
 const (
@@ -3257,7 +3268,6 @@ type PodAffinityTerm struct {
 	// pod labels will be ignored. The default value is empty.
 	// The same key is forbidden to exist in both matchLabelKeys and labelSelector.
 	// Also, matchLabelKeys cannot be set when labelSelector isn't set.
-	// This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
 	//
 	// +listType=atomic
 	// +optional
@@ -3270,7 +3280,6 @@ type PodAffinityTerm struct {
 	// pod labels will be ignored. The default value is empty.
 	// The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
 	// Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-	// This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
 	//
 	// +listType=atomic
 	// +optional
@@ -4251,6 +4260,9 @@ type PodStatus struct {
 	// Status of resources resize desired for pod's containers.
 	// It is empty if no resources resize is pending.
 	// Any changes to container resources will automatically set this to "Proposed"
+	// Deprecated: Resize status is moved to two pod conditions PodResizePending and PodResizeInProgress.
+	// PodResizePending will track states where the spec has been resized, but the Kubelet has not yet allocated the resources.
+	// PodResizeInProgress will track in-progress resizes, and should be present whenever allocated resources != acknowledged resources.
 	// +featureGate=InPlacePodVerticalScaling
 	// +optional
 	Resize PodResizeStatus
@@ -4548,12 +4560,27 @@ const (
 
 // These are valid values for the TrafficDistribution field of a Service.
 const (
-	// Indicates a preference for routing traffic to endpoints that are in the
-	// same zone as the client. Setting this value gives implementations
-	// permission to make different tradeoffs, e.g. optimizing for proximity
-	// rather than equal distribution of load. Users should not set this value
-	// if such tradeoffs are not acceptable.
+	// Indicates a preference for routing traffic to endpoints that are in the same
+	// zone as the client. Users should not set this value unless they have ensured
+	// that clients and endpoints are distributed in such a way that the "same zone"
+	// preference will not result in endpoints getting overloaded.
 	ServiceTrafficDistributionPreferClose = "PreferClose"
+
+	// Indicates a preference for routing traffic to endpoints that are in the same
+	// zone as the client. Users should not set this value unless they have ensured
+	// that clients and endpoints are distributed in such a way that the "same zone"
+	// preference will not result in endpoints getting overloaded.
+	// This is an alias for "PreferClose", but it is an Alpha feature and is only
+	// recognized if the PreferSameTrafficDistribution feature gate is enabled.
+	ServiceTrafficDistributionPreferSameZone = "PreferSameZone"
+
+	// Indicates a preference for routing traffic to endpoints that are on the same
+	// node as the client. Users should not set this value unless they have ensured
+	// that clients and endpoints are distributed in such a way that the "same node"
+	// preference will not result in endpoints getting overloaded.
+	// This is an Alpha feature and is only recognized if the
+	// PreferSameTrafficDistribution feature gate is enabled.
+	ServiceTrafficDistributionPreferSameNode = "PreferSameNode"
 )
 
 // These are the valid conditions of a service.
@@ -5176,6 +5203,15 @@ type NodeSystemInfo struct {
 	OperatingSystem string
 	// The Architecture reported by the node
 	Architecture string
+	// Swap Info reported by the node.
+	Swap *NodeSwapStatus
+}
+
+// NodeSwapStatus represents swap memory information.
+type NodeSwapStatus struct {
+	// Total amount of swap memory in bytes.
+	// +optional
+	Capacity *int64
 }
 
 // NodeConfigStatus describes the status of the config assigned by Node.Spec.ConfigSource.
@@ -6687,7 +6723,6 @@ type TopologySpreadConstraint struct {
 	// - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
 	//
 	// If this value is nil, the behavior is equivalent to the Honor policy.
-	// This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
 	// +optional
 	NodeAffinityPolicy *NodeInclusionPolicy
 	// NodeTaintsPolicy indicates how we will treat node taints when calculating
@@ -6697,7 +6732,6 @@ type TopologySpreadConstraint struct {
 	// - Ignore: node taints are ignored. All nodes are included.
 	//
 	// If this value is nil, the behavior is equivalent to the Ignore policy.
-	// This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
 	// +optional
 	NodeTaintsPolicy *NodeInclusionPolicy
 	// MatchLabelKeys is a set of pod label keys to select the pods over which
