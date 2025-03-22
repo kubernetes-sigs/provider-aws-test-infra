@@ -113,6 +113,62 @@ message BasicDevice {
   //
   // +optional
   map<string, DeviceCapacity> capacity = 2;
+
+  // ConsumesCounter defines a list of references to sharedCounters
+  // and the set of counters that the device will
+  // consume from those counter sets.
+  //
+  // There can only be a single entry per counterSet.
+  //
+  // The maximum number of device counter consumption entries
+  // is 32. This is the same as the maximum number of shared counters
+  // allowed in a ResourceSlice.
+  //
+  // +optional
+  // +listType=atomic
+  // +featureGate=DRAPartitionableDevices
+  repeated DeviceCounterConsumption consumesCounter = 3;
+
+  // NodeName identifies the node where the device is available.
+  //
+  // Must only be set if Spec.PerDeviceNodeSelection is set to true.
+  // At most one of NodeName, NodeSelector and AllNodes can be set.
+  //
+  // +optional
+  // +oneOf=DeviceNodeSelection
+  // +featureGate=DRAPartitionableDevices
+  optional string nodeName = 4;
+
+  // NodeSelector defines the nodes where the device is available.
+  //
+  // Must only be set if Spec.PerDeviceNodeSelection is set to true.
+  // At most one of NodeName, NodeSelector and AllNodes can be set.
+  //
+  // +optional
+  // +oneOf=DeviceNodeSelection
+  optional .k8s.io.api.core.v1.NodeSelector nodeSelector = 5;
+
+  // AllNodes indicates that all nodes have access to the device.
+  //
+  // Must only be set if Spec.PerDeviceNodeSelection is set to true.
+  // At most one of NodeName, NodeSelector and AllNodes can be set.
+  //
+  // +optional
+  // +oneOf=DeviceNodeSelection
+  // +featureGate=DRAPartitionableDevices
+  optional bool allNodes = 6;
+
+  // If specified, these are the driver-defined taints.
+  //
+  // The maximum number of taints is 8.
+  //
+  // This is an alpha field and requires enabling the DRADeviceTaints
+  // feature gate.
+  //
+  // +optional
+  // +listType=atomic
+  // +featureGate=DRADeviceTaints
+  repeated DeviceTaint taints = 7;
 }
 
 // CELDeviceSelector contains a CEL expression for selecting a device.
@@ -170,6 +226,38 @@ message CELDeviceSelector {
   //
   // +required
   optional string expression = 1;
+}
+
+// Counter describes a quantity associated with a device.
+message Counter {
+  // Value defines how much of a certain device counter is available.
+  //
+  // +required
+  optional .k8s.io.apimachinery.pkg.api.resource.Quantity value = 1;
+}
+
+// CounterSet defines a named set of counters
+// that are available to be used by devices defined in the
+// ResourceSlice.
+//
+// The counters are not allocatable by themselves, but
+// can be referenced by devices. When a device is allocated,
+// the portion of counters it uses will no longer be available for use
+// by other devices.
+message CounterSet {
+  // Name defines the name of the counter set.
+  // It must be a DNS label.
+  //
+  // +required
+  optional string name = 1;
+
+  // Counters defines the set of counters for this CounterSet
+  // The name of each counter must be unique in that set and must be a DNS label.
+  //
+  // The maximum number of counters is 32.
+  //
+  // +required
+  map<string, Counter> counters = 2;
 }
 
 // Device represents one individual hardware instance that can be selected based
@@ -412,6 +500,24 @@ message DeviceConstraint {
   optional string matchAttribute = 2;
 }
 
+// DeviceCounterConsumption defines a set of counters that
+// a device will consume from a CounterSet.
+message DeviceCounterConsumption {
+  // SharedCounter defines the shared counter from which the
+  // counters defined will be consumed.
+  //
+  // +required
+  optional string sharedCounter = 1;
+
+  // Counters defines the Counter that will be consumed by
+  // the device.
+  //
+  // The maximum number of Counters is 32.
+  //
+  // +required
+  map<string, Counter> counters = 2;
+}
+
 // DeviceRequest is a request for devices required for a claim.
 // This is typically a request for a single resource like a device, but can
 // also ask for several identical devices.
@@ -529,6 +635,32 @@ message DeviceRequest {
   // +listType=atomic
   // +featureGate=DRAPrioritizedList
   repeated DeviceSubRequest firstAvailable = 7;
+
+  // If specified, the request's tolerations.
+  //
+  // Tolerations for NoSchedule are required to allocate a
+  // device which has a taint with that effect. The same applies
+  // to NoExecute.
+  //
+  // In addition, should any of the allocated devices get tainted
+  // with NoExecute after allocation and that effect is not tolerated,
+  // then all pods consuming the ResourceClaim get deleted to evict
+  // them. The scheduler will not let new pods reserve the claim while
+  // it has these tainted devices. Once all pods are evicted, the
+  // claim will get deallocated.
+  //
+  // The maximum number of tolerations is 16.
+  //
+  // This field can only be set when deviceClassName is set and no subrequests
+  // are specified in the firstAvailable list.
+  //
+  // This is an alpha field and requires enabling the DRADeviceTaints
+  // feature gate.
+  //
+  // +optional
+  // +listType=atomic
+  // +featureGate=DRADeviceTaints
+  repeated DeviceToleration tolerations = 8;
 }
 
 // DeviceRequestAllocationResult contains the allocation result for one request.
@@ -580,6 +712,19 @@ message DeviceRequestAllocationResult {
   // +optional
   // +featureGate=DRAAdminAccess
   optional bool adminAccess = 5;
+
+  // A copy of all tolerations specified in the request at the time
+  // when the device got allocated.
+  //
+  // The maximum number of tolerations is 16.
+  //
+  // This is an alpha field and requires enabling the DRADeviceTaints
+  // feature gate.
+  //
+  // +optional
+  // +listType=atomic
+  // +featureGate=DRADeviceTaints
+  repeated DeviceToleration tolerations = 6;
 }
 
 // DeviceSelector must have exactly one field set.
@@ -661,6 +806,105 @@ message DeviceSubRequest {
   // +optional
   // +oneOf=AllocationMode
   optional int64 count = 5;
+
+  // If specified, the request's tolerations.
+  //
+  // Tolerations for NoSchedule are required to allocate a
+  // device which has a taint with that effect. The same applies
+  // to NoExecute.
+  //
+  // In addition, should any of the allocated devices get tainted
+  // with NoExecute after allocation and that effect is not tolerated,
+  // then all pods consuming the ResourceClaim get deleted to evict
+  // them. The scheduler will not let new pods reserve the claim while
+  // it has these tainted devices. Once all pods are evicted, the
+  // claim will get deallocated.
+  //
+  // The maximum number of tolerations is 16.
+  //
+  // This is an alpha field and requires enabling the DRADeviceTaints
+  // feature gate.
+  //
+  // +optional
+  // +listType=atomic
+  // +featureGate=DRADeviceTaints
+  repeated DeviceToleration tolerations = 7;
+}
+
+// The device this taint is attached to has the "effect" on
+// any claim which does not tolerate the taint and, through the claim,
+// to pods using the claim.
+//
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+message DeviceTaint {
+  // The taint key to be applied to a device.
+  // Must be a label name.
+  //
+  // +required
+  optional string key = 1;
+
+  // The taint value corresponding to the taint key.
+  // Must be a label value.
+  //
+  // +optional
+  optional string value = 2;
+
+  // The effect of the taint on claims that do not tolerate the taint
+  // and through such claims on the pods using them.
+  // Valid effects are NoSchedule and NoExecute. PreferNoSchedule as used for
+  // nodes is not valid here.
+  //
+  // +required
+  optional string effect = 3;
+
+  // TimeAdded represents the time at which the taint was added.
+  // Added automatically during create or update if not set.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time timeAdded = 4;
+}
+
+// The ResourceClaim this DeviceToleration is attached to tolerates any taint that matches
+// the triple <key,value,effect> using the matching operator <operator>.
+message DeviceToleration {
+  // Key is the taint key that the toleration applies to. Empty means match all taint keys.
+  // If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+  // Must be a label name.
+  //
+  // +optional
+  optional string key = 1;
+
+  // Operator represents a key's relationship to the value.
+  // Valid operators are Exists and Equal. Defaults to Equal.
+  // Exists is equivalent to wildcard for value, so that a ResourceClaim can
+  // tolerate all taints of a particular category.
+  //
+  // +optional
+  // +default="Equal"
+  optional string operator = 2;
+
+  // Value is the taint value the toleration matches to.
+  // If the operator is Exists, the value must be empty, otherwise just a regular string.
+  // Must be a label value.
+  //
+  // +optional
+  optional string value = 3;
+
+  // Effect indicates the taint effect to match. Empty means match all taint effects.
+  // When specified, allowed values are NoSchedule and NoExecute.
+  //
+  // +optional
+  optional string effect = 4;
+
+  // TolerationSeconds represents the period of time the toleration (which must be
+  // of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+  // it is not set, which means tolerate the taint forever (do not evict). Zero and
+  // negative values will be treated as 0 (evict immediately) by the system.
+  // If larger than zero, the time when the pod needs to be evicted is calculated as <time when
+  // taint was adedd> + <toleration seconds>.
+  //
+  // +optional
+  optional int64 tolerationSeconds = 5;
 }
 
 // NetworkDeviceData provides network-related details for the allocated device.
@@ -982,7 +1226,7 @@ message ResourceSliceSpec {
   // new nodes of the same type as some old node might also make new
   // resources available.
   //
-  // Exactly one of NodeName, NodeSelector and AllNodes must be set.
+  // Exactly one of NodeName, NodeSelector, AllNodes, and PerDeviceNodeSelection must be set.
   // This field is immutable.
   //
   // +optional
@@ -994,7 +1238,7 @@ message ResourceSliceSpec {
   //
   // Must use exactly one term.
   //
-  // Exactly one of NodeName, NodeSelector and AllNodes must be set.
+  // Exactly one of NodeName, NodeSelector, AllNodes, and PerDeviceNodeSelection must be set.
   //
   // +optional
   // +oneOf=NodeSelection
@@ -1002,7 +1246,7 @@ message ResourceSliceSpec {
 
   // AllNodes indicates that all nodes have access to the resources in the pool.
   //
-  // Exactly one of NodeName, NodeSelector and AllNodes must be set.
+  // Exactly one of NodeName, NodeSelector, AllNodes, and PerDeviceNodeSelection must be set.
   //
   // +optional
   // +oneOf=NodeSelection
@@ -1015,5 +1259,29 @@ message ResourceSliceSpec {
   // +optional
   // +listType=atomic
   repeated Device devices = 6;
+
+  // PerDeviceNodeSelection defines whether the access from nodes to
+  // resources in the pool is set on the ResourceSlice level or on each
+  // device. If it is set to true, every device defined the ResourceSlice
+  // must specify this individually.
+  //
+  // Exactly one of NodeName, NodeSelector, AllNodes, and PerDeviceNodeSelection must be set.
+  //
+  // +optional
+  // +oneOf=NodeSelection
+  // +featureGate=DRAPartitionableDevices
+  optional bool perDeviceNodeSelection = 7;
+
+  // SharedCounters defines a list of counter sets, each of which
+  // has a name and a list of counters available.
+  //
+  // The names of the SharedCounters must be unique in the ResourceSlice.
+  //
+  // The maximum number of SharedCounters is 32.
+  //
+  // +optional
+  // +listType=atomic
+  // +featureGate=DRAPartitionableDevices
+  repeated CounterSet sharedCounters = 8;
 }
 

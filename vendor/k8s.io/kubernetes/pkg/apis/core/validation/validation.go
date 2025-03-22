@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"unicode"
@@ -6194,8 +6195,21 @@ func validateServiceTrafficDistribution(service *core.Service) field.ErrorList {
 		return allErrs
 	}
 
-	if *service.Spec.TrafficDistribution != v1.ServiceTrafficDistributionPreferClose {
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec").Child("trafficDistribution"), *service.Spec.TrafficDistribution, []string{v1.ServiceTrafficDistributionPreferClose}))
+	var supportedTrafficDistribution []string
+	if !utilfeature.DefaultFeatureGate.Enabled(features.PreferSameTrafficDistribution) {
+		supportedTrafficDistribution = []string{
+			v1.ServiceTrafficDistributionPreferClose,
+		}
+	} else {
+		supportedTrafficDistribution = []string{
+			v1.ServiceTrafficDistributionPreferClose,
+			v1.ServiceTrafficDistributionPreferSameZone,
+			v1.ServiceTrafficDistributionPreferSameNode,
+		}
+	}
+
+	if !slices.Contains(supportedTrafficDistribution, *service.Spec.TrafficDistribution) {
+		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec").Child("trafficDistribution"), *service.Spec.TrafficDistribution, supportedTrafficDistribution))
 	}
 
 	return allErrs
@@ -6424,6 +6438,7 @@ func ValidateNode(node *core.Node) field.ErrorList {
 	// All status fields are optional and can be updated later.
 	// That said, if specified, we need to ensure they are valid.
 	allErrs = append(allErrs, ValidateNodeResources(node)...)
+	allErrs = append(allErrs, validateNodeSwapStatus(node.Status.NodeInfo.Swap, fldPath.Child("nodeSwapStatus"))...)
 
 	// validate PodCIDRS only if we need to
 	if len(node.Spec.PodCIDRs) > 0 {
@@ -8609,10 +8624,10 @@ func validateContainerStatusUsers(containerStatuses []core.ContainerStatus, fldP
 		switch osName {
 		case core.Windows:
 			if containerUser.Linux != nil {
-				allErrors = append(allErrors, field.Forbidden(fldPath.Index(i).Child("linux"), "cannot be set for a windows pod"))
+				allErrors = append(allErrors, field.Forbidden(fldPath.Index(i).Child("user").Child("linux"), "cannot be set for a windows pod"))
 			}
 		case core.Linux:
-			allErrors = append(allErrors, validateLinuxContainerUser(containerUser.Linux, fldPath.Index(i).Child("linux"))...)
+			allErrors = append(allErrors, validateLinuxContainerUser(containerUser.Linux, fldPath.Index(i).Child("user").Child("linux"))...)
 		}
 	}
 	return allErrors
@@ -8768,4 +8783,23 @@ func IsValidIPForLegacyField(fldPath *field.Path, value string, validOldIPs []st
 // value validation; use validation.IsValidCIDR for new fields.
 func IsValidCIDRForLegacyField(fldPath *field.Path, value string, validOldCIDRs []string) field.ErrorList {
 	return validation.IsValidCIDRForLegacyField(fldPath, value, utilfeature.DefaultFeatureGate.Enabled(features.StrictIPCIDRValidation), validOldCIDRs)
+}
+
+func validateNodeSwapStatus(nodeSwapStatus *core.NodeSwapStatus, fldPath *field.Path) field.ErrorList {
+	allErrors := field.ErrorList{}
+
+	if nodeSwapStatus == nil {
+		return allErrors
+	}
+
+	if nodeSwapStatus.Capacity != nil {
+		capacityFld := fldPath.Child("capacity")
+
+		errs := ValidatePositiveField(*nodeSwapStatus.Capacity, capacityFld)
+		if len(errs) > 0 {
+			allErrors = append(allErrors, errs...)
+		}
+	}
+
+	return allErrors
 }
