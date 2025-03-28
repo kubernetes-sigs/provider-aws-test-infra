@@ -120,7 +120,7 @@ func (a *AWSRunner) Validate() error {
 				a.deployer.UserDataFile = "al2023.sh"
 			}
 		case "ubuntu", "":
-			path = "/aws/service/canonical/ubuntu/server/noble/stable/current/" + arch + "/hvm/ebs-gp3/ami-id"
+			path = "/aws/service/canonical/ubuntu/server/24.04/stable/20250305/" + arch + "/hvm/ebs-gp3/ami-id"
 			if a.deployer.UserDataFile == "" {
 				a.deployer.UserDataFile = "ubuntu2404.yaml"
 			}
@@ -182,7 +182,7 @@ func (a *AWSRunner) Validate() error {
 				a.deployer.WorkerUserDataFile = "al2023.sh"
 			}
 		case "ubuntu", "":
-			path = "/aws/service/canonical/ubuntu/server/noble/stable/current/" + arch + "/hvm/ebs-gp3/ami-id"
+			path = "/aws/service/canonical/ubuntu/server/24.04/stable/20250305/" + arch + "/hvm/ebs-gp3/ami-id"
 			if a.deployer.WorkerUserDataFile == "" {
 				a.deployer.WorkerUserDataFile = "ubuntu2404.yaml"
 			}
