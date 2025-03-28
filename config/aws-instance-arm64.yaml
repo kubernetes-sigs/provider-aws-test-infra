@@ -4,6 +4,6 @@ images:
     instance_type: m6g.large
     user_data_file: al2023-6.1.yaml
   ubuntu-2404:
-    ssm_path: /aws/service/canonical/ubuntu/server/noble/stable/current/arm64/hvm/ebs-gp3/ami-id
+    ssm_path: /aws/service/canonical/ubuntu/server/24.04/stable/20250305/arm64/hvm/ebs-gp3/ami-id
     instance_type: m6g.large
     user_data_file: ubuntu2404.yaml
