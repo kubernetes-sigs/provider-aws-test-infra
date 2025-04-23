@@ -46,7 +46,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     sed -i 's/sudo wget .*sha256$//' scripts/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo rm .*sha256$//' scripts/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo sha256sum.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
-    sed -i 's/.*99-default.link.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/99-no-policy.conf/99-no-policy.invalid/' scripts/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/.*amazon-ec2-net-utils.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo.*cri-tools.*$//' scripts/install-worker.sh >/dev/null 2>&1 || true
 
@@ -75,7 +75,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     sed -i 's/sudo wget .*sha256$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo rm .*sha256$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo sha256sum.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
-    sed -i 's/.*99-default.link.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
+    sed -i 's/99-no-policy.conf/99-no-policy.invalid/' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/.*amazon-ec2-net-utils.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo.*cri-tools.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
 
