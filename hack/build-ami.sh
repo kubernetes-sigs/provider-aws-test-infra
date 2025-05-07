@@ -55,6 +55,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json  || true
     cat <<< "$(jq --arg instance_profile ${INSTANCE_PROFILE_NAME:-'packer-instance-profile'} '.iam_instance_profile = $instance_profile' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json || true
     cat <<< "$(jq --arg pause_container_image ${PAUSE_CONTAINER_IMAGE:-'registry.k8s.io/pause:3.10'} '.pause_container_image = $pause_container_image' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json || true
+    cat <<< "$(jq --arg containerd_version ${CONTAINERD_VERSION:-"1.7.*"} '.containerd_version = $containerd_version' eks-worker-al2-variables.json)" > eks-worker-al2-variables.json || true
 
     if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
       make transform-al2-to-al2023
