@@ -295,6 +295,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	APIServerTracing: {
 		{Version: version.MustParse("1.22"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.27"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.37
 	},
 
 	APIServingWithRoutine: {
@@ -468,5 +469,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.32"), Default: true, PreRelease: featuregate.Beta},
 		// switch this back to false because the json and proto streaming encoders appear to work better.
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
 	},
 }

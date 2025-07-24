@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Kubernetes Authors.
+Copyright 2016 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,19 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package certificates
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme   = SchemeBuilder.AddToScheme
 )
 
 // GroupName is the group name use in this package
 const GroupName = "certificates.k8s.io"
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}
 
 // Kind takes an unqualified kind and returns a Group qualified GroupKind
 func Kind(kind string) schema.GroupKind {
@@ -38,26 +42,15 @@ func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
-var (
-	// SchemeBuilder is the scheme builder with scheme init functions to run for this API package
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-
-	localSchemeBuilder = &SchemeBuilder
-
-	// AddToScheme is a global function that registers this API group & version to a scheme
-	AddToScheme = localSchemeBuilder.AddToScheme
-)
-
 // Adds the list of known types to the given scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&CertificateSigningRequest{},
+		&CertificateSigningRequestList{},
 		&ClusterTrustBundle{},
 		&ClusterTrustBundleList{},
 		&PodCertificateRequest{},
 		&PodCertificateRequestList{},
 	)
-
-	// Add the watch version that applies
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
