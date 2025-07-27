@@ -768,10 +768,10 @@ message Container {
   repeated ContainerResizePolicy resizePolicy = 23;
 
   // RestartPolicy defines the restart behavior of individual containers in a pod.
-  // This field may only be set for init containers, and the only allowed value is "Always".
-  // For non-init containers or when this field is not specified,
+  // This overrides the pod-level restart policy. When this field is not specified,
   // the restart behavior is defined by the Pod's restart policy and the container type.
-  // Setting the RestartPolicy as "Always" for the init container will have the following effect:
+  // Additionally, setting the RestartPolicy as "Always" for the init container will
+  // have the following effect:
   // this init container will be continually restarted on
   // exit until all regular containers have terminated. Once all regular
   // containers have completed, all init containers with restartPolicy "Always"
@@ -785,6 +785,22 @@ message Container {
   // +featureGate=SidecarContainers
   // +optional
   optional string restartPolicy = 24;
+
+  // Represents a list of rules to be checked to determine if the
+  // container should be restarted on exit. The rules are evaluated in
+  // order. Once a rule matches a container exit condition, the remaining
+  // rules are ignored. If no rule matches the container exit condition,
+  // the Container-level restart policy determines the whether the container
+  // is restarted or not. Constraints on the rules:
+  // - At most 20 rules are allowed.
+  // - Rules can have the same action.
+  // - Identical rules are not forbidden in validations.
+  // When rules are specified, container MUST set RestartPolicy explicitly
+  // even it if matches the Pod's RestartPolicy.
+  // +featureGate=ContainerRestartRules
+  // +optional
+  // +listType=atomic
+  repeated ContainerRestartRule restartPolicyRules = 25;
 
   // Pod volumes to mount into the container's filesystem.
   // Cannot be updated.
@@ -940,6 +956,39 @@ message ContainerResizePolicy {
   // Restart policy to apply when specified resource is resized.
   // If not specified, it defaults to NotRequired.
   optional string restartPolicy = 2;
+}
+
+// ContainerRestartRule describes how a container exit is handled.
+message ContainerRestartRule {
+  // Specifies the action taken on a container exit if the requirements
+  // are satisfied. The only possible value is "Restart" to restart the
+  // container.
+  // +required
+  optional string action = 1;
+
+  // Represents the exit codes to check on container exits.
+  // +optional
+  // +oneOf=when
+  optional ContainerRestartRuleOnExitCodes exitCodes = 2;
+}
+
+// ContainerRestartRuleOnExitCodes describes the condition
+// for handling an exited container based on its exit codes.
+message ContainerRestartRuleOnExitCodes {
+  // Represents the relationship between the container exit code(s) and the
+  // specified values. Possible values are:
+  // - In: the requirement is satisfied if the container exit code is in the
+  //   set of specified values.
+  // - NotIn: the requirement is satisfied if the container exit code is
+  //   not in the set of specified values.
+  // +required
+  optional string operator = 1;
+
+  // Specifies the set of values to check for container exit codes.
+  // At most 255 elements are allowed.
+  // +optional
+  // +listType=set
+  repeated int32 values = 2;
 }
 
 // ContainerState holds a possible state of container.
@@ -1519,11 +1568,18 @@ message EphemeralContainerCommon {
 
   // Restart policy for the container to manage the restart behavior of each
   // container within a pod.
-  // This may only be set for init containers. You cannot set this field on
-  // ephemeral containers.
+  // You cannot set this field on ephemeral containers.
   // +featureGate=SidecarContainers
   // +optional
   optional string restartPolicy = 24;
+
+  // Represents a list of rules to be checked to determine if the
+  // container should be restarted on exit. You cannot set this field on
+  // ephemeral containers.
+  // +featureGate=ContainerRestartRules
+  // +optional
+  // +listType=atomic
+  repeated ContainerRestartRule restartPolicyRules = 25;
 
   // Pod volumes to mount into the container's filesystem. Subpath mounts are not allowed for ephemeral containers.
   // Cannot be updated.
@@ -3199,13 +3255,12 @@ message PersistentVolumeClaimSpec {
   // If specified, the CSI driver will create or update the volume with the attributes defined
   // in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
   // it can be changed after the claim is created. An empty string or nil value indicates that no
-  // VolumeAttributesClass will be applied to the claim. This field can be reset to an empty string
-  // or nil to perform a rollback if the claim enters an Infeasible error state.
+  // VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+  // this field can be reset to its previous value (including nil) to cancel the modification.
   // If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
   // set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
   // exists.
   // More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
-  // (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
   // +featureGate=VolumeAttributesClass
   // +optional
   optional string volumeAttributesClassName = 9;
@@ -3304,14 +3359,12 @@ message PersistentVolumeClaimStatus {
 
   // currentVolumeAttributesClassName is the current name of the VolumeAttributesClass the PVC is using.
   // When unset, there is no VolumeAttributeClass applied to this PersistentVolumeClaim
-  // This is a beta field and requires enabling VolumeAttributesClass feature (off by default).
   // +featureGate=VolumeAttributesClass
   // +optional
   optional string currentVolumeAttributesClassName = 8;
 
   // ModifyVolumeStatus represents the status object of ControllerModifyVolume operation.
   // When this is unset, there is no ModifyVolume operation being attempted.
-  // This is a beta field and requires enabling VolumeAttributesClass feature (off by default).
   // +featureGate=VolumeAttributesClass
   // +optional
   optional ModifyVolumeStatus modifyVolumeStatus = 9;
@@ -3552,7 +3605,6 @@ message PersistentVolumeSpec {
   // after a volume has been updated successfully to a new class.
   // For an unbound PersistentVolume, the volumeAttributesClassName will be matched with unbound
   // PersistentVolumeClaims during the binding process.
-  // This is a beta field and requires enabling VolumeAttributesClass feature (off by default).
   // +featureGate=VolumeAttributesClass
   // +optional
   optional string volumeAttributesClassName = 10;
@@ -4546,6 +4598,7 @@ message PodSpec {
   // - spec.hostPID
   // - spec.hostIPC
   // - spec.hostUsers
+  // - spec.resources
   // - spec.securityContext.appArmorProfile
   // - spec.securityContext.seLinuxOptions
   // - spec.securityContext.seccompProfile
@@ -4616,7 +4669,7 @@ message PodSpec {
 
   // Resources is the total amount of CPU and Memory resources required by all
   // containers in the pod. It supports specifying Requests and Limits for
-  // "cpu" and "memory" resource names only. ResourceClaims are not supported.
+  // "cpu", "memory" and "hugepages-" resource names only. ResourceClaims are not supported.
   //
   // This field enables fine-grained control over resource allocation for the
   // entire pod, allowing resource sharing among containers in a pod.
@@ -4628,6 +4681,21 @@ message PodSpec {
   // +featureGate=PodLevelResources
   // +optional
   optional ResourceRequirements resources = 40;
+
+  // HostnameOverride specifies an explicit override for the pod's hostname as perceived by the pod.
+  // This field only specifies the pod's hostname and does not affect its DNS records.
+  // When this field is set to a non-empty string:
+  // - It takes precedence over the values set in `hostname` and `subdomain`.
+  // - The Pod's hostname will be set to this value.
+  // - `setHostnameAsFQDN` must be nil or set to false.
+  // - `hostNetwork` must be set to false.
+  //
+  // This field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.
+  // Requires the HostnameOverride feature gate to be enabled.
+  //
+  // +featureGate=HostnameOverride
+  // +optional
+  optional string hostnameOverride = 41;
 }
 
 // PodStatus represents information about the status of a pod. Status may trail the actual
@@ -5410,7 +5478,7 @@ message ResourceRequirements {
   // Claims lists the names of resources, defined in spec.resourceClaims,
   // that are used by this container.
   //
-  // This is an alpha field and requires enabling the
+  // This field depends on the
   // DynamicResourceAllocation feature gate.
   //
   // This field is immutable. It can only be set for containers.
