@@ -529,7 +529,7 @@ gopkg.in/inf.v0
 ## explicit
 gopkg.in/yaml.v3
 # k8s.io/api v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/api
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
 k8s.io/api/admissionregistration/v1
@@ -590,10 +590,10 @@ k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 k8s.io/api/storagemigration/v1alpha1
 # k8s.io/apiextensions-apiserver v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/apiextensions-apiserver/pkg/features
 # k8s.io/apimachinery v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/apimachinery
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/meta
@@ -656,7 +656,7 @@ k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/reflect
 # k8s.io/apiserver v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/apiserver
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/apiserver/pkg/admission
 k8s.io/apiserver/pkg/admission/configuration
 k8s.io/apiserver/pkg/admission/initializer
@@ -707,7 +707,7 @@ k8s.io/apiserver/pkg/util/webhook
 k8s.io/apiserver/pkg/util/x509metrics
 k8s.io/apiserver/pkg/warning
 # k8s.io/client-go v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/client-go
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/client-go/applyconfigurations/admissionregistration/v1
 k8s.io/client-go/applyconfigurations/admissionregistration/v1alpha1
 k8s.io/client-go/applyconfigurations/admissionregistration/v1beta1
@@ -986,7 +986,7 @@ k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
 # k8s.io/component-base v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/component-base
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/component-base/cli/flag
 k8s.io/component-base/compatibility
 k8s.io/component-base/featuregate
@@ -1000,13 +1000,13 @@ k8s.io/component-base/tracing/api/v1
 k8s.io/component-base/version
 k8s.io/component-base/zpages/features
 # k8s.io/component-helpers v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/component-helpers
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/component-helpers/node/util/sysctl
 k8s.io/component-helpers/resource
 k8s.io/component-helpers/scheduling/corev1
 k8s.io/component-helpers/scheduling/corev1/nodeaffinity
 # k8s.io/controller-manager v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/controller-manager
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/controller-manager/pkg/features
 # k8s.io/klog/v2 v2.130.1
 ## explicit; go 1.18
@@ -1034,13 +1034,13 @@ k8s.io/kube-openapi/pkg/validation/spec
 k8s.io/kube-openapi/pkg/validation/strfmt
 k8s.io/kube-openapi/pkg/validation/strfmt/bson
 # k8s.io/kubectl v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/kubectl
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/kubectl/pkg/scale
 # k8s.io/kubelet v0.29.2 => ../../k8s.io/kubernetes/staging/src/k8s.io/kubelet
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/kubelet/pkg/apis
 # k8s.io/kubernetes v0.0.0 => ../../k8s.io/kubernetes
-## explicit; go 1.24.0
+## explicit; go 1.25.0
 k8s.io/kubernetes/pkg/api/legacyscheme
 k8s.io/kubernetes/pkg/api/service
 k8s.io/kubernetes/pkg/api/v1/pod
