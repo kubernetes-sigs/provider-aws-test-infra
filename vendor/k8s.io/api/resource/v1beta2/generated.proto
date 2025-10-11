@@ -684,6 +684,7 @@ message DeviceConfiguration {
   //
   // +optional
   // +oneOf=ConfigurationType
+  // +k8s:optional
   optional OpaqueDeviceConfiguration opaque = 1;
 }
 
@@ -1083,6 +1084,8 @@ message DeviceToleration {
   // Must be a label name.
   //
   // +optional
+  // +k8s:optional
+  // +k8s:format=k8s-label-key
   optional string key = 1;
 
   // Operator represents a key's relationship to the value.
@@ -1273,6 +1276,8 @@ message OpaqueDeviceConfiguration {
   // vendor of the driver. It should use only lower case characters.
   //
   // +required
+  // +k8s:required
+  // +k8s:format=k8s-long-name-caseless
   optional string driver = 1;
 
   // Parameters can contain arbitrary data. It is the responsibility of
@@ -1301,6 +1306,7 @@ message ResourceClaim {
 
   // Spec describes what is being requested and how to configure it.
   // The spec is immutable.
+  // +k8s:immutable
   optional ResourceClaimSpec spec = 2;
 
   // Status describes whether the claim is ready to use and what has been allocated.
@@ -1379,11 +1385,13 @@ message ResourceClaimStatus {
   // the future, but not reduced.
   //
   // +optional
-  // +k8s:optional
   // +listType=map
   // +listMapKey=uid
   // +patchStrategy=merge
   // +patchMergeKey=uid
+  // +k8s:optional
+  // +k8s:listType=map
+  // +k8s:listMapKey=uid
   repeated ResourceClaimConsumerReference reservedFor = 2;
 
   // Devices contains the status of each device allocated for this
