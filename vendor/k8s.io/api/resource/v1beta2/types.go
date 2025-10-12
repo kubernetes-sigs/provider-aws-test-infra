@@ -697,6 +697,7 @@ type ResourceClaim struct {
 
 	// Spec describes what is being requested and how to configure it.
 	// The spec is immutable.
+	// +k8s:immutable
 	Spec ResourceClaimSpec `json:"spec" protobuf:"bytes,2,name=spec"`
 
 	// Status describes whether the claim is ready to use and what has been allocated.
@@ -1266,6 +1267,7 @@ type DeviceConfiguration struct {
 	//
 	// +optional
 	// +oneOf=ConfigurationType
+	// +k8s:optional
 	Opaque *OpaqueDeviceConfiguration `json:"opaque,omitempty" protobuf:"bytes,1,opt,name=opaque"`
 }
 
@@ -1282,6 +1284,8 @@ type OpaqueDeviceConfiguration struct {
 	// vendor of the driver. It should use only lower case characters.
 	//
 	// +required
+	// +k8s:required
+	// +k8s:format=k8s-long-name-caseless
 	Driver string `json:"driver" protobuf:"bytes,1,name=driver"`
 
 	// Parameters can contain arbitrary data. It is the responsibility of
@@ -1307,6 +1311,8 @@ type DeviceToleration struct {
 	// Must be a label name.
 	//
 	// +optional
+	// +k8s:optional
+	// +k8s:format=k8s-label-key
 	Key string `json:"key,omitempty" protobuf:"bytes,1,opt,name=key"`
 
 	// Operator represents a key's relationship to the value.
@@ -1382,11 +1388,13 @@ type ResourceClaimStatus struct {
 	// the future, but not reduced.
 	//
 	// +optional
-	// +k8s:optional
 	// +listType=map
 	// +listMapKey=uid
 	// +patchStrategy=merge
 	// +patchMergeKey=uid
+	// +k8s:optional
+	// +k8s:listType=map
+	// +k8s:listMapKey=uid
 	ReservedFor []ResourceClaimConsumerReference `json:"reservedFor,omitempty" protobuf:"bytes,2,opt,name=reservedFor" patchStrategy:"merge" patchMergeKey:"uid"`
 
 	// DeallocationRequested is tombstoned since Kubernetes 1.32 where
