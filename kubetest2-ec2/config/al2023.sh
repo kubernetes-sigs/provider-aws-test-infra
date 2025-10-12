@@ -24,11 +24,13 @@ install_packages_with_retry() {
         # Run the DNF command
         DNF=""
         DNF_ARGS=""
+        DNF_EXCLUDES=""
         if command -v dnf; then
           DNF="dnf"
         else
           DNF="yum"
           DNF_ARGS="--enablerepo=amzn2extra-docker"
+          DNF_EXCLUDES="--exclude=docker*"
         fi
 
         $DNF clean all
@@ -51,7 +53,7 @@ install_packages_with_retry() {
           unzip \
           wget \
           mdadm \
-          pigz $EXTRAS
+          pigz $EXTRAS $DNF_EXCLUDES
 
         # Check if the command was successful
         if [ $? -eq 0 ]; then
