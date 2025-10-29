@@ -198,14 +198,6 @@ disabled_plugins = ["io.containerd.internal.v1.restart"]
 EOF
 chmod 644 "${config_path}"
 
-mkdir "${config_path}/docker.io/"
-cat > "${config_path}/docker.io/hosts.toml" <<EOF
-server = "https://registry-1.docker.io"
-
-[host."https://mirror.gcr.io"]
-  capabilities = ["pull", "resolve"]
-EOF
-
 # containerd_extra_runtime_handler is the extra runtime handler to install.
 containerd_extra_runtime_handler=${CONTAINERD_EXTRA_RUNTIME_HANDLER:-""}
 if [[ -n "${containerd_extra_runtime_handler}" ]]; then
