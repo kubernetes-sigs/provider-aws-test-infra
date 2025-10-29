@@ -195,8 +195,6 @@ disabled_plugins = ["io.containerd.internal.v1.restart"]
 [plugins."io.containerd.grpc.v1.cri".cni]
   bin_dir = "${cni_bin_dir}"
   conf_dir = "/etc/cni/net.d"
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-  endpoint = ["https://mirror.gcr.io","https://registry-1.docker.io"]
 [plugins."io.containerd.grpc.v1.cri".containerd]
   default_runtime_name = "${CONTAINERD_DEFAULT_RUNTIME:-"runc"}"
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
