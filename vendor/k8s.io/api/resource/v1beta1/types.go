@@ -202,6 +202,8 @@ type CounterSet struct {
 	// The maximum number of counters is 32.
 	//
 	// +required
+	// +k8s:required
+	// +k8s:eachKey=+k8s:format=k8s-short-name
 	Counters map[string]Counter `json:"counters,omitempty" protobuf:"bytes,2,name=counters"`
 }
 
@@ -429,6 +431,8 @@ type DeviceCounterConsumption struct {
 	// 16 counters each).
 	//
 	// +required
+	// +k8s:required
+	// +k8s:eachKey=+k8s:format=k8s-short-name
 	Counters map[string]Counter `json:"counters,omitempty" protobuf:"bytes,2,opt,name=counters"`
 }
 
@@ -568,6 +572,9 @@ const ResourceSliceMaxDeviceCountersPerSlice = 1024 // 64 * 16
 type QualifiedName string
 
 // FullyQualifiedName is a QualifiedName where the domain is set.
+// Format validation cannot be added to this type because one of its usages,
+// DistinctAttribute, is validated conditionally. This conditional validation
+// cannot be expressed declaratively.
 type FullyQualifiedName string
 
 // DeviceMaxDomainLength is the maximum length of the domain prefix in a fully-qualified name.
@@ -740,6 +747,7 @@ type DeviceClaim struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:listType=atomic
 	// +k8s:unique=map
 	// +k8s:listMapKey=name
@@ -751,6 +759,7 @@ type DeviceClaim struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:maxItems=32
 	Constraints []DeviceConstraint `json:"constraints,omitempty" protobuf:"bytes,2,opt,name=constraints"`
 
@@ -760,6 +769,7 @@ type DeviceClaim struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:maxItems=32
 	Config []DeviceClaimConfiguration `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
 
@@ -827,6 +837,7 @@ type DeviceRequest struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:maxItems=32
 	Selectors []DeviceSelector `json:"selectors,omitempty" protobuf:"bytes,3,name=selectors"`
 
@@ -903,6 +914,7 @@ type DeviceRequest struct {
 	// +oneOf=deviceRequestType
 	// +listType=atomic
 	// +featureGate=DRAPrioritizedList
+	// +k8s:optional
 	// +k8s:listType=atomic
 	// +k8s:unique=map
 	// +k8s:listMapKey=name
@@ -1223,6 +1235,7 @@ type DeviceConstraint struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:listType=atomic
 	// +k8s:unique=set
 	// +k8s:maxItems=32
@@ -1243,6 +1256,8 @@ type DeviceConstraint struct {
 	//
 	// +optional
 	// +oneOf=ConstraintType
+	// +k8s:optional
+	// +k8s:format=k8s-resource-fully-qualified-name
 	MatchAttribute *FullyQualifiedName `json:"matchAttribute,omitempty" protobuf:"bytes,2,opt,name=matchAttribute"`
 
 	// Potential future extension, not part of the current design:
@@ -1283,6 +1298,7 @@ type DeviceClaimConfiguration struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:listType=atomic
 	// +k8s:unique=set
 	// +k8s:maxItems=32
@@ -1516,6 +1532,7 @@ type DeviceAllocationResult struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:maxItems=32
 	Results []DeviceRequestAllocationResult `json:"results,omitempty" protobuf:"bytes,1,opt,name=results"`
 
@@ -1529,6 +1546,7 @@ type DeviceAllocationResult struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
 	// +k8s:maxItems=64
 	Config []DeviceAllocationConfiguration `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
 }
@@ -1602,6 +1620,7 @@ type DeviceRequestAllocationResult struct {
 	// +optional
 	// +listType=atomic
 	// +featureGate=DRADeviceTaints
+	// +k8s:optional
 	// +k8s:maxItems=16
 	Tolerations []DeviceToleration `json:"tolerations,omitempty" protobuf:"bytes,6,opt,name=tolerations"`
 
@@ -1675,6 +1694,10 @@ type DeviceAllocationConfiguration struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
+	// +k8s:listType=atomic
+	// +k8s:unique=set
+	// +k8s:maxItems=32
 	Requests []string `json:"requests,omitempty" protobuf:"bytes,2,opt,name=requests"`
 
 	DeviceConfiguration `json:",inline" protobuf:"bytes,3,name=deviceConfiguration"`
@@ -1956,6 +1979,10 @@ type NetworkDeviceData struct {
 	//
 	// +optional
 	// +listType=atomic
+	// +k8s:optional
+	// +k8s:listType=atomic
+	// +k8s:unique=set
+	// +k8s:maxItems=16
 	IPs []string `json:"ips,omitempty" protobuf:"bytes,2,opt,name=ips"`
 
 	// HardwareAddress represents the hardware address (e.g. MAC Address) of the device's network interface.
