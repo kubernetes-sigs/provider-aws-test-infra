@@ -315,6 +315,8 @@ message CounterSet {
   // The maximum number of counters in all sets is 32.
   //
   // +required
+  // +k8s:required
+  // +k8s:eachKey=+k8s:format=k8s-short-name
   map<string, Counter> counters = 2;
 }
 
@@ -481,6 +483,10 @@ message DeviceAllocationConfiguration {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
+  // +k8s:listType=atomic
+  // +k8s:unique=set
+  // +k8s:maxItems=32
   repeated string requests = 2;
 
   optional DeviceConfiguration deviceConfiguration = 3;
@@ -492,6 +498,7 @@ message DeviceAllocationResult {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:maxItems=32
   repeated DeviceRequestAllocationResult results = 1;
 
@@ -505,6 +512,7 @@ message DeviceAllocationResult {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:maxItems=64
   repeated DeviceAllocationConfiguration config = 2;
 }
@@ -574,6 +582,7 @@ message DeviceClaim {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:listType=atomic
   // +k8s:unique=map
   // +k8s:listMapKey=name
@@ -585,6 +594,7 @@ message DeviceClaim {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:maxItems=32
   repeated DeviceConstraint constraints = 2;
 
@@ -594,6 +604,7 @@ message DeviceClaim {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:maxItems=32
   repeated DeviceClaimConfiguration config = 3;
 }
@@ -609,6 +620,7 @@ message DeviceClaimConfiguration {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:listType=atomic
   // +k8s:unique=set
   // +k8s:maxItems=32
@@ -723,6 +735,7 @@ message DeviceConstraint {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:listType=atomic
   // +k8s:unique=set
   // +k8s:maxItems=32
@@ -743,6 +756,8 @@ message DeviceConstraint {
   //
   // +optional
   // +oneOf=ConstraintType
+  // +k8s:optional
+  // +k8s:format=k8s-resource-fully-qualified-name
   optional string matchAttribute = 2;
 
   // DistinctAttribute requires that all devices in question have this
@@ -779,6 +794,8 @@ message DeviceCounterConsumption {
   // 16 counters each).
   //
   // +required
+  // +k8s:required
+  // +k8s:eachKey=+k8s:format=k8s-short-name
   map<string, Counter> counters = 2;
 }
 
@@ -829,6 +846,7 @@ message DeviceRequest {
   // +oneOf=deviceRequestType
   // +listType=atomic
   // +featureGate=DRAPrioritizedList
+  // +k8s:optional
   // +k8s:listType=atomic
   // +k8s:unique=map
   // +k8s:listMapKey=name
@@ -1005,6 +1023,7 @@ message DeviceSubRequest {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:maxItems=32
   repeated DeviceSelector selectors = 3;
 
@@ -1180,6 +1199,7 @@ message ExactDeviceRequest {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
   // +k8s:maxItems=32
   repeated DeviceSelector selectors = 2;
 
@@ -1291,6 +1311,10 @@ message NetworkDeviceData {
   //
   // +optional
   // +listType=atomic
+  // +k8s:optional
+  // +k8s:listType=atomic
+  // +k8s:unique=set
+  // +k8s:maxItems=16
   repeated string ips = 2;
 
   // HardwareAddress represents the hardware address (e.g. MAC Address) of the device's network interface.
