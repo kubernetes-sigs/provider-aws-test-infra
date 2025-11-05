@@ -4458,91 +4458,6 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         scalar: string
       default: ""
-- name: io.k8s.api.certificates.v1alpha1.PodCertificateRequest
-  map:
-    fields:
-    - name: apiVersion
-      type:
-        scalar: string
-    - name: kind
-      type:
-        scalar: string
-    - name: metadata
-      type:
-        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
-      default: {}
-    - name: spec
-      type:
-        namedType: io.k8s.api.certificates.v1alpha1.PodCertificateRequestSpec
-      default: {}
-    - name: status
-      type:
-        namedType: io.k8s.api.certificates.v1alpha1.PodCertificateRequestStatus
-      default: {}
-- name: io.k8s.api.certificates.v1alpha1.PodCertificateRequestSpec
-  map:
-    fields:
-    - name: maxExpirationSeconds
-      type:
-        scalar: numeric
-      default: 86400
-    - name: nodeName
-      type:
-        scalar: string
-      default: ""
-    - name: nodeUID
-      type:
-        scalar: string
-      default: ""
-    - name: pkixPublicKey
-      type:
-        scalar: string
-    - name: podName
-      type:
-        scalar: string
-      default: ""
-    - name: podUID
-      type:
-        scalar: string
-      default: ""
-    - name: proofOfPossession
-      type:
-        scalar: string
-    - name: serviceAccountName
-      type:
-        scalar: string
-      default: ""
-    - name: serviceAccountUID
-      type:
-        scalar: string
-      default: ""
-    - name: signerName
-      type:
-        scalar: string
-      default: ""
-- name: io.k8s.api.certificates.v1alpha1.PodCertificateRequestStatus
-  map:
-    fields:
-    - name: beginRefreshAt
-      type:
-        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
-    - name: certificateChain
-      type:
-        scalar: string
-    - name: conditions
-      type:
-        list:
-          elementType:
-            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
-          elementRelationship: associative
-          keys:
-          - type
-    - name: notAfter
-      type:
-        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
-    - name: notBefore
-      type:
-        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
 - name: io.k8s.api.certificates.v1beta1.CertificateSigningRequest
   map:
     fields:
@@ -4666,6 +4581,96 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         scalar: string
       default: ""
+- name: io.k8s.api.certificates.v1beta1.PodCertificateRequest
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+      default: {}
+    - name: spec
+      type:
+        namedType: io.k8s.api.certificates.v1beta1.PodCertificateRequestSpec
+      default: {}
+    - name: status
+      type:
+        namedType: io.k8s.api.certificates.v1beta1.PodCertificateRequestStatus
+      default: {}
+- name: io.k8s.api.certificates.v1beta1.PodCertificateRequestSpec
+  map:
+    fields:
+    - name: maxExpirationSeconds
+      type:
+        scalar: numeric
+      default: 86400
+    - name: nodeName
+      type:
+        scalar: string
+      default: ""
+    - name: nodeUID
+      type:
+        scalar: string
+      default: ""
+    - name: pkixPublicKey
+      type:
+        scalar: string
+    - name: podName
+      type:
+        scalar: string
+      default: ""
+    - name: podUID
+      type:
+        scalar: string
+      default: ""
+    - name: proofOfPossession
+      type:
+        scalar: string
+    - name: serviceAccountName
+      type:
+        scalar: string
+      default: ""
+    - name: serviceAccountUID
+      type:
+        scalar: string
+      default: ""
+    - name: signerName
+      type:
+        scalar: string
+      default: ""
+    - name: unverifiedUserAnnotations
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: io.k8s.api.certificates.v1beta1.PodCertificateRequestStatus
+  map:
+    fields:
+    - name: beginRefreshAt
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: certificateChain
+      type:
+        scalar: string
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: associative
+          keys:
+          - type
+    - name: notAfter
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: notBefore
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
 - name: io.k8s.api.coordination.v1.Lease
   map:
     fields:
@@ -7282,6 +7287,11 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: signerName
       type:
         scalar: string
+    - name: userAnnotations
+      type:
+        map:
+          elementType:
+            scalar: string
 - name: io.k8s.api.core.v1.PodCondition
   map:
     fields:
@@ -13476,19 +13486,6 @@ var schemaYAML = typed.YAMLObject(`types:
           elementType:
             namedType: io.k8s.api.resource.v1.CounterSet
           elementRelationship: atomic
-- name: io.k8s.api.resource.v1alpha3.CELDeviceSelector
-  map:
-    fields:
-    - name: expression
-      type:
-        scalar: string
-      default: ""
-- name: io.k8s.api.resource.v1alpha3.DeviceSelector
-  map:
-    fields:
-    - name: cel
-      type:
-        namedType: io.k8s.api.resource.v1alpha3.CELDeviceSelector
 - name: io.k8s.api.resource.v1alpha3.DeviceTaint
   map:
     fields:
@@ -13523,6 +13520,10 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         namedType: io.k8s.api.resource.v1alpha3.DeviceTaintRuleSpec
       default: {}
+    - name: status
+      type:
+        namedType: io.k8s.api.resource.v1alpha3.DeviceTaintRuleStatus
+      default: {}
 - name: io.k8s.api.resource.v1alpha3.DeviceTaintRuleSpec
   map:
     fields:
@@ -13533,13 +13534,21 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         namedType: io.k8s.api.resource.v1alpha3.DeviceTaint
       default: {}
+- name: io.k8s.api.resource.v1alpha3.DeviceTaintRuleStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: associative
+          keys:
+          - type
 - name: io.k8s.api.resource.v1alpha3.DeviceTaintSelector
   map:
     fields:
     - name: device
-      type:
-        scalar: string
-    - name: deviceClassName
       type:
         scalar: string
     - name: driver
@@ -13548,12 +13557,6 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: pool
       type:
         scalar: string
-    - name: selectors
-      type:
-        list:
-          elementType:
-            namedType: io.k8s.api.resource.v1alpha3.DeviceSelector
-          elementRelationship: atomic
 - name: io.k8s.api.resource.v1beta1.AllocatedDeviceStatus
   map:
     fields:
