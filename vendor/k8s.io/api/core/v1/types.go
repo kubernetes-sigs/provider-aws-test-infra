@@ -427,6 +427,7 @@ type PersistentVolumeSpec struct {
 	VolumeMode *PersistentVolumeMode `json:"volumeMode,omitempty" protobuf:"bytes,8,opt,name=volumeMode,casttype=PersistentVolumeMode"`
 	// nodeAffinity defines constraints that limit what nodes this volume can be accessed from.
 	// This field influences the scheduling of pods that use this volume.
+	// This field is mutable if MutablePVNodeAffinity feature gate is enabled.
 	// +optional
 	NodeAffinity *VolumeNodeAffinity `json:"nodeAffinity,omitempty" protobuf:"bytes,9,opt,name=nodeAffinity"`
 	// Name of VolumeAttributesClass to which this persistent volume belongs. Empty value
@@ -4433,6 +4434,17 @@ type PodSpec struct {
 	// +featureGate=HostnameOverride
 	// +optional
 	HostnameOverride *string `json:"hostnameOverride,omitempty" protobuf:"bytes,41,opt,name=hostnameOverride"`
+	// WorkloadRef provides a reference to the Workload object that this Pod belongs to.
+	// This field is used by the scheduler to identify the PodGroup and apply the
+	// correct group scheduling policies. The Workload object referenced
+	// by this field may not exist at the time the Pod is created.
+	// This field is immutable, but a Workload object with the same name
+	// may be recreated with different policies. Doing this during pod scheduling
+	// may result in the placement not conforming to the expected policies.
+	//
+	// +featureGate=GenericWorkload
+	// +optional
+	WorkloadRef *WorkloadReference `json:"workloadRef,omitempty" protobuf:"bytes,42,opt,name=workloadRef"`
 }
 
 // PodResourceClaim references exactly one ResourceClaim, either directly
@@ -4542,6 +4554,36 @@ type PodSchedulingGate struct {
 	// Name of the scheduling gate.
 	// Each scheduling gate must have a unique name field.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+}
+
+// WorkloadReference identifies the Workload object and PodGroup membership
+// that a Pod belongs to. The scheduler uses this information to apply
+// workload-aware scheduling semantics.
+type WorkloadReference struct {
+	// Name defines the name of the Workload object this Pod belongs to.
+	// Workload must be in the same namespace as the Pod.
+	// If it doesn't match any existing Workload, the Pod will remain unschedulable
+	// until a Workload object is created and observed by the kube-scheduler.
+	// It must be a DNS subdomain.
+	//
+	// +required
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+
+	// PodGroup is the name of the PodGroup within the Workload that this Pod
+	// belongs to. If it doesn't match any existing PodGroup within the Workload,
+	// the Pod will remain unschedulable until the Workload object is recreated
+	// and observed by the kube-scheduler. It must be a DNS label.
+	//
+	// +required
+	PodGroup string `json:"podGroup" protobuf:"bytes,2,opt,name=podGroup"`
+
+	// PodGroupReplicaKey specifies the replica key of the PodGroup to which this
+	// Pod belongs. It is used to distinguish pods belonging to different replicas
+	// of the same pod group. The pod group policy is applied separately to each replica.
+	// When set, it must be a DNS label.
+	//
+	// +optional
+	PodGroupReplicaKey string `json:"podGroupReplicaKey,omitempty" protobuf:"bytes,3,opt,name=podGroupReplicaKey"`
 }
 
 // +enum
@@ -6702,6 +6744,11 @@ type NodeStatus struct {
 	// +featureGate=SupplementalGroupsPolicy
 	// +optional
 	Features *NodeFeatures `json:"features,omitempty" protobuf:"bytes,13,rep,name=features"`
+	// DeclaredFeatures represents the features related to feature gates that are declared by the node.
+	// +featureGate=NodeDeclaredFeatures
+	// +optional
+	// +listType=atomic
+	DeclaredFeatures []string `json:"declaredFeatures,omitempty" protobuf:"bytes,14,rep,name=declaredFeatures"`
 }
 
 type UniqueVolumeName string
@@ -7655,6 +7702,8 @@ const (
 	ResourceLimitsEphemeralStorage ResourceName = "limits.ephemeral-storage"
 	// resource.k8s.io devices requested with a certain DeviceClass, number
 	ResourceClaimsPerClass string = ".deviceclass.resource.k8s.io/devices"
+	// resource.k8s.io devices requested with a certain DeviceClass by implicit extended resource name, number
+	ResourceImplicitExtendedClaimsPerClass string = "requests.deviceclass.resource.kubernetes.io/"
 )
 
 // The following identify resource prefix for Kubernetes object types
