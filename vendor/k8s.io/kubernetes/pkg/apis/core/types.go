@@ -398,6 +398,7 @@ type PersistentVolumeSpec struct {
 	VolumeMode *PersistentVolumeMode
 	// NodeAffinity defines constraints that limit what nodes this volume can be accessed from.
 	// This field influences the scheduling of pods that use this volume.
+	// This field is mutable if MutablePVNodeAffinity feature gate is enabled.
 	// +optional
 	NodeAffinity *VolumeNodeAffinity
 	// Name of VolumeAttributesClass to which this persistent volume belongs. Empty value
@@ -3887,6 +3888,17 @@ type PodSpec struct {
 	// +featureGate=HostnameOverride
 	// +optional
 	HostnameOverride *string
+	// WorkloadRef provides a reference to the Workload object that this Pod belongs to.
+	// This field is used by the scheduler to identify the PodGroup and apply the
+	// correct group scheduling policies. The Workload object referenced
+	// by this field may not exist at the time the Pod is created.
+	// This field is immutable, but a Workload object with the same name
+	// may be recreated with different policies. Doing this during pod scheduling
+	// may result in the placement not conforming to the expected policies.
+	//
+	// +featureGate=GenericWorkload
+	// +optional
+	WorkloadRef *WorkloadReference
 }
 
 // PodResourceClaim references exactly one ResourceClaim through a ClaimSource.
@@ -3983,6 +3995,36 @@ type PodSchedulingGate struct {
 	// Name of the scheduling gate.
 	// Each scheduling gate must have a unique name field.
 	Name string
+}
+
+// WorkloadReference identifies the Workload object and PodGroup membership
+// that a Pod belongs to. The scheduler uses this information to apply
+// workload-aware scheduling semantics.
+type WorkloadReference struct {
+	// Name defines the name of the Workload object this Pod belongs to.
+	// Workload must be in the same namespace as the Pod.
+	// If it doesn't match any existing Workload, the Pod will remain unschedulable
+	// until a Workload object is created and observed by the kube-scheduler.
+	// It must be a DNS subdomain.
+	//
+	// +required
+	Name string
+
+	// PodGroup is the name of the PodGroup within the Workload that this Pod
+	// belongs to. If it doesn't match any existing PodGroup within the Workload,
+	// the Pod will remain unschedulable until the Workload object is recreated
+	// and observed by the kube-scheduler. It must be a DNS label.
+	//
+	// +required
+	PodGroup string
+
+	// PodGroupReplicaKey specifies the replica key of the PodGroup to which this
+	// Pod belongs. It is used to distinguish pods belonging to different replicas
+	// of the same pod group. The pod group policy is applied separately to each replica.
+	// When set, it must be a DNS label.
+	//
+	// +optional
+	PodGroupReplicaKey string
 }
 
 // HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
@@ -5595,6 +5637,10 @@ type NodeStatus struct {
 	// +featureGate=SupplementalGroupsPolicy
 	// +optional
 	Features *NodeFeatures
+	// DeclaredFeatures represents the declared features of a node.
+	// +featureGate=NodeDeclaredFeatures
+	// +optional
+	DeclaredFeatures []string
 }
 
 // UniqueVolumeName defines the name of attached volume

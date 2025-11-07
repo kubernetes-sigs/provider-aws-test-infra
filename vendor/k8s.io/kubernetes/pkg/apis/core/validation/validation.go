@@ -80,6 +80,10 @@ var fileModeErrorMsg = "must be a number between 0 and 0777 (octal), both inclus
 // BannedOwners is a black list of object that are not allowed to be owners.
 var BannedOwners = apimachineryvalidation.BannedOwners
 
+// nodeDeclaredFeatureRegexp defines the allowed format for feature names.
+// The first segment must be in UpperCamelCase. Subsequent segments (separated by '/')
+// can be in either UpperCamelCase or lowerCamelCase.
+var nodeDeclaredFeatureRegexp = regexp.MustCompile(`^[A-Z][a-zA-Z0-9]*(\/[a-zA-Z][a-zA-Z0-9]*)*$`)
 var iscsiInitiatorIqnRegex = regexp.MustCompile(`iqn\.\d{4}-\d{2}\.([[:alnum:]-.]+)(:[^,;*&$|\s]+)$`)
 var iscsiInitiatorEuiRegex = regexp.MustCompile(`^eui.[[:alnum:]]{16}$`)
 var iscsiInitiatorNaaRegex = regexp.MustCompile(`^naa.[[:alnum:]]{32}$`)
@@ -335,6 +339,18 @@ var ValidateResourceClaimName = apimachineryvalidation.NameIsDNSSubdomain
 // ValidateResourceClaimTemplateName can be used to check whether the given
 // name for a ResourceClaimTemplate is valid.
 var ValidateResourceClaimTemplateName = apimachineryvalidation.NameIsDNSSubdomain
+
+// ValidateWorkloadName can be used to check whether the given
+// name for a Workload is valid.
+var ValidateWorkloadName = apimachineryvalidation.NameIsDNSSubdomain
+
+// ValidatePodGroupName can be used to check whether the given
+// name for a PodGroup is valid.
+var ValidatePodGroupName = apimachineryvalidation.NameIsDNSLabel
+
+// ValidatePodGroupReplicaKey can be used to check whether the given
+// PodGroupReplicaKey is valid.
+var ValidatePodGroupReplicaKey = apimachineryvalidation.NameIsDNSLabel
 
 // ValidateRuntimeClassName can be used to check whether the given RuntimeClass name is valid.
 // Prefix indicates this name will be used as part of generation, in which case
@@ -2268,7 +2284,8 @@ func ValidatePersistentVolumeUpdate(newPv, oldPv *core.PersistentVolume, opts Pe
 	allErrs = append(allErrs, ValidateImmutableField(newPv.Spec.VolumeMode, oldPv.Spec.VolumeMode, field.NewPath("volumeMode"))...)
 
 	// Allow setting NodeAffinity if oldPv NodeAffinity was not set
-	if oldPv.Spec.NodeAffinity != nil {
+	if !utilfeature.DefaultFeatureGate.Enabled(features.MutablePVNodeAffinity) &&
+		oldPv.Spec.NodeAffinity != nil {
 		allErrs = append(allErrs, validatePvNodeAffinity(newPv.Spec.NodeAffinity, oldPv.Spec.NodeAffinity, field.NewPath("nodeAffinity"))...)
 	}
 
@@ -3898,9 +3915,12 @@ func validateHostUsers(spec *core.PodSpec, fldPath *field.Path, opts PodValidati
 	// know of any good use case and we can always enable them later.
 
 	// Note we already validated above spec.SecurityContext is not nil.
-	if spec.SecurityContext.HostNetwork {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("hostNetwork"), "when `hostUsers` is false"))
+	if !opts.AllowUserNamespacesHostNetworkSupport {
+		if spec.SecurityContext.HostNetwork {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("hostNetwork"), "when `hostUsers` is false"))
+		}
 	}
+
 	if spec.SecurityContext.HostPID {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("HostPID"), "when `hostUsers` is false"))
 	}
@@ -4431,6 +4451,8 @@ type PodValidationOptions struct {
 	AllowContainerRestartPolicyRules bool
 	// Allow user namespaces with volume devices, even though they will not function properly (should only be tolerated in updates of objects which already have this invalid configuration).
 	AllowUserNamespacesWithVolumeDevices bool
+	// Allow hostNetwork pods to use user namespaces
+	AllowUserNamespacesHostNetworkSupport bool
 }
 
 // validatePodMetadataAndSpec tests if required fields in the pod.metadata and pod.spec are set,
@@ -4661,6 +4683,10 @@ func ValidatePodSpec(spec *core.PodSpec, podMeta *metav1.ObjectMeta, fldPath *fi
 		case spec.OS.Name == core.Windows:
 			allErrs = append(allErrs, validateWindows(spec, fldPath)...)
 		}
+	}
+
+	if spec.WorkloadRef != nil {
+		allErrs = append(allErrs, validateWorkloadReference(spec.WorkloadRef, fldPath.Child("workloadRef"))...)
 	}
 
 	allErrs = append(allErrs, validateFileKeyRefVolumes(spec, fldPath)...)
@@ -6020,6 +6046,7 @@ func validatePodExtendedResourceClaimStatus(status *core.PodExtendedResourceClai
 	type key struct {
 		container string
 		resource  string
+		request   string
 	}
 	seen := map[key]struct{}{}
 	for i, rm := range status.RequestMappings {
@@ -6033,10 +6060,11 @@ func validatePodExtendedResourceClaimStatus(status *core.PodExtendedResourceClai
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("containerName"), rm.ContainerName, "must match the name of an entry in spec.initContainers.name or spec.containers.name"))
 		}
 		allErrs = append(allErrs, ValidateDNS1123Label(rm.RequestName, fldPath.Child("requestName"))...)
-		k := key{container: rm.ContainerName, resource: rm.ResourceName}
+		k := key{container: rm.ContainerName, resource: rm.ResourceName, request: rm.RequestName}
 		if _, ok := seen[k]; ok {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("containerName"), rm.ContainerName))
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("resourceName"), rm.ResourceName))
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("requestName"), rm.RequestName))
 		}
 		seen[k] = struct{}{}
 	}
@@ -6932,6 +6960,37 @@ func ValidateNodeSpecificAnnotations(annotations map[string]string, fldPath *fie
 	return allErrs
 }
 
+// validateNodeDeclaredFeatureName checks if a declared feature name is valid.
+func validateNodeDeclaredFeatureName(featureName string) error {
+	if len(featureName) > validation.DNS1123SubdomainMaxLength {
+		return fmt.Errorf("invalid feature name %q: must be no more than %d characters", featureName, validation.DNS1123SubdomainMaxLength)
+	}
+	if !nodeDeclaredFeatureRegexp.MatchString(featureName) {
+		return fmt.Errorf("invalid feature name %q: must start with an UpperCamelCase segment, with subsequent segments separated by '/' (e.g., MyFeature or MyFeature/mySubFeature), and contain only alphanumeric characters and slashes", featureName)
+	}
+	return nil
+}
+
+func validateNodeDeclaredFeatures(nodeFeatures []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	// We do not need to check feature gate again here as we do it in dropDisabledFields() (pkg/registry/core/node/strategy.go)
+	featureCount := len(nodeFeatures)
+	for i, feature := range nodeFeatures {
+		if err := validateNodeDeclaredFeatureName(feature); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), feature, err.Error()))
+		}
+		if i+1 < featureCount {
+			nextFeature := nodeFeatures[i+1]
+			if feature == nextFeature {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i+1), nextFeature))
+			} else if feature > nextFeature {
+				allErrs = append(allErrs, field.Invalid(fldPath.Index(i+1), nextFeature, "list must be sorted alphabetically"))
+			}
+		}
+	}
+	return allErrs
+}
+
 // ValidateNode tests if required fields in the node are set.
 func ValidateNode(node *core.Node) field.ErrorList {
 	fldPath := field.NewPath("metadata")
@@ -6946,6 +7005,8 @@ func ValidateNode(node *core.Node) field.ErrorList {
 	// That said, if specified, we need to ensure they are valid.
 	allErrs = append(allErrs, ValidateNodeResources(node)...)
 	allErrs = append(allErrs, validateNodeSwapStatus(node.Status.NodeInfo.Swap, fldPath.Child("nodeSwapStatus"))...)
+	statusField := field.NewPath("status")
+	allErrs = append(allErrs, validateNodeDeclaredFeatures(node.Status.DeclaredFeatures, statusField.Child("declaredFeatures"))...)
 
 	// validate PodCIDRS only if we need to
 	if len(node.Spec.PodCIDRs) > 0 {
@@ -6994,14 +7055,16 @@ func ValidateNodeUpdate(node, oldNode *core.Node) field.ErrorList {
 	fldPath := field.NewPath("metadata")
 	allErrs := ValidateObjectMetaUpdate(&node.ObjectMeta, &oldNode.ObjectMeta, fldPath)
 	allErrs = append(allErrs, ValidateNodeSpecificAnnotations(node.ObjectMeta.Annotations, fldPath.Child("annotations"))...)
-
 	// TODO: Enable the code once we have better core object.status update model. Currently,
 	// anyone can update node status.
 	// if !apiequality.Semantic.DeepEqual(node.Status, core.NodeStatus{}) {
 	// 	allErrs = append(allErrs, field.Invalid("status", node.Status, "must be empty"))
 	// }
-
 	allErrs = append(allErrs, ValidateNodeResources(node)...)
+
+	// TODO: dedup the validation checks in ValidateNode() and ValidateNodeUpdate() since both these functions get called during node update.
+	statusField := field.NewPath("status")
+	allErrs = append(allErrs, validateNodeDeclaredFeatures(node.Status.DeclaredFeatures, statusField.Child("declaredFeatures"))...)
 
 	// Validate no duplicate addresses in node status.
 	addresses := make(map[core.NodeAddress]bool)
@@ -9335,4 +9398,20 @@ func validateNodeSwapStatus(nodeSwapStatus *core.NodeSwapStatus, fldPath *field.
 	}
 
 	return allErrors
+}
+
+func validateWorkloadReference(workloadRef *core.WorkloadReference, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	for _, detail := range ValidateWorkloadName(workloadRef.Name, false) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), workloadRef.Name, detail))
+	}
+	for _, detail := range ValidatePodGroupName(workloadRef.PodGroup, false) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("podGroup"), workloadRef.PodGroup, detail))
+	}
+	if workloadRef.PodGroupReplicaKey != "" {
+		for _, detail := range ValidatePodGroupReplicaKey(workloadRef.PodGroupReplicaKey, false) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("podGroupReplicaKey"), workloadRef.PodGroupReplicaKey, detail))
+		}
+	}
+	return allErrs
 }
