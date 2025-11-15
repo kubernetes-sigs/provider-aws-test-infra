@@ -388,6 +388,12 @@ const (
 	// Enables the image volume source.
 	ImageVolume featuregate.Feature = "ImageVolume"
 
+	// owner: @ndixita
+	// kep: https://kep.k8s.io/5419
+	//
+	// Enables specifying resources at pod-level.
+	InPlacePodLevelResourcesVerticalScaling featuregate.Feature = "InPlacePodLevelResourcesVerticalScaling"
+
 	// owner: @vinaykul,@tallclair
 	// kep: http://kep.k8s.io/1287
 	//
@@ -667,6 +673,12 @@ const (
 	// resume work after restarts.
 	NominatedNodeNameForExpectation featuregate.Feature = "NominatedNodeNameForExpectation"
 
+	// owner: @bwsalmon
+	// kep: https://kep.k8s.io/5598
+	//
+	// Enables opportunistic batching in the scheduler.
+	OpportunisticBatching featuregate.Feature = "OpportunisticBatching"
+
 	// owner: @cici37
 	// kep: https://kep.k8s.io/5080
 	//
@@ -825,6 +837,12 @@ const (
 	//
 	// Adds the AllocatedResourcesStatus to the container status.
 	ResourceHealthStatus featuregate.Feature = "ResourceHealthStatus"
+
+	// owner: @yuanwang04
+	// kep: https://kep.k8s.io/5532
+	//
+	// Restart the pod in-place on the same node.
+	RestartAllContainersOnContainerExits featuregate.Feature = "RestartAllContainersOnContainerExits"
 
 	// owner: @mikedanese
 	//
@@ -1351,6 +1369,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.Beta},
 	},
 
+	InPlacePodLevelResourcesVerticalScaling: {
+		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
+	},
+
 	InPlacePodVerticalScaling: {
 		{Version: version.MustParse("1.27"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
@@ -1411,6 +1433,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	KubeletEnsureSecretPulledImages: {
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	KubeletFineGrainedAuthz: {
@@ -1562,6 +1585,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.Beta},
 	},
 
+	OpportunisticBatching: {
+		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.Beta},
+	},
+
 	OrderedNamespaceDeletion: {
 		{Version: version.MustParse("1.30"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
@@ -1689,6 +1716,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	ResourceHealthStatus: {
 		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
+	},
+
+	RestartAllContainersOnContainerExits: {
+		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
 	RotateKubeletServerCertificate: {
@@ -2239,6 +2270,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	ImageVolume: {},
 
+	InPlacePodLevelResourcesVerticalScaling: {InPlacePodVerticalScaling, PodLevelResources, NodeDeclaredFeatures},
+
 	InPlacePodVerticalScaling: {},
 
 	InPlacePodVerticalScalingAllocatedStatus: {InPlacePodVerticalScaling},
@@ -2321,6 +2354,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	NominatedNodeNameForExpectation: {},
 
+	OpportunisticBatching: {},
+
 	OrderedNamespaceDeletion: {},
 
 	PodAndContainerStatsFromCRI: {},
@@ -2370,6 +2405,10 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	ReloadKubeletServerCertificateFile: {},
 
 	ResourceHealthStatus: {DynamicResourceAllocation},
+
+	// RestartAllContainersOnContainerExits introduces a new container restart rule action.
+	// All restart rules will be dropped by API if ContainerRestartRules feature is not enabled.
+	RestartAllContainersOnContainerExits: {ContainerRestartRules, NodeDeclaredFeatures},
 
 	RotateKubeletServerCertificate: {},
 
