@@ -112,7 +112,7 @@ if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
 
   kubeadm init \
    --v 10 \
-   --ignore-preflight-errors=ImagePull \
+   --ignore-preflight-errors=ImagePull,SystemVerification \
    --config /etc/kubernetes/kubeadm-init.yaml
 
   kubeadm init phase upload-certs \
@@ -125,5 +125,6 @@ else
   sed -i "s|{{KUBEADM_CONTROL_PLANE_IP}}|$KUBEADM_CONTROL_PLANE_IP|g" /etc/kubernetes/kubeadm-join.yaml
   kubeadm join \
    --v 10 \
+   --ignore-preflight-errors=SystemVerification \
    --config /etc/kubernetes/kubeadm-join.yaml
 fi
