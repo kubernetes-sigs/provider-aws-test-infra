@@ -163,6 +163,10 @@ nodeRegistration:
     runtime-cgroups: /runtime.slice
     kubelet-cgroups: /runtime.slice
     cgroup-root: /
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+failCgroupV1: false
 EOF
 
 cat <<EOF > /etc/eks/image-credential-provider/config.json
@@ -351,6 +355,6 @@ ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ct
 export PATH=$PATH:/usr/local/bin
 
 kubeadm join \
-   --ignore-preflight-errors=FileContent--proc-sys-net-bridge-bridge-nf-call-iptables \
+   --ignore-preflight-errors=FileContent--proc-sys-net-bridge-bridge-nf-call-iptables,SystemVerification \
    --v 10 \
    --config /etc/kubernetes/kubeadm-join.yaml
