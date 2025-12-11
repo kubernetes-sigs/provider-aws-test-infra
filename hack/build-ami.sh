@@ -42,6 +42,16 @@ KUBE_DATE=$(date -u +'%Y-%m-%d')
 # Generate aws-iam-authenticator binaries
 # shellcheck disable=SC2164
 pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
+  # Check if AMI already exists before attempting to build
+  if [[ -n "${AMI_NAME:-}" ]]; then
+    existing_ami=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME" --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
+    if [[ -n "${existing_ami}" ]]; then
+      echo "AMI '$AMI_NAME' already exists: ${existing_ami}, skipping build..."
+      popd
+      exit 0
+    fi
+  fi
+
   if [ -f scripts/install-worker.sh ]; then
     sed -i 's/sudo wget .*sha256$//' scripts/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo rm .*sha256$//' scripts/install-worker.sh >/dev/null 2>&1 || true
