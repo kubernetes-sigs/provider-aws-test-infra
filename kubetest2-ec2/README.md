@@ -104,6 +104,27 @@ Some important CLI parameters are:
 | `target-build-arch`       | `--target-build-arch linux/amd64`  | supports both `linux/amd64` and `linux/arm64`                                                |
 | `external-cloud-provider` | `--external-cloud-provider true`   | to use AWS External cloud provider when starting the nodes and the cluster                   |
 
+## CNI Options
+
+The deployer uses the following CNI plugins:
+
+1. **Cilium CNI** (default): Provides better network reliability, observability, and debugging
+   capabilities. Uses VXLAN tunneling for reliable pod-to-pod communication across nodes.
+   This is used by default for all clusters without external cloud provider.
+
+2. **AWS VPC CNI** (with `--external-cloud-provider true`): Native AWS networking using ENIs.
+   Best performance and integrates with AWS services. Used automatically when external cloud
+   provider is enabled.
+
+## Test Parallelism
+
+The default test parallelism for node e2e tests has been reduced to 4 (from 8) to avoid network
+and resource contention issues. You can override this by setting the `PARALLELISM` environment variable:
+
+```bash
+PARALLELISM=8 hack/make-rules/test-e2e-node.sh
+```
+
 
 ## Reference Implementations
 
