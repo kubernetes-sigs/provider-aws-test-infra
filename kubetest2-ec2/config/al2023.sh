@@ -297,7 +297,7 @@ state = "/run/containerd"
 # Users can use the following import directory to add additional
 # configuration to containerd. The imports do not behave exactly like overrides.
 # see: https://github.com/containerd/containerd/blob/main/docs/man/containerd-config.toml.5.md#format
-imports = ["/etc/containerd/config.d/*.toml"]
+imports = ["/etc/containerd/config.d/*.toml", "/etc/containerd/conf.d/*.toml"]
 
 [grpc]
 address = "/run/containerd/containerd.sock"
@@ -338,8 +338,24 @@ sed -i "s/SANDBOX_IMAGE/registry.k8s.io\/pause:3.8/" /etc/containerd/config.toml
 
 # enable nvidia driver if present
 if command -v nvidia-ctk; then
-  nvidia-ctk runtime configure --runtime=containerd
-  sed -i 's/default_runtime_name = .*/default_runtime_name = "nvidia"/' /etc/containerd/config.toml
+  # Configure nvidia runtime directly in the containerd config.toml
+  # Using --config to write directly to config.toml instead of a separate file in conf.d
+  nvidia-ctk runtime configure --runtime=containerd --config=/etc/containerd/config.toml --set-as-default
+
+  # Also ensure the import directory matches where nvidia-ctk might write additional configs
+  # Create symlink from conf.d to config.d if needed (nvidia-ctk defaults to conf.d)
+  mkdir -p /etc/containerd/conf.d
+  mkdir -p /etc/containerd/config.d
+
+  # If nvidia-ctk created a file in conf.d, copy it to config.d as well
+  if [[ -f /etc/containerd/conf.d/99-nvidia.toml ]]; then
+    cp /etc/containerd/conf.d/99-nvidia.toml /etc/containerd/config.d/99-nvidia.toml
+  fi
+
+  # Ensure default_runtime_name is set to nvidia (backup in case --set-as-default didn't work)
+  if grep -q 'default_runtime_name' /etc/containerd/config.toml; then
+    sed -i 's/default_runtime_name = .*/default_runtime_name = "nvidia"/' /etc/containerd/config.toml
+  fi
 fi
 
 systemctl start containerd
