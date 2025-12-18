@@ -5,6 +5,9 @@ set -x
 aws sts get-caller-identity || exit 1
 
 AWS_REGION=${AWS_REGION:-"us-east-1"}
+# Default to AL2023 to match the AMI name format we're checking for
+BUILD_EKS_AMI_OS=${BUILD_EKS_AMI_OS:-"al2023"}
+export BUILD_EKS_AMI_OS
 
 build_eks_arch=""
 AMI_TARGET_BUILD_ARCH="linux/amd64"
@@ -24,7 +27,12 @@ pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
 popd
 TODAYS_DATE=$(date -u +'%Y%m%d')
 AMI_VERSION="v$TODAYS_DATE"
-AMI_NAME="amazon-eks-al2023-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
+# Set AMI name based on OS type to match what build-ami.sh will create
+if [[ "${BUILD_EKS_AMI_OS}" == "al2023" ]]; then
+  AMI_NAME="amazon-eks-al2023-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
+else
+  AMI_NAME="amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
+fi
 AMI_ID=$(aws ec2 describe-images --region=${AWS_REGION} --filters "Name=name,Values=$AMI_NAME" --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
 
 if [ -z "$AMI_ID" ] ; then
