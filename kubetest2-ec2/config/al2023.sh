@@ -3,41 +3,26 @@
 set -o xtrace
 set -xeuo pipefail
 
-os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
-
 # Set the maximum number of retries
 MAX_RETRIES=5
 
-# Function to run DNF/yum command with retries
+# Function to run dnf command with retries (AL2023)
 install_packages_with_retry() {
     set +e
     local attempt=1
 
-    EXTRAS=""
-    if [ "$os" == "amzn2023" ]; then
-      EXTRAS="iptables-nft"
-    fi
+    # AL2023 requires iptables-nft
+    EXTRAS="iptables-nft"
 
     while [ $attempt -le $MAX_RETRIES ]; do
         echo "Attempt $attempt of $MAX_RETRIES"
 
-        # Run the DNF command
-        DNF=""
-        DNF_ARGS=""
-        DNF_EXCLUDES=""
-        if command -v dnf; then
-          DNF="dnf"
-        else
-          DNF="yum"
-          DNF_ARGS="--enablerepo=amzn2extra-docker"
-          DNF_EXCLUDES="--exclude=docker*"
-        fi
+        # Use dnf (AL2023 package manager)
+        dnf clean all
+        dnf makecache
+        dnf update -y
 
-        $DNF clean all
-        $DNF makecache
-        $DNF update -y
-
-        $DNF $DNF_ARGS install -y \
+        dnf install -y \
           runc \
           containerd \
           git \
@@ -53,20 +38,20 @@ install_packages_with_retry() {
           unzip \
           wget \
           mdadm \
-          pigz $EXTRAS $DNF_EXCLUDES
+          pigz $EXTRAS
 
         # Check if the command was successful
         if [ $? -eq 0 ]; then
-            echo "DNF/YUM command succeeded"
+            echo "dnf command succeeded"
             return 0
         else
-            echo "DNF/YUM command failed. Retrying in 5 seconds..."
+            echo "dnf command failed. Retrying in 5 seconds..."
             sleep 5
             ((attempt++))
         fi
     done
 
-    echo "DNF/YUM command failed after $MAX_RETRIES attempts"
+    echo "dnf command failed after $MAX_RETRIES attempts"
     set -e
     return 1
 }
@@ -116,20 +101,15 @@ else
   ARCH=amd64
 fi
 
-os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
-if [ "$os" == "amzn2023" ]; then
+# AL2023-specific network configurations
+# Fix issues with networking from pods
+sed -i "s/^.*ReadEtcHosts.*/ReadEtcHosts=no/" /etc/systemd/resolved.conf
+sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
+systemctl restart systemd-resolved
 
-  # Fix issues with networking from pods
-  sed -i "s/^.*ReadEtcHosts.*/ReadEtcHosts=no/" /etc/systemd/resolved.conf
-  sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link
-  systemctl restart systemd-resolved
-
-  # Remove duplicate lines in /etc/resolv.conf
-  awk -i inplace '!seen[$0]++'  /etc/resolv.conf || true
-  RESOLVE_CONF=/run/systemd/resolve/resolv.conf
-else
-  RESOLVE_CONF=/etc/resolv.conf
-fi
+# Remove duplicate lines in /etc/resolv.conf
+awk -i inplace '!seen[$0]++'  /etc/resolv.conf || true
+RESOLVE_CONF=/run/systemd/resolve/resolv.conf
 
 mkdir -p /etc/kubernetes/
 mkdir -p /etc/kubernetes/manifests

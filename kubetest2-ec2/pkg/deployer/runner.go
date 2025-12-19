@@ -73,7 +73,6 @@ type awsInstance struct {
 var operatingSystems = []string{
 	"ubuntu",
 	"al2023",
-	"al2",
 }
 
 func (a *AWSRunner) Validate() error {
@@ -106,17 +105,6 @@ func (a *AWSRunner) Validate() error {
 				path = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-" + arch
 			}
 			if a.deployer.UserDataFile == "" {
-				a.deployer.UserDataFile = "al2023.sh"
-			}
-		case "al2":
-			if arch == "amd64" {
-				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-			} else {
-				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-" + arch + "-gp2"
-			}
-			if a.deployer.UserDataFile == "" {
-				// this is intentional, same file works on both al2 and al2023 and the al2.sh is
-				// symlinked to al2023.sh
 				a.deployer.UserDataFile = "al2023.sh"
 			}
 		case "ubuntu", "":
@@ -168,17 +156,6 @@ func (a *AWSRunner) Validate() error {
 				path = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-" + arch
 			}
 			if a.deployer.WorkerUserDataFile == "" {
-				a.deployer.WorkerUserDataFile = "al2023.sh"
-			}
-		case "al2":
-			if arch == "amd64" {
-				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-			} else {
-				path = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-" + arch + "-gp2"
-			}
-			if a.deployer.WorkerUserDataFile == "" {
-				// this is intentional, same file works on both al2 and al2023 and the al2.sh is
-				// symlinked to al2023.sh
 				a.deployer.WorkerUserDataFile = "al2023.sh"
 			}
 		case "ubuntu", "":
