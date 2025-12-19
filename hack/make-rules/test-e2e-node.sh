@@ -35,15 +35,10 @@ if [[ ${build_eks_ami} != "false" ]]; then
   if [[ ${BUILD_EKS_AMI_ARCH:-""} == "arm64" ]]; then
     instance_type=${INSTANCE_TYPE:-"m6g.large"}
   fi
-  user_data_file="userdata.sh"
-  if [[ ${BUILD_EKS_AMI_OS:-""} == "al2023" ]]; then
-    AMI_NAME="amazon-eks-al2023-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
-    user_data_file="userdata-al2023.sh"
-    ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
-  else
-    AMI_NAME="amazon-eks-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
-    ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
-  fi
+  # Default to AL2023 for all builds
+  user_data_file="userdata-al2023.sh"
+  AMI_NAME="amazon-eks-al2023-${build_eks_arch}node-${KUBE_MINOR_VERSION}-v${TODAYS_DATE}"
+  ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME"  --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
   if [ -z "${ami_id}" ] ; then
     export AMI_NAME
     ${TEST_INFRA_ROOT}/hack/build-ami.sh
