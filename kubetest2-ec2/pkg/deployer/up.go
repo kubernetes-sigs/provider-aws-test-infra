@@ -22,7 +22,9 @@ import (
 	osexec "os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -168,6 +170,14 @@ func (d *deployer) Up() error {
 
 	d.waitForKubectlNodes()
 	d.waitForKubectlNodesToBeReady()
+
+	// Wait for cloud-init to complete on control plane before starting tests.
+	// This ensures run-post-install.sh has finished deploying cluster resources
+	// like Cilium CNI and NVIDIA device plugin (if enabled).
+	if err := d.waitForCloudInitComplete(); err != nil {
+		klog.Warningf("cloud-init wait failed (continuing anyway): %v", err)
+	}
+
 	if d.ExternalCloudProvider {
 		d.waitForExternalProviderPods()
 	}
@@ -207,4 +217,56 @@ func downloadKubeConfig(instanceID string, publicIp string) string {
 	}
 	klog.Infof("KUBECONFIG=%v", f.Name())
 	return f.Name()
+}
+
+// waitForCloudInitComplete waits for cloud-init to finish on the control plane.
+// This ensures run-post-install.sh has completed, which deploys:
+// - Cilium CNI
+// - NVIDIA device plugin (if enabled)
+// - CoreDNS readiness check
+//
+// This fixes a race condition where tests could start before cloud-init finishes
+// deploying required cluster resources.
+func (d *deployer) waitForCloudInitComplete() error {
+	if len(d.runner.instances) == 0 {
+		return fmt.Errorf("no instances available")
+	}
+
+	// Get control plane instance (first instance)
+	controlPlane := d.runner.instances[0]
+
+	klog.Info("Waiting for cloud-init to complete on control plane...")
+
+	timeout := 5 * time.Minute
+	pollInterval := 10 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		// Use "cloud-init status" to check completion
+		// --wait flag would block, so we poll instead for better logging
+		output, err := remote.SSH(controlPlane.instanceID, "cloud-init", "status")
+		if err != nil {
+			klog.V(2).Infof("cloud-init status check failed (retrying): %v", err)
+			time.Sleep(pollInterval)
+			continue
+		}
+
+		// cloud-init status returns "status: done" when complete
+		if strings.Contains(output, "status: done") {
+			klog.Info("cloud-init completed successfully")
+			return nil
+		}
+
+		// Check for error status
+		if strings.Contains(output, "status: error") {
+			klog.Warningf("cloud-init reported error status: %s", output)
+			return fmt.Errorf("cloud-init failed with error status")
+		}
+
+		klog.V(2).Infof("cloud-init still running, waiting... (status: %s)",
+			strings.TrimSpace(output))
+		time.Sleep(pollInterval)
+	}
+
+	return fmt.Errorf("timeout waiting for cloud-init to complete after %v", timeout)
 }
