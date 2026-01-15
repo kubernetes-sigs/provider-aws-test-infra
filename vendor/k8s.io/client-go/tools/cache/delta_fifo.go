@@ -172,12 +172,19 @@ const (
 	Updated DeltaType = "Updated"
 	Deleted DeltaType = "Deleted"
 	// Replaced is emitted when we encountered watch errors and had to do a
-	// relist. We don't know if the replaced object has changed.
+	// relist, or on initial listing of objects. We don't know if the replaced
+	// object has changed.
 	//
 	// NOTE: Previous versions of DeltaFIFO would use Sync for Replace events
 	// as well. Hence, Replaced is only emitted when the option
 	// EmitDeltaTypeReplaced is true.
 	Replaced DeltaType = "Replaced"
+	// ReplacedAll is emitted when we encountered watch errors and had to do
+	// a relist, or on initial listing of objects. This is the same reason as
+	// Replaced but will be emitted instead when the FIFO supports atomic
+	// replacement. This event will return the full list of replaced items
+	// instead of a single object.
+	ReplacedAll DeltaType = "ReplacedAll"
 	// Sync is for synthetic events during a periodic resync.
 	Sync DeltaType = "Sync"
 )
@@ -270,7 +277,8 @@ func NewDeltaFIFOWithOptions(opts DeltaFIFOOptions) *DeltaFIFO {
 }
 
 var (
-	_ = Queue(&DeltaFIFO{}) // DeltaFIFO is a Queue
+	_ = Queue(&DeltaFIFO{})             // DeltaFIFO is a Queue
+	_ = TransformingStore(&DeltaFIFO{}) // DeltaFIFO implements TransformingStore to allow memory optimizations
 )
 
 var (
