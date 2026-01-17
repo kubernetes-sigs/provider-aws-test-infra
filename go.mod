@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.25.3
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.3
 	github.com/google/uuid v1.6.0
-	golang.org/x/crypto v0.46.0
+	golang.org/x/crypto v0.47.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubernetes v0.0.0
 	sigs.k8s.io/yaml v1.6.0
@@ -77,7 +77,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
