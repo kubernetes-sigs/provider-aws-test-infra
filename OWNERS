@@ -1,6 +1,9 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
 approvers:
-  - nckturner
-  - wongma7
   - dims
+  - hakuna-matatah
+  - kmala
+  - mengqiy
+  - ronaldngounou
+  - yue9944882
