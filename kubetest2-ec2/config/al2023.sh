@@ -354,3 +354,9 @@ kubeadm join \
    --ignore-preflight-errors=FileContent--proc-sys-net-bridge-bridge-nf-call-iptables,SystemVerification \
    --v 10 \
    --config /etc/kubernetes/kubeadm-join.yaml
+
+# shellcheck disable=SC2050
+if [[ "{{ENABLE_DRA_NVIDIA}}" == "true" ]]; then
+  # Label this node for NVIDIA DRA driver DaemonSet scheduling
+  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf label node "$PRIVATE_DNS_NAME" nvidia.com/gpu.present=true --overwrite
+fi
