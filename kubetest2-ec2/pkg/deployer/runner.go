@@ -76,6 +76,11 @@ var operatingSystems = []string{
 }
 
 func (a *AWSRunner) Validate() error {
+	// Mutual exclusion: cannot use both device plugin and DRA
+	if a.deployer.DevicePluginNvidia && a.deployer.DRANvidia {
+		return fmt.Errorf("--device-plugin-nvidia and --dra-nvidia are mutually exclusive; use one or the other")
+	}
+
 	_, err := a.InitializeServices()
 	if err != nil {
 		return fmt.Errorf("unable to initialize AWS services : %w", err)
@@ -530,6 +535,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		userdata = strings.ReplaceAll(userdata, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "false")
 	}
 
+	if a.deployer.DRANvidia {
+		userdata = strings.ReplaceAll(userdata, "{{ENABLE_DRA_NVIDIA}}", "true")
+	} else {
+		userdata = strings.ReplaceAll(userdata, "{{ENABLE_DRA_NVIDIA}}", "false")
+	}
+
 	scriptString, err = utils.FetchRunPostInstallSH(func(data string) string {
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
@@ -545,6 +556,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 			data = strings.ReplaceAll(data, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "true")
 		} else {
 			data = strings.ReplaceAll(data, "{{ENABLE_NVIDIA_DEVICE_PLUGIN}}", "false")
+		}
+
+		if a.deployer.DRANvidia {
+			data = strings.ReplaceAll(data, "{{ENABLE_DRA_NVIDIA}}", "true")
+		} else {
+			data = strings.ReplaceAll(data, "{{ENABLE_DRA_NVIDIA}}", "false")
 		}
 
 		return data

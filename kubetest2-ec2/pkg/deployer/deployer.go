@@ -76,6 +76,7 @@ func New(opts types.Options) (types.Deployer, *pflag.FlagSet) {
 		ExternalCloudProvider: false,
 		ExternalLoadBalancer:  false,
 		DevicePluginNvidia:    false,
+		DRANvidia:             false,
 		commonOptions:         opts,
 		BuildOptions: &options.BuildOptions{
 			CommonBuildOptions: &build.Options{
@@ -125,6 +126,7 @@ type deployer struct {
 
 	ExternalLoadBalancer bool `desc:"Enable external AWS load balancer"`
 	DevicePluginNvidia   bool `desc:"Enable nvidia device plugin daemonset"`
+	DRANvidia            bool `desc:"Enable NVIDIA DRA driver for Dynamic Resource Allocation (mutually exclusive with DevicePluginNvidia)"`
 
 	Region             string `desc:"AWS region that the hosts live in (aws)"`
 	UserDataFile       string `flag:"user-data-file" desc:"Path to user data to pass to control plane instances (aws)"`
