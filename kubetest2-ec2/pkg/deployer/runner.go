@@ -537,8 +537,10 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 
 	if a.deployer.DRANvidia {
 		userdata = strings.ReplaceAll(userdata, "{{ENABLE_DRA_NVIDIA}}", "true")
+		userdata = strings.ReplaceAll(userdata, "{{NODE_LABELS}}", "nvidia.com/gpu.present=true")
 	} else {
 		userdata = strings.ReplaceAll(userdata, "{{ENABLE_DRA_NVIDIA}}", "false")
+		userdata = strings.ReplaceAll(userdata, "{{NODE_LABELS}}", "")
 	}
 
 	scriptString, err = utils.FetchRunPostInstallSH(func(data string) string {
