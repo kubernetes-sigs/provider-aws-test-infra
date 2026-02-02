@@ -49,7 +49,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
       curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
     fi
     helm repo add nvidia https://helm.ngc.nvidia.com/nvidia && helm repo update
-    helm template nvidia-dra-driver nvidia/nvidia-dra-driver-gpu --version 25.8.1 --namespace kube-system --set nvidiaDriverRoot=/ --set gpuResourcesEnabledOverride=true | kubectl $KC apply -f -
+    helm template nvidia-dra-driver nvidia/nvidia-dra-driver-gpu --version 25.8.1 --namespace kube-system --set nvidiaDriverRoot=/ --set gpuResourcesEnabledOverride=true --set resources.computeDomains.enabled=false | kubectl $KC apply -f -
     kubectl $KC rollout status daemonset nvidia-dra-driver-gpu-kubelet-plugin -n kube-system --timeout=2m
   fi
   kubectl $KC wait --for=condition=Ready pod -l k8s-app=kube-dns -n kube-system --timeout=2m
