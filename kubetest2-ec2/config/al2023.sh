@@ -132,6 +132,7 @@ nodeRegistration:
   name: {{HOSTNAME_OVERRIDE}}
   kubeletExtraArgs:
     feature-gates: {{FEATURE_GATES}}
+    node-labels: {{NODE_LABELS}}
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     provider-id: {{PROVIDER_ID}}
     node-ip: {{NODE_IP}}
@@ -354,19 +355,3 @@ kubeadm join \
    --ignore-preflight-errors=FileContent--proc-sys-net-bridge-bridge-nf-call-iptables,SystemVerification \
    --v 10 \
    --config /etc/kubernetes/kubeadm-join.yaml
-
-# shellcheck disable=SC2050
-if [[ "{{ENABLE_DRA_NVIDIA}}" == "true" ]]; then
-  # Wait for this node to be registered before labeling
-  echo "Waiting for node $PRIVATE_DNS_NAME to be registered..."
-  for i in {1..30}; do
-    if kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$PRIVATE_DNS_NAME" &>/dev/null; then
-      echo "Node $PRIVATE_DNS_NAME is registered"
-      break
-    fi
-    echo "Attempt $i: Node not yet registered, waiting..."
-    sleep 5
-  done
-  # Label this node for NVIDIA DRA driver DaemonSet scheduling
-  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf label node "$PRIVATE_DNS_NAME" nvidia.com/gpu.present=true --overwrite
-fi
