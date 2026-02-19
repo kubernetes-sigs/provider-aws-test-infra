@@ -48,7 +48,7 @@ chmod +x /usr/local/bin/ecr-credential-provider
 
 # shellcheck disable=SC2050
 if [[ "{{STAGING_BUCKET}}" =~ ^https.*  ]]; then
-  curl -sSLo kubernetes-server-linux-$ARCH.tar.gz --fail --retry 5 "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz"
+  curl -sSLo kubernetes-server-linux-$ARCH.tar.gz --fail --retry 5 --retry-delay 10 --retry-all-errors "{{STAGING_BUCKET}}/{{STAGING_VERSION}}/kubernetes-server-linux-$ARCH.tar.gz"
 else
   BUCKET="{{STAGING_BUCKET}}"
   # Strip out 's3://' prefix if it exists
