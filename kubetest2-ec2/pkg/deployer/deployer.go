@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/build"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/options"
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/remote"
+	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/pkg/deployer/utils"
 )
 
 // Name is the name of the deployer
@@ -145,6 +146,7 @@ type deployer struct {
 	SSHUser            string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
 	SSHEnv             string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
 	NumNodes           int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
+	IPFamily           string `flag:"ip-family" desc:"IP family for the cluster: ipv4, ipv6, or dual"`
 
 	runner  *AWSRunner
 	logsDir string
@@ -153,6 +155,11 @@ type deployer struct {
 func (d *deployer) Down() error {
 	if err := d.DumpClusterLogs(); err != nil {
 		klog.Warningf("Dumping cluster logs at the start of Down() failed: %s", err)
+	}
+	if d.IPFamily != "" && d.IPFamily != "ipv4" && d.runner != nil && d.runner.subnetID != "" {
+		if err := utils.TeardownIPv6Subnet(context.TODO(), d.runner.ec2Service, d.runner.subnetID); err != nil {
+			klog.Warningf("failed to teardown IPv6 subnet %s: %v", d.runner.subnetID, err)
+		}
 	}
 	for _, instance := range d.runner.instances {
 		_, err := d.runner.ec2Service.TerminateInstances(context.TODO(), &ec2v2.TerminateInstancesInput{
