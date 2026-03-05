@@ -59,6 +59,7 @@ type AWSRunner struct {
 	certificateKey     string
 	controlPlaneIP     string
 	subnetID           string
+	vpcID              string
 }
 
 type awsInstance struct {
@@ -393,7 +394,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
 	}
 	if len(userControlPlane) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
+		return nil, fmt.Errorf("control plane user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
 	}
 
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
@@ -482,6 +483,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		data = strings.ReplaceAll(data, "{{RUNTIME_CONFIG}}", a.deployer.RuntimeConfig)
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
+		if a.deployer.IPFamily == "dual" {
+			data = strings.ReplaceAll(data, "{{SERVICE_CIDR}}", "10.96.0.0/12,fd00:10:96::/112")
+			data = strings.ReplaceAll(data, "{{POD_CIDR}}", "192.168.0.0/16,fd00:10:244::/56")
+		} else {
+			data = strings.ReplaceAll(data, "{{SERVICE_CIDR}}", "10.96.0.0/12")
+		}
 		return data
 	})
 	if err != nil {
@@ -597,10 +604,15 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 
 	if a.subnetID == "" {
 		var err error
-		var vpcID string
-		a.subnetID, vpcID, err = utils.PickSubnetID(a.ec2Service)
+		a.subnetID, a.vpcID, err = utils.PickSubnetID(a.ec2Service)
 		if err != nil {
-			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, vpcID)
+			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, a.vpcID)
+		}
+	}
+
+	if a.deployer.IPFamily != "" && a.deployer.IPFamily != "ipv4" {
+		if _, err := utils.EnsureIPv6(context.TODO(), a.ec2Service, a.vpcID, a.subnetID); err != nil {
+			return nil, fmt.Errorf("ensuring IPv6 on subnet %s: %w", a.subnetID, err)
 		}
 	}
 
@@ -611,7 +623,8 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		a.deployer.ClusterID,
 		a.controlPlaneIP,
 		img,
-		a.subnetID)
+		a.subnetID,
+		a.deployer.IPFamily)
 	if err != nil {
 		return nil, fmt.Errorf("unable to launch instance : %w", err)
 	}
