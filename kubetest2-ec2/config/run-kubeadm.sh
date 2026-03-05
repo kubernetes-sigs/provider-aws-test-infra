@@ -80,6 +80,13 @@ PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
 PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname --header "X-aws-ec2-metadata-token: $TOKEN")
 NODE_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
 
+# Append IPv6 address to NODE_IP if one is assigned (enables dual-stack kubelet registration)
+IFACE_MAC=$(curl -s $META_URL/network/interfaces/macs/ --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
+IPV6_ADDR=$(curl -sf "$META_URL/network/interfaces/macs/${IFACE_MAC}ipv6s" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
+if [ -n "$IPV6_ADDR" ]; then
+    NODE_IP="${NODE_IP},${IPV6_ADDR}"
+fi
+
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{NODE_IP}}|$NODE_IP|g" /etc/kubernetes/kubeadm-*.yaml
