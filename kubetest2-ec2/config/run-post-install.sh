@@ -4,7 +4,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   KC="--kubeconfig /etc/kubernetes/admin.conf"
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
-    CNI_VERSION=v1.20.4
+    CNI_VERSION=v1.21.1
     kubectl $KC create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/${CNI_VERSION}/config/master/aws-k8s-cni.yaml
     kubectl $KC set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true MINIMUM_IP_TARGET=160 WARM_IP_TARGET=20 AWS_VPC_K8S_CNI_EXCLUDE_SNAT_CIDRS=10.0.0.0/8
   else
