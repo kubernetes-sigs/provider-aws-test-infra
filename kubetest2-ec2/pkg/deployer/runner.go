@@ -394,7 +394,7 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
 	}
 	if len(userControlPlane) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
+		return nil, fmt.Errorf("control plane user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
 	}
 
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
