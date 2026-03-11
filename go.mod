@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.3
 	github.com/google/uuid v1.6.0
 	golang.org/x/crypto v0.47.0
-	k8s.io/klog/v2 v2.130.1
+	k8s.io/klog/v2 v2.140.0
 	k8s.io/kubernetes v0.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
