@@ -156,11 +156,6 @@ func (d *deployer) Down() error {
 	if err := d.DumpClusterLogs(); err != nil {
 		klog.Warningf("Dumping cluster logs at the start of Down() failed: %s", err)
 	}
-	if d.IPFamily != "" && d.IPFamily != "ipv4" && d.runner != nil && d.runner.subnetID != "" {
-		if err := utils.TeardownIPv6Subnet(context.TODO(), d.runner.ec2Service, d.runner.subnetID); err != nil {
-			klog.Warningf("failed to teardown IPv6 subnet %s: %v", d.runner.subnetID, err)
-		}
-	}
 	for _, instance := range d.runner.instances {
 		_, err := d.runner.ec2Service.TerminateInstances(context.TODO(), &ec2v2.TerminateInstancesInput{
 			InstanceIds: []string{instance.instanceID},
@@ -169,6 +164,12 @@ func (d *deployer) Down() error {
 			return fmt.Errorf("failed to delete instance %s : %w", instance.instanceID, err)
 		}
 		klog.Infof("deleted instance id: %s", instance.instanceID)
+	}
+
+	if d.IPFamily != "" && d.IPFamily != "ipv4" && d.runner != nil && d.runner.subnetID != "" {
+		if err := utils.TeardownIPv6Subnet(context.TODO(), d.runner.ec2Service, d.runner.subnetID); err != nil {
+			klog.Warningf("failed to teardown IPv6 subnet %s: %v", d.runner.subnetID, err)
+		}
 	}
 	return nil
 }
