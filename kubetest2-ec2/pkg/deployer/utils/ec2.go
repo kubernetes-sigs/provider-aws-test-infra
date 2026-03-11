@@ -3,17 +3,19 @@ package utils
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"hash/fnv"
-	"net"
-	"time"
 	"math/rand"
+	"net"
 	"strings"
+	"time"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	ec2v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2typesv2 "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	iamv2 "github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/smithy-go"
 
 	"k8s.io/klog/v2"
 
@@ -234,25 +236,62 @@ func EnsureIPv6(ctx context.Context, svc *ec2v2.Client, vpcID, subnetID string) 
 		if err != nil {
 			return "", fmt.Errorf("associate IPv6 CIDR with VPC %s: %w", vpcID, err)
 		}
+
 		assocID := awsv2.ToString(out.Ipv6CidrBlockAssociation.AssociationId)
-		if err := waitForVpcIpv6Cidr(ctx, svc, vpcID, assocID); err != nil {
+
+		err = waitForIPv6Association(ctx, svc, func(ctx context.Context, svc *ec2v2.Client) error {
+			klog.Infof("checking VPC %s for IPv6 association", vpcID)
+			out, err := svc.DescribeVpcs(ctx, &ec2v2.DescribeVpcsInput{VpcIds: []string{vpcID}})
+			if err != nil {
+				return err
+			}
+			for _, a := range out.Vpcs[0].Ipv6CidrBlockAssociationSet {
+				if a.Ipv6CidrBlock == nil {
+					return fmt.Errorf("IPv6 CIDR not yet associated with VPC")
+				}
+				if awsv2.ToString(a.AssociationId) == assocID {
+					if a.Ipv6CidrBlockState.State == ec2typesv2.VpcCidrBlockStateCodeAssociated {
+						klog.Infof("found vpcIPv6CIDR: %s", a.Ipv6CidrBlock)
+						vpcIPv6CIDR = awsv2.ToString(a.Ipv6CidrBlock)
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("timed out waiting for VPC %s IPv6 CIDR association %s", vpcID, assocID)
+		})
+
+		if err != nil {
 			return "", err
 		}
-		vpcIPv6CIDR = awsv2.ToString(out.Ipv6CidrBlockAssociation.Ipv6CidrBlock)
 	}
 
 	// 3. Carve a /64 for the subnet (if not already present) and enable auto-assignment
-	subnetOut, err := svc.DescribeSubnets(ctx, &ec2v2.DescribeSubnetsInput{SubnetIds: []string{subnetID}})
-	if err != nil {
-		return "", fmt.Errorf("describe subnet %s: %w", subnetID, err)
-	}
-	hasIPv6 := false
-	for _, a := range subnetOut.Subnets[0].Ipv6CidrBlockAssociationSet {
-		if a.Ipv6CidrBlockState.State == ec2typesv2.SubnetCidrBlockStateCodeAssociated {
-			hasIPv6 = true
-			break
+	var hasIPv6 bool
+	var subnetOut *ec2v2.DescribeSubnetsOutput
+	checkSubnetAssociated := func(ctx context.Context, svc *ec2v2.Client) error {
+		klog.Infof("checking subnet %s for IPv6 CIDR", subnetID)
+		subnetOut, err = svc.DescribeSubnets(ctx, &ec2v2.DescribeSubnetsInput{SubnetIds: []string{subnetID}})
+		if err != nil {
+			return fmt.Errorf("describe subnet %s: %w", subnetID, err)
 		}
+		klog.Infof("subnetOut items: %d", len(subnetOut.Subnets))
+		klog.Infof("association set items: %d", len(subnetOut.Subnets[0].Ipv6CidrBlockAssociationSet))
+		hasIPv6 = false
+		for _, a := range subnetOut.Subnets[0].Ipv6CidrBlockAssociationSet {
+			klog.Infof("found the subnet")
+			if a.Ipv6CidrBlockState.State == ec2typesv2.SubnetCidrBlockStateCodeAssociated {
+				klog.Infof("CIDR associated")
+				hasIPv6 = true
+				break
+			}
+		}
+		return nil
 	}
+
+	// Check the subnet's association initially to determine if it has IPv6 yet.
+	checkSubnetAssociated(ctx, svc)
+	klog.Infof("subnetOut items after check: %d", len(subnetOut.Subnets))
+
 	if !hasIPv6 {
 		subnetIPv6CIDR, err := ipv6SubnetCIDR(
 			awsv2.ToString(subnetOut.Subnets[0].CidrBlock),
@@ -267,7 +306,12 @@ func EnsureIPv6(ctx context.Context, svc *ec2v2.Client, vpcID, subnetID string) 
 		}); err != nil {
 			return "", fmt.Errorf("associate IPv6 CIDR %s with subnet %s: %w", subnetIPv6CIDR, subnetID, err)
 		}
+		err = waitForIPv6Association(ctx, svc, checkSubnetAssociated)
+		if err != nil {
+			return "", err
+		}
 	}
+
 	if _, err := svc.ModifySubnetAttribute(ctx, &ec2v2.ModifySubnetAttributeInput{
 		SubnetId:                    awsv2.String(subnetID),
 		AssignIpv6AddressOnCreation: &ec2typesv2.AttributeBooleanValue{Value: awsv2.Bool(true)},
@@ -327,25 +371,27 @@ func EnsureIPv6(ctx context.Context, svc *ec2v2.Client, vpcID, subnetID string) 
 	return vpcIPv6CIDR, nil
 }
 
-// waitForVpcIpv6Cidr polls until the VPC IPv6 CIDR association reaches the associated state.
-func waitForVpcIpv6Cidr(ctx context.Context, svc *ec2v2.Client, vpcID, assocID string) error {
-	for i := 0; i < 30; i++ {
-		if i > 0 {
-			time.Sleep(5 * time.Second)
+// waitFunc defines a function that will execute an AWS Client call and return an error.
+// It will be executed in a loop until a) it returns `nil` or b) timeout is passed.
+type waitFunc func(ctx context.Context, svc *ec2v2.Client) error
+
+func waitForIPv6Association(ctx context.Context, svc *ec2v2.Client, waiterFunc waitFunc) error {
+	var err error
+	var i int
+
+	for i = 0; i < 30; i++ {
+		err = waiterFunc(ctx, svc)
+		if err == nil {
+			break
 		}
-		out, err := svc.DescribeVpcs(ctx, &ec2v2.DescribeVpcsInput{VpcIds: []string{vpcID}})
-		if err != nil {
-			continue
-		}
-		for _, a := range out.Vpcs[0].Ipv6CidrBlockAssociationSet {
-			if awsv2.ToString(a.AssociationId) == assocID {
-				if a.Ipv6CidrBlockState.State == ec2typesv2.VpcCidrBlockStateCodeAssociated {
-					return nil
-				}
-			}
-		}
+		time.Sleep(5 * time.Second)
 	}
-	return fmt.Errorf("timed out waiting for VPC %s IPv6 CIDR association %s", vpcID, assocID)
+
+	if i == 30 {
+		err = fmt.Errorf("timed out waiting for condition")
+	}
+
+	return err
 }
 
 // ipv6SubnetCIDR derives a /64 prefix for the given subnet from the VPC's /56 IPv6 block.
@@ -354,6 +400,8 @@ func waitForVpcIpv6Cidr(ctx context.Context, svc *ec2v2.Client, vpcID, assocID s
 func ipv6SubnetCIDR(subnetIPv4CIDR, vpcIPv6CIDR string) (string, error) {
 	h := fnv.New32a()
 	h.Write([]byte(subnetIPv4CIDR))
+
+	klog.Infof("Trying to use net.ParseCIDR")
 
 	_, vpcIPv6Net, err := net.ParseCIDR(vpcIPv6CIDR)
 	if err != nil {
@@ -378,14 +426,45 @@ func TeardownIPv6Subnet(ctx context.Context, svc *ec2v2.Client, subnetID string)
 	if len(out.Subnets) == 0 {
 		return nil // already deleted
 	}
-	for _, a := range out.Subnets[0].Ipv6CidrBlockAssociationSet {
-		if a.Ipv6CidrBlockState.State == ec2typesv2.SubnetCidrBlockStateCodeAssociated {
-			if _, err := svc.DisassociateSubnetCidrBlock(ctx, &ec2v2.DisassociateSubnetCidrBlockInput{
-				AssociationId: a.AssociationId,
-			}); err != nil {
-				return fmt.Errorf("disassociate IPv6 CIDR from subnet %s: %w", subnetID, err)
+
+	// AWS's API needs a *bool, not just a bool.
+	falseVal := false
+
+	// Remove the IPv6 auto-assignment before disassociating the IPv6 CIDR.
+	modifyInput := &ec2v2.ModifySubnetAttributeInput{
+		SubnetId: &subnetID,
+		AssignIpv6AddressOnCreation: &ec2typesv2.AttributeBooleanValue{
+			Value: &falseVal,
+		},
+	}
+
+	_, err = svc.ModifySubnetAttribute(ctx, modifyInput)
+	if err != nil {
+		return fmt.Errorf("could not disable ipv6 creation on assignment for subnet %s: %w", subnetID, err)
+	}
+
+	err = waitForIPv6Association(ctx, svc, func(ctx context.Context, svc *ec2v2.Client) error {
+		for _, a := range out.Subnets[0].Ipv6CidrBlockAssociationSet {
+			if a.Ipv6CidrBlockState.State == ec2typesv2.SubnetCidrBlockStateCodeAssociated {
+				if _, err := svc.DisassociateSubnetCidrBlock(ctx, &ec2v2.DisassociateSubnetCidrBlockInput{
+					AssociationId: a.AssociationId,
+				}); err != nil {
+					var smithyErr smithy.APIError
+					// resource may be in use, keep trying if so.
+					if errors.As(err, &smithyErr) && smithyErr.ErrorCode() == "400" {
+						continue
+					}
+				}
+				// no error
+				return nil
 			}
 		}
+		return fmt.Errorf("disassociate IPv6 CIDR from subnet %s: %w", subnetID, err)
+	})
+
+	if err != nil {
+		return fmt.Errorf("timed out waiting for IPv6 CIDR to disassoiate from subnet %s: %w", subnetID, err)
 	}
+
 	return nil
 }
