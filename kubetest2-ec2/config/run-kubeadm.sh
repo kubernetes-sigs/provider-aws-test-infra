@@ -70,7 +70,6 @@ curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tool
 
 TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
 META_URL=http://169.254.169.254/latest/meta-data
-# generate the right provider-id and host name needed for external aws cloud provider
 AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone --header "X-aws-ec2-metadata-token: $TOKEN")
 INSTANCE_ID=$(curl -s $META_URL/instance-id --header "X-aws-ec2-metadata-token: $TOKEN")
 PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
@@ -89,9 +88,7 @@ sudo modprobe br_netfilter
 sudo sysctl --system
 sudo systemctl daemon-reload
 sudo ln -s /home/containerd/usr/local/bin/ctr /usr/local/bin/ctr || true
-# shellcheck disable=SC2038
 find ./kubernetes/server/bin -name "*.tar" -print | xargs -L 1 ctr -n k8s.io images import
-# shellcheck disable=SC2016
 ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
 
 if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
