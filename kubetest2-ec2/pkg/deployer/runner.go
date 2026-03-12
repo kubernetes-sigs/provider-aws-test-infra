@@ -573,6 +573,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 			data = strings.ReplaceAll(data, "{{ENABLE_DRA_NVIDIA}}", "false")
 		}
 
+		if a.deployer.IPFamily == "dual" {
+			data = strings.ReplaceAll(data, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/nrb/cloud-provider-aws/refs/heads/dual-stack-example/examples/existing-cluster-dual-stack/base") // TODO(nrb): Update this once https://github.com/kubernetes/cloud-provider-aws/pull/1356 merges
+		} else {
+			data = strings.ReplaceAll(data, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/master/examples/existing-cluster/base")
+		}
+
 		return data
 	})
 	if err != nil {

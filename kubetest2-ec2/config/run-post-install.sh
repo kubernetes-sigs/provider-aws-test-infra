@@ -22,7 +22,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
     mkdir -p cloud-provider-aws
     for f in kustomization.yaml apiserver-authentication-reader-role-binding.yaml aws-cloud-controller-manager-daemonset.yaml cluster-role-binding.yaml cluster-role.yaml service-account.yaml; do
-      curl -sSLo ./cloud-provider-aws/${f} --fail --retry 5 "https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/master/examples/existing-cluster/base/${f}"
+      curl -sSLo ./cloud-provider-aws/${f} --fail --retry 5 "{{EXTERNAL_CCM_DAEMONSET_URL}}/${f}"
     done
     if [[ "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}" != "" ]]; then
       sed -i "s|registry.k8s.io/provider-aws/cloud-controller-manager.*$|{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}|" ./cloud-provider-aws/aws-cloud-controller-manager-daemonset.yaml
