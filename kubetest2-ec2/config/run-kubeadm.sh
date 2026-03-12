@@ -1,6 +1,7 @@
 #!/bin/bash
 set -xeu
 
+mkdir -p /tmp/k8s-bootstrap && cd /tmp/k8s-bootstrap || exit 1
 wait_for_update() {
     local bucket="$1" key="$2"
     local previous_etag previous_size
@@ -16,14 +17,12 @@ wait_for_update() {
         current_size=$(get_size "$bucket" "$key")
 
         if [[ "$current_etag" == "$previous_etag" && "$current_size" == "$previous_size" ]]; then
-            echo "File is stable. Ready for download."
             return 0
         fi
 
         previous_etag=$current_etag
         previous_size=$current_size
     done
-
     echo "Timeout reached. File may still be updating."
     return 2
 }
@@ -95,7 +94,6 @@ find ./kubernetes/server/bin -name "*.tar" -print | xargs -L 1 ctr -n k8s.io ima
 # shellcheck disable=SC2016
 ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
 
-# {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
 if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
   MAC=$(curl -s $META_URL/network/interfaces/macs/ -s --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
