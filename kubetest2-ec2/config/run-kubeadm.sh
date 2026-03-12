@@ -77,7 +77,7 @@ NODE_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKE
 
 IFACE_MAC=$(curl -s $META_URL/network/interfaces/macs/ --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
 IPV6_ADDR=$(curl -sf "$META_URL/network/interfaces/macs/${IFACE_MAC}ipv6s" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
-[ -n "$IPV6_ADDR" ] && NODE_IP="${NODE_IP},${IPV6_ADDR}"
+[ -n "$IPV6_ADDR" ] && NODE_IP="${IPV6_ADDR},${NODE_IP}"
 
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
