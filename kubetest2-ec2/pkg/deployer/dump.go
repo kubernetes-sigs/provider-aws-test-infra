@@ -75,7 +75,7 @@ func (d *deployer) dumpCloudInitLogs() {
 
 func (d *deployer) kubectlDump() {
 	d.dumpRemoteLogs("cluster-info",
-		"kubectl",
+		"/usr/local/bin/kubectl",
 		"--kubeconfig",
 		"/etc/kubernetes/admin.conf",
 		"cluster-info",

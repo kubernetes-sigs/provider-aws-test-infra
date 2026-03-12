@@ -223,7 +223,7 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 	if err != nil {
 		return testInstance, fmt.Errorf("instance %s did not start running", testInstance.instanceID)
 	}
-	for i := 0; i < 30 && !instanceRunning; i++ {
+	for i := 0; i < 60 && !instanceRunning; i++ {
 		if i > 0 {
 			time.Sleep(time.Second * 15)
 		}
@@ -296,12 +296,12 @@ func (a *AWSRunner) isAWSInstanceRunning(testInstance *awsInstance) (*awsInstanc
 		}
 
 		if a.controlPlaneIP == *testInstance.instance.PrivateIpAddress {
-			output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf version")
+			output, err = remote.SSH(testInstance.instanceID, "/usr/local/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf version")
 			if err != nil {
 				err = fmt.Errorf("checking instance %s is api server running - Command failed: %s", testInstance.instanceID, output)
 				continue
 			}
-			output, err = remote.SSH(testInstance.instanceID, "kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name")
+			output, err = remote.SSH(testInstance.instanceID, "/usr/local/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name")
 			if err != nil {
 				err = fmt.Errorf("checking instance %s is node present - Command failed: %s", testInstance.instanceID, output)
 				continue

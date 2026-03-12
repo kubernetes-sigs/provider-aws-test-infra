@@ -58,10 +58,8 @@ else
   VERSION="{{STAGING_VERSION}}"
   FILE_NAME="kubernetes-server-linux-$ARCH.tar.gz"
   KEY="$VERSION/$FILE_NAME"
-
   echo "Waiting to see if s3://$BUCKET/$KEY is being updated..."
   wait_for_update "$BUCKET" "$KEY"
-
   aws s3 cp --no-progress "s3://$BUCKET/$KEY" "$FILE_NAME"
 fi
 
@@ -90,12 +88,10 @@ sed -i "s|{{NODE_IP}}|$NODE_IP|g" /etc/kubernetes/kubeadm-*.yaml
 
 sudo modprobe br_netfilter
 sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl restart kubelet
-
+sudo systemctl daemon-reload
 sudo ln -s /home/containerd/usr/local/bin/ctr /usr/local/bin/ctr || true
 # shellcheck disable=SC2038
 find ./kubernetes/server/bin -name "*.tar" -print | xargs -L 1 ctr -n k8s.io images import
-
 # shellcheck disable=SC2016
 ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
 
@@ -124,6 +120,7 @@ if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
     --upload-certs \
     --skip-certificate-key-print \
     --certificate-key "{{KUBEADM_CERTIFICATE_KEY}}"
+  sudo systemctl restart kubelet
 else
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-join.yaml
   sed -i "s|{{KUBEADM_CONTROL_PLANE_IP}}|$KUBEADM_CONTROL_PLANE_IP|g" /etc/kubernetes/kubeadm-join.yaml
@@ -131,4 +128,5 @@ else
    --v 10 \
    --ignore-preflight-errors=SystemVerification \
    --config /etc/kubernetes/kubeadm-join.yaml
+  sudo systemctl restart kubelet
 fi
