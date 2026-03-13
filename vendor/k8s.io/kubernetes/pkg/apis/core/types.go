@@ -221,7 +221,6 @@ type VolumeSource struct {
 	// The volume will be mounted read-only (ro).
 	// Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 	// The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
-	// +featureGate=ImageVolume
 	// +optional
 	Image *ImageVolumeSource
 }
@@ -5520,7 +5519,6 @@ type NodeRuntimeHandlerFeatures struct {
 	// +optional
 	RecursiveReadOnlyMounts *bool
 	// UserNamespaces is set to true if the runtime handler supports UserNamespaces, including for volumes.
-	// +featureGate=UserNamespacesSupport
 	// +optional
 	UserNamespaces *bool
 }
@@ -5665,7 +5663,6 @@ type NodeStatus struct {
 	// +optional
 	Config *NodeConfigStatus
 	// The available runtime handlers.
-	// +featureGate=UserNamespacesSupport
 	// +optional
 	RuntimeHandlers []NodeRuntimeHandler
 	// Features describes the set of features implemented by the CRI implementation.

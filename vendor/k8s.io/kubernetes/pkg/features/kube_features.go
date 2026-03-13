@@ -316,6 +316,13 @@ const (
 	// Locked to default, will remove in v1.38. Progress is reflected in KEP #1972 update
 	ExecProbeTimeout featuregate.Feature = "ExecProbeTimeout"
 
+	// owner: @seans3
+	// kep: http://kep.k8s.io/4006
+	//
+	// Enables the API server to proxy websockets to the kubelet for exec/attach
+	// if the kubelet has advertised that it supports them.
+	ExtendWebSocketsToKubelet featuregate.Feature = "ExtendWebSocketsToKubelet"
+
 	// owner: @HarshalNeelkamal
 	//
 	// Enables external service account JWT signing and key management.
@@ -1254,10 +1261,12 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	DRADeviceTaintRules: {
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Beta}, // Depends on an off-by-default beta API.
 	},
 
 	DRADeviceTaints: {
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	DRAExtendedResource: {
@@ -1328,6 +1337,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in v1.38
 	},
 
+	ExtendWebSocketsToKubelet: {
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
+	},
+
 	ExternalServiceAccountTokenSigner: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
@@ -1382,6 +1395,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA and LockToDefault in 1.36, remove in 1.39
 	},
 
 	ImageVolumeWithDigest: {
@@ -1464,11 +1478,13 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	KubeletPodResourcesDynamicResources: {
 		{Version: version.MustParse("1.27"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.37
 	},
 
 	KubeletPodResourcesGet: {
 		{Version: version.MustParse("1.27"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.37
 	},
 
 	KubeletPodResourcesListUseActivePods: {
@@ -1568,6 +1584,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	NodeDeclaredFeatures: {
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	NodeInclusionPolicyInPodTopologySpread: {
@@ -1737,6 +1754,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	RestartAllContainersOnContainerExits: {
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	RotateKubeletServerCertificate: {
@@ -1923,6 +1941,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.25"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.30"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.39.
 	},
 
 	VolumeAttributesClass: {
@@ -1968,6 +1987,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	apiextensionsfeatures.CRDObservedGenerationTracking: {
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	apiextensionsfeatures.CRDValidationRatcheting: {
@@ -2083,6 +2103,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	genericfeatures.ListFromCacheSnapshot: {
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
+	},
+
+	genericfeatures.ManifestBasedAdmissionControlConfig: {
+		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
 	genericfeatures.MutatingAdmissionPolicy: {
@@ -2275,6 +2299,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	EventedPLEG: {},
 
 	ExecProbeTimeout: {},
+
+	ExtendWebSocketsToKubelet: {NodeDeclaredFeatures},
 
 	ExternalServiceAccountTokenSigner: {},
 
@@ -2572,6 +2598,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	genericfeatures.KMSv1: {},
 
 	genericfeatures.ListFromCacheSnapshot: {},
+
+	genericfeatures.ManifestBasedAdmissionControlConfig: {},
 
 	genericfeatures.MutatingAdmissionPolicy: {},
 
