@@ -6120,7 +6120,7 @@ func validatePodResourceClaimStatuses(statuses []core.PodResourceClaimStatus, po
 		}
 		if status.ResourceClaimName != nil {
 			for _, detail := range ValidateResourceClaimName(*status.ResourceClaimName, false) {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), status.ResourceClaimName, detail))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("resourceClaimName"), status.ResourceClaimName, detail))
 			}
 		}
 	}
