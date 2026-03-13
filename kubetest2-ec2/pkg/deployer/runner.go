@@ -499,7 +499,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		if a.deployer.IPFamily == "dual" {
 			data = strings.ReplaceAll(data, "{{SERVICE_CIDR}}", "10.96.0.0/12,fd00:10:96::/112")
-			data = strings.ReplaceAll(data, "{{POD_CIDR}}", "192.168.0.0/16,fd00:10:244::/56")
+			// {{POD_CIDR}} left for run-kubeadm.sh to resolve from IMDS at boot
 		} else {
 			data = strings.ReplaceAll(data, "{{SERVICE_CIDR}}", "10.96.0.0/12")
 		}
@@ -568,6 +568,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
+		data = strings.ReplaceAll(data, "{{IP_FAMILY}}", a.deployer.IPFamily)
 
 		if loadBalancer {
 			data = strings.ReplaceAll(data, "{{EXTERNAL_LOAD_BALANCER}}", "true")

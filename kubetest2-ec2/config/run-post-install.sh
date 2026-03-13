@@ -4,9 +4,21 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   KC="--kubeconfig /etc/kubernetes/admin.conf"
   # shellcheck disable=SC2050
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
-    CNI_VERSION=v1.21.1
-    kubectl $KC create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/${CNI_VERSION}/config/master/aws-k8s-cni.yaml
-    kubectl $KC set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true MINIMUM_IP_TARGET=160 WARM_IP_TARGET=20 AWS_VPC_K8S_CNI_EXCLUDE_SNAT_CIDRS=10.0.0.0/8
+    if [[ "{{IP_FAMILY}}" == "dual" ]]; then
+      CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+      CLI_ARCH=amd64
+      if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
+      curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+      sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+      tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
+      rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+      HOME=/root cilium install --version 1.18.4 --set cni.chainingMode=portmap --set kubeProxyReplacement=false --set socketLB.enabled=false --set sessionAffinity=true --set externalIPs.enabled=true --set nodePort.enabled=true --set hostPort.enabled=false --set cluster.name=kubernetes --set ipam.mode=kubernetes --set ipv4.enabled=true --set ipv6.enabled=true $KC
+      HOME=/root cilium status --wait $KC
+    else
+      CNI_VERSION=v1.21.1
+      kubectl $KC create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/${CNI_VERSION}/config/master/aws-k8s-cni.yaml
+      kubectl $KC set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true MINIMUM_IP_TARGET=160 WARM_IP_TARGET=20 AWS_VPC_K8S_CNI_EXCLUDE_SNAT_CIDRS=10.0.0.0/8
+    fi
   else
     CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
     CLI_ARCH=amd64

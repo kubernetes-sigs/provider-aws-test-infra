@@ -95,6 +95,8 @@ if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   LOCAL_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
   FIRST_TWO_OCTETS=$(echo $LOCAL_IP | cut -d'.' -f1,2)
   POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks --header "X-aws-ec2-metadata-token: $TOKEN" | grep "$FIRST_TWO_OCTETS.")
+  VPC_IPV6_CIDR=$(curl -sf "$META_URL/network/interfaces/macs/${MAC}vpc-ipv6-cidr-blocks" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
+  [ -n "$VPC_IPV6_CIDR" ] && POD_CIDR="${POD_CIDR},${VPC_IPV6_CIDR}"
 
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
   EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
