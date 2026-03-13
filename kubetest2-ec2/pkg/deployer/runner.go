@@ -588,9 +588,9 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		}
 
 		if a.deployer.IPFamily == "dual" {
-			data = strings.ReplaceAll(userdata, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/nrb/cloud-provider-aws/refs/heads/dual-stack-example/examples/existing-cluster-dual-stack/base") // TODO(nrb): Update this once https://github.com/kubernetes/cloud-provider-aws/pull/1356 merges
+			data = strings.ReplaceAll(data, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/nrb/cloud-provider-aws/refs/heads/dual-stack-example/examples/existing-cluster-dual-stack/base") // TODO(nrb): Update this once https://github.com/kubernetes/cloud-provider-aws/pull/1356 merges
 		} else {
-			data = strings.ReplaceAll(userdata, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/master/examples/existing-cluster/base")
+			data = strings.ReplaceAll(data, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/master/examples/existing-cluster/base")
 		}
 
 		return data
