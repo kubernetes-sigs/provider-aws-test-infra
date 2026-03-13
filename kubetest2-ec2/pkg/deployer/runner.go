@@ -393,16 +393,30 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
 	}
-	if len(userControlPlane) > 16384 { // 16KB
-		return nil, fmt.Errorf("control plane user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
+	if err := a.dumpUserData("userdata-control-plane.yaml", userControlPlane); err != nil {
+		klog.Warningf("failed to write control plane userdata artifact: %v", err)
+	}
+	compressedCP, err := utils.GzipBytes([]byte(userControlPlane))
+	if err != nil {
+		return nil, fmt.Errorf("compressing control plane userdata for size check: %w", err)
+	}
+	if len(compressedCP) > 16384 {
+		return nil, fmt.Errorf("control plane user data is too large after compression (%d bytes); see userdata-control-plane.yaml in artifacts for content", len(compressedCP))
 	}
 
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load worker user data %s : %w", a.deployer.WorkerUserDataFile, err)
 	}
-	if len(userDataWorkerNode) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userDataWorkerNode), userDataWorkerNode)
+	if err := a.dumpUserData("userdata-worker.yaml", userDataWorkerNode); err != nil {
+		klog.Warningf("failed to write worker userdata artifact: %v", err)
+	}
+	compressedWorker, err := utils.GzipBytes([]byte(userDataWorkerNode))
+	if err != nil {
+		return nil, fmt.Errorf("compressing worker userdata for size check: %w", err)
+	}
+	if len(compressedWorker) > 16384 {
+		return nil, fmt.Errorf("worker user data is too large after compression (%d bytes); see userdata-worker.yaml in artifacts for content", len(compressedWorker))
 	}
 
 	klog.Infof("using %s for control plane image", a.deployer.Image)
@@ -650,6 +664,14 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		publicIP:   *instance.PublicIpAddress,
 		privateIP:  *instance.PrivateIpAddress,
 	}, nil
+}
+
+func (a *AWSRunner) dumpUserData(filename, content string) error {
+	dir := a.deployer.logsDir
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, filename), []byte(content), 0644)
 }
 
 // assignNewSSHKey generates a new SSH key-pair and assigns it to the EC2 instance using EC2-instance connect. It then

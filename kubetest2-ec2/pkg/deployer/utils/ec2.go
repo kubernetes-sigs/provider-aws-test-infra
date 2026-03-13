@@ -98,7 +98,11 @@ func LaunchNewInstance(ec2Service *ec2v2.Client, iamService *iamv2.Client,
 	}
 	if len(img.UserData) > 0 {
 		data := strings.ReplaceAll(img.UserData, "{{KUBEADM_CONTROL_PLANE_IP}}", controlPlaneIP)
-		input.UserData = awsv2.String(base64.StdEncoding.EncodeToString([]byte(data)))
+		compressed, err := GzipBytes([]byte(data))
+		if err != nil {
+			return nil, fmt.Errorf("compressing userdata: %w", err)
+		}
+		input.UserData = awsv2.String(base64.StdEncoding.EncodeToString(compressed))
 	}
 	if img.InstanceProfile != "" {
 		arn, err := GetInstanceProfileArn(iamService, img.InstanceProfile)
