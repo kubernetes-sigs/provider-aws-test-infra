@@ -59,6 +59,7 @@ type AWSRunner struct {
 	certificateKey     string
 	controlPlaneIP     string
 	subnetID           string
+	vpcID              string
 }
 
 type awsInstance struct {
@@ -392,16 +393,30 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
 	}
-	if len(userControlPlane) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
+	if err := a.dumpUserData("userdata-control-plane.yaml", userControlPlane); err != nil {
+		klog.Warningf("failed to write control plane userdata artifact: %v", err)
+	}
+	compressedCP, err := utils.GzipBytes([]byte(userControlPlane))
+	if err != nil {
+		return nil, fmt.Errorf("compressing control plane userdata for size check: %w", err)
+	}
+	if len(compressedCP) > 16384 {
+		return nil, fmt.Errorf("control plane user data is too large after compression (%d bytes); see userdata-control-plane.yaml in artifacts for content", len(compressedCP))
 	}
 
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load worker user data %s : %w", a.deployer.WorkerUserDataFile, err)
 	}
-	if len(userDataWorkerNode) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userDataWorkerNode), userDataWorkerNode)
+	if err := a.dumpUserData("userdata-worker.yaml", userDataWorkerNode); err != nil {
+		klog.Warningf("failed to write worker userdata artifact: %v", err)
+	}
+	compressedWorker, err := utils.GzipBytes([]byte(userDataWorkerNode))
+	if err != nil {
+		return nil, fmt.Errorf("compressing worker userdata for size check: %w", err)
+	}
+	if len(compressedWorker) > 16384 {
+		return nil, fmt.Errorf("worker user data is too large after compression (%d bytes); see userdata-worker.yaml in artifacts for content", len(compressedWorker))
 	}
 
 	klog.Infof("using %s for control plane image", a.deployer.Image)
@@ -482,6 +497,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		data = strings.ReplaceAll(data, "{{RUNTIME_CONFIG}}", a.deployer.RuntimeConfig)
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
+		if a.deployer.IPFamily == "dual" {
+			data = strings.ReplaceAll(data, "{{SERVICE_CIDR}}", "10.96.0.0/12,fd00:10:96::/112")
+			// {{POD_CIDR}} left for run-kubeadm.sh to resolve from IMDS at boot
+		} else {
+			data = strings.ReplaceAll(data, "{{SERVICE_CIDR}}", "10.96.0.0/12")
+		}
 		return data
 	})
 	if err != nil {
@@ -547,6 +568,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{FEATURE_GATES}}", a.deployer.FeatureGates)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER_IMAGE}}", a.deployer.ExternalCloudProviderImage)
+		data = strings.ReplaceAll(data, "{{IP_FAMILY}}", a.deployer.IPFamily)
 
 		if loadBalancer {
 			data = strings.ReplaceAll(data, "{{EXTERNAL_LOAD_BALANCER}}", "true")
@@ -564,6 +586,12 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 			data = strings.ReplaceAll(data, "{{ENABLE_DRA_NVIDIA}}", "true")
 		} else {
 			data = strings.ReplaceAll(data, "{{ENABLE_DRA_NVIDIA}}", "false")
+		}
+
+		if a.deployer.IPFamily == "dual" {
+			data = strings.ReplaceAll(data, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/nrb/cloud-provider-aws/refs/heads/dual-stack-example/examples/existing-cluster-dual-stack/base") // TODO(nrb): Update this once https://github.com/kubernetes/cloud-provider-aws/pull/1356 merges
+		} else {
+			data = strings.ReplaceAll(data, "{{EXTERNAL_CCM_DAEMONSET_URL}}", "https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/master/examples/existing-cluster/base")
 		}
 
 		return data
@@ -597,10 +625,15 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 
 	if a.subnetID == "" {
 		var err error
-		var vpcID string
-		a.subnetID, vpcID, err = utils.PickSubnetID(a.ec2Service)
+		a.subnetID, a.vpcID, err = utils.PickSubnetID(a.ec2Service)
 		if err != nil {
-			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, vpcID)
+			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, a.vpcID)
+		}
+	}
+
+	if a.deployer.IPFamily != "" && a.deployer.IPFamily != "ipv4" {
+		if _, err := utils.EnsureIPv6(context.TODO(), a.ec2Service, a.vpcID, a.subnetID); err != nil {
+			return nil, fmt.Errorf("ensuring IPv6 on subnet %s: %w", a.subnetID, err)
 		}
 	}
 
@@ -611,7 +644,8 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		a.deployer.ClusterID,
 		a.controlPlaneIP,
 		img,
-		a.subnetID)
+		a.subnetID,
+		a.deployer.IPFamily)
 	if err != nil {
 		return nil, fmt.Errorf("unable to launch instance : %w", err)
 	}
@@ -631,6 +665,14 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		publicIP:   *instance.PublicIpAddress,
 		privateIP:  *instance.PrivateIpAddress,
 	}, nil
+}
+
+func (a *AWSRunner) dumpUserData(filename, content string) error {
+	dir := a.deployer.logsDir
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, filename), []byte(content), 0644)
 }
 
 // assignNewSSHKey generates a new SSH key-pair and assigns it to the EC2 instance using EC2-instance connect. It then

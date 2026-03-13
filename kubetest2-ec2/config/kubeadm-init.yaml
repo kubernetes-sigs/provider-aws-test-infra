@@ -38,6 +38,7 @@ scheduler:
   extraArgs:
     feature-gates: {{FEATURE_GATES}}
 networking:
+  serviceSubnet: {{SERVICE_CIDR}}
   podSubnet: {{POD_CIDR}}
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1

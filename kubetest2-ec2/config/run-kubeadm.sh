@@ -16,14 +16,12 @@ wait_for_update() {
         current_size=$(get_size "$bucket" "$key")
 
         if [[ "$current_etag" == "$previous_etag" && "$current_size" == "$previous_size" ]]; then
-            echo "File is stable. Ready for download."
             return 0
         fi
 
         previous_etag=$current_etag
         previous_size=$current_size
     done
-
     echo "Timeout reached. File may still be updating."
     return 2
 }
@@ -58,10 +56,8 @@ else
   VERSION="{{STAGING_VERSION}}"
   FILE_NAME="kubernetes-server-linux-$ARCH.tar.gz"
   KEY="$VERSION/$FILE_NAME"
-
   echo "Waiting to see if s3://$BUCKET/$KEY is being updated..."
   wait_for_update "$BUCKET" "$KEY"
-
   aws s3 cp --no-progress "s3://$BUCKET/$KEY" "$FILE_NAME"
 fi
 
@@ -73,12 +69,15 @@ curl -sSL --fail --retry 5 https://storage.googleapis.com/k8s-artifacts-cri-tool
 
 TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
 META_URL=http://169.254.169.254/latest/meta-data
-# generate the right provider-id and host name needed for external aws cloud provider
 AVAILABILITY_ZONE=$(curl -s $META_URL/placement/availability-zone --header "X-aws-ec2-metadata-token: $TOKEN")
 INSTANCE_ID=$(curl -s $META_URL/instance-id --header "X-aws-ec2-metadata-token: $TOKEN")
 PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
 PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname --header "X-aws-ec2-metadata-token: $TOKEN")
 NODE_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
+
+IFACE_MAC=$(curl -s $META_URL/network/interfaces/macs/ --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
+IPV6_ADDR=$(curl -sf "$META_URL/network/interfaces/macs/${IFACE_MAC}ipv6s" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
+[ -n "$IPV6_ADDR" ] && NODE_IP="${IPV6_ADDR},${NODE_IP}"
 
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
@@ -87,21 +86,17 @@ sed -i "s|{{NODE_IP}}|$NODE_IP|g" /etc/kubernetes/kubeadm-*.yaml
 sudo modprobe br_netfilter
 sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl restart kubelet
-
 sudo ln -s /home/containerd/usr/local/bin/ctr /usr/local/bin/ctr || true
-# shellcheck disable=SC2038
 find ./kubernetes/server/bin -name "*.tar" -print | xargs -L 1 ctr -n k8s.io images import
-
-# shellcheck disable=SC2016
 ctr -n k8s.io images ls -q | grep -e $ARCH | xargs -L 1 -I '{}' /bin/bash -c 'ctr -n k8s.io images tag "{}" "$(echo "{}" | sed s/-'$ARCH':/:/)"'
-
-# {{KUBEADM_CONTROL_PLANE}} should be "true" or "false"
 if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600" -s)
   MAC=$(curl -s $META_URL/network/interfaces/macs/ -s --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
   LOCAL_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
   FIRST_TWO_OCTETS=$(echo $LOCAL_IP | cut -d'.' -f1,2)
   POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks --header "X-aws-ec2-metadata-token: $TOKEN" | grep "$FIRST_TWO_OCTETS.")
+  VPC_IPV6_CIDR=$(curl -sf "$META_URL/network/interfaces/macs/${MAC}vpc-ipv6-cidr-blocks" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
+  [ -n "$VPC_IPV6_CIDR" ] && POD_CIDR="${POD_CIDR},${VPC_IPV6_CIDR}"
 
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
   EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
