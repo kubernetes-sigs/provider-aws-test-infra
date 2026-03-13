@@ -2,7 +2,7 @@ apiVersion: kubeadm.k8s.io/v1beta3
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
-    apiServerEndpoint: {{KUBEADM_CONTROL_PLANE_IP}}:6443
+    apiServerEndpoint: "{{KUBEADM_CONTROL_PLANE_IP}}:6443"
     token: {{BOOTSTRAP_TOKEN}}
     unsafeSkipCAVerification: true
 nodeRegistration:
@@ -12,7 +12,7 @@ nodeRegistration:
     feature-gates: {{FEATURE_GATES}}
     cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
     provider-id: {{PROVIDER_ID}}
-    node-ip: {{NODE_IP}}
+    node-ip: "{{NODE_IP}}"
     hostname-override: {{HOSTNAME_OVERRIDE}}
     image-credential-provider-bin-dir: /usr/local/bin
     image-credential-provider-config: /etc/kubernetes/credential-provider.yaml
