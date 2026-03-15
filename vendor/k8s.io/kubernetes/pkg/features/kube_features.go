@@ -668,6 +668,11 @@ const (
 	// Enables ordered namespace deletion.
 	OrderedNamespaceDeletion featuregate.Feature = "OrderedNamespaceDeletion"
 
+	// owner: @tallclair
+	//
+	// Enables relisting individual pods on-demand.
+	PLEGOnDemandRelist featuregate.Feature = "PLEGOnDemandRelist"
+
 	// owner: @haircommander
 	// kep: https://kep.k8s.io/2364
 	//
@@ -685,6 +690,13 @@ const (
 	//
 	// Enables controlling pod ranking on replicaset scale-down.
 	PodDeletionCost featuregate.Feature = "PodDeletionCost"
+
+	// owner: @KevinTMtz
+	// kep: https://kep.k8s.io/5526
+	//
+	// PodLevelResourceManagers enables pod-level resource management in the Topology, CPU, and Memory managers.
+	// This feature depends on the PodLevelResources feature.
+	PodLevelResourceManagers featuregate.Feature = "PodLevelResourceManagers"
 
 	// owner: @ndixita
 	// key: https://kep.k8s.io/2837
@@ -1620,6 +1632,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.37
 	},
 
+	PLEGOnDemandRelist: {
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
+	},
+
 	PodAndContainerStatsFromCRI: {
 		{Version: version.MustParse("1.23"), Default: false, PreRelease: featuregate.Alpha},
 	},
@@ -1632,6 +1648,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	PodDeletionCost: {
 		{Version: version.MustParse("1.21"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.22"), Default: true, PreRelease: featuregate.Beta},
+	},
+
+	PodLevelResourceManagers: {
+		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
 	PodLevelResources: {
@@ -1696,6 +1716,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.12"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.39
 	},
 
 	QOSReserved: {
@@ -2408,11 +2429,15 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	OrderedNamespaceDeletion: {},
 
+	PLEGOnDemandRelist: {},
+
 	PodAndContainerStatsFromCRI: {},
 
 	PodCertificateRequest: {AuthorizeNodeWithSelectors},
 
 	PodDeletionCost: {},
+
+	PodLevelResourceManagers: {PodLevelResources},
 
 	PodLevelResources: {},
 
