@@ -526,6 +526,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{STAGING_VERSION}}", version)
 		data = strings.ReplaceAll(data, "{{KUBEADM_TOKEN}}", a.token)
 		data = strings.ReplaceAll(data, "{{KUBEADM_CERTIFICATE_KEY}}", a.certificateKey)
+		data = strings.ReplaceAll(data, "{{IP_FAMILY}}", a.deployer.IPFamily)
 		return data
 	})
 	if err != nil {
