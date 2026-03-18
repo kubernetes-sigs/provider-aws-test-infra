@@ -156,6 +156,15 @@ func (d *deployer) Down() error {
 	if err := d.DumpClusterLogs(); err != nil {
 		klog.Warningf("Dumping cluster logs at the start of Down() failed: %s", err)
 	}
+	if d.IPFamily != "" && d.IPFamily != "ipv4" {
+		for _, instance := range d.runner.instances {
+			if instance.networkInterfaceID != "" && instance.ipv6Address != "" {
+				if err := utils.UnassignIPv6FromInstance(context.TODO(), d.runner.ec2Service, instance.networkInterfaceID, instance.ipv6Address); err != nil {
+					klog.Warningf("failed to unassign IPv6 from instance %s: %v", instance.instanceID, err)
+				}
+			}
+		}
+	}
 	for _, instance := range d.runner.instances {
 		_, err := d.runner.ec2Service.TerminateInstances(context.TODO(), &ec2v2.TerminateInstancesInput{
 			InstanceIds: []string{instance.instanceID},

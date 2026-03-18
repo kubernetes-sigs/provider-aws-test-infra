@@ -63,12 +63,14 @@ type AWSRunner struct {
 }
 
 type awsInstance struct {
-	instance         *ec2typesv2.Instance
-	instanceID       string
-	sshKey           *utils.TemporarySSHKey
-	publicIP         string
-	privateIP        string
-	sshPublicKeyFile string
+	instance           *ec2typesv2.Instance
+	instanceID         string
+	sshKey             *utils.TemporarySSHKey
+	publicIP           string
+	privateIP          string
+	ipv6Address        string
+	networkInterfaceID string
+	sshPublicKeyFile   string
 }
 
 var operatingSystems = []string{
@@ -660,12 +662,22 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 	if instance.PrivateIpAddress == nil {
 		return nil, fmt.Errorf("missing private ip address for instance id : %s", *instance.InstanceId)
 	}
-	return &awsInstance{
+	ai := &awsInstance{
 		instanceID: *instance.InstanceId,
 		instance:   instance,
 		publicIP:   *instance.PublicIpAddress,
 		privateIP:  *instance.PrivateIpAddress,
-	}, nil
+	}
+	if a.deployer.IPFamily != "" && a.deployer.IPFamily != "ipv4" {
+		if len(instance.NetworkInterfaces) > 0 {
+			ni := instance.NetworkInterfaces[0]
+			ai.networkInterfaceID = awsv2.ToString(ni.NetworkInterfaceId)
+			if len(ni.Ipv6Addresses) > 0 {
+				ai.ipv6Address = awsv2.ToString(ni.Ipv6Addresses[0].Ipv6Address)
+			}
+		}
+	}
+	return ai, nil
 }
 
 func (a *AWSRunner) dumpUserData(filename, content string) error {

@@ -316,13 +316,6 @@ func EnsureIPv6(ctx context.Context, svc *ec2v2.Client, vpcID, subnetID string) 
 		}
 	}
 
-	if _, err := svc.ModifySubnetAttribute(ctx, &ec2v2.ModifySubnetAttributeInput{
-		SubnetId:                    awsv2.String(subnetID),
-		AssignIpv6AddressOnCreation: &ec2typesv2.AttributeBooleanValue{Value: awsv2.Bool(true)},
-	}); err != nil {
-		return "", fmt.Errorf("enable IPv6 auto-assignment on subnet %s: %w", subnetID, err)
-	}
-
 	// 4. Add ::/0 route via the IGW to the subnet's route table (if not already present)
 	igwOut, err := svc.DescribeInternetGateways(ctx, &ec2v2.DescribeInternetGatewaysInput{
 		Filters: []ec2typesv2.Filter{
@@ -431,22 +424,6 @@ func TeardownIPv6Subnet(ctx context.Context, svc *ec2v2.Client, subnetID string)
 		return nil // already deleted
 	}
 
-	// AWS's API needs a *bool, not just a bool.
-	falseVal := false
-
-	// Remove the IPv6 auto-assignment before disassociating the IPv6 CIDR.
-	modifyInput := &ec2v2.ModifySubnetAttributeInput{
-		SubnetId: &subnetID,
-		AssignIpv6AddressOnCreation: &ec2typesv2.AttributeBooleanValue{
-			Value: &falseVal,
-		},
-	}
-
-	_, err = svc.ModifySubnetAttribute(ctx, modifyInput)
-	if err != nil {
-		return fmt.Errorf("could not disable ipv6 creation on assignment for subnet %s: %w", subnetID, err)
-	}
-
 	err = waitForIPv6Association(ctx, svc, func(ctx context.Context, svc *ec2v2.Client) error {
 		for _, a := range out.Subnets[0].Ipv6CidrBlockAssociationSet {
 			if a.Ipv6CidrBlockState.State == ec2typesv2.SubnetCidrBlockStateCodeAssociated {
@@ -471,4 +448,13 @@ func TeardownIPv6Subnet(ctx context.Context, svc *ec2v2.Client, subnetID string)
 	}
 
 	return nil
+}
+
+// UnassignIPv6FromInstance removes a specific IPv6 address from an instance's network interface.
+func UnassignIPv6FromInstance(ctx context.Context, svc *ec2v2.Client, networkInterfaceID, ipv6Addr string) error {
+	_, err := svc.UnassignIpv6Addresses(ctx, &ec2v2.UnassignIpv6AddressesInput{
+		NetworkInterfaceId: awsv2.String(networkInterfaceID),
+		Ipv6Addresses:      []string{ipv6Addr},
+	})
+	return err
 }
