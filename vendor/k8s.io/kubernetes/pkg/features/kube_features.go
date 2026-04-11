@@ -344,13 +344,6 @@ const (
 	// based on "structured parameters".
 	DynamicResourceAllocation featuregate.Feature = "DynamicResourceAllocation"
 
-	// owner: @helayoty @mm4tt @wojtek-t
-	// kep: https://kep.k8s.io/5547
-	//
-	// Enables the Job controller to automatically create Workload and PodGroup
-	// objects for Jobs that qualify for gang scheduling.
-	EnableWorkloadWithJob featuregate.Feature = "EnableWorkloadWithJob"
-
 	// owner: @HirazawaUi
 	// kep: http://kep.k8s.io/3721
 	//
@@ -1225,6 +1218,13 @@ const (
 	// Enables support for workload-aware preemption in pod group scheduling cycle
 	// and related PodGroup and Workload API fields.
 	WorkloadAwarePreemption featuregate.Feature = "WorkloadAwarePreemption"
+
+	// owner: @helayoty @mm4tt @wojtek-t
+	// kep: https://kep.k8s.io/5547
+	//
+	// Enables the Job controller to automatically create Workload and PodGroup
+	// objects for Jobs that qualify for gang scheduling.
+	WorkloadWithJob featuregate.Feature = "WorkloadWithJob"
 )
 
 // defaultVersionedKubernetesFeatureGates consists of all known Kubernetes-specific feature keys with VersionedSpecs.
@@ -1446,10 +1446,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA},
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 		// TODO (https://github.com/kubernetes/kubernetes/issues/134459): remove completely in 1.38
-	},
-
-	EnableWorkloadWithJob: {
-		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
 	EnvFiles: {
@@ -2142,6 +2138,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
+	WorkloadWithJob: {
+		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Alpha},
+	},
+
 	apiextensionsfeatures.CRDObservedGenerationTracking: {
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
@@ -2470,8 +2470,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	DynamicResourceAllocation: {},
 
-	EnableWorkloadWithJob: {GenericWorkload},
-
 	EnvFiles: {},
 
 	EventedPLEG: {},
@@ -2743,6 +2741,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	WindowsHostNetwork: {},
 
 	WorkloadAwarePreemption: {GangScheduling},
+
+	WorkloadWithJob: {GenericWorkload},
 
 	apiextensionsfeatures.CRDObservedGenerationTracking: {},
 
