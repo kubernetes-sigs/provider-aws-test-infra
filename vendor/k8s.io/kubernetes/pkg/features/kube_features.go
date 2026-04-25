@@ -406,6 +406,11 @@ const (
 	// Enables support of configurable HPA scale-up and scale-down tolerances.
 	HPAConfigurableTolerance featuregate.Feature = "HPAConfigurableTolerance"
 
+	// owner: @adrianmoisey
+	//
+	// Enables generation tracking for HorizontalPodAutoscaler
+	HPAGeneration featuregate.Feature = "HPAGeneration"
+
 	// owner: @johanneswuerbach
 	// kep: https://kep.k8s.io/2021
 	//
@@ -968,13 +973,6 @@ const (
 	// This allows to process potentially schedulable pods ASAP, eliminating a penalty effect of the backoff queue.
 	SchedulerPopFromBackoffQ featuregate.Feature = "SchedulerPopFromBackoffQ"
 
-	// owner: @sanposhiho
-	// kep: http://kep.k8s.io/4247
-	//
-	// Enables the scheduler's enhancement called QueueingHints,
-	// which benefits to reduce the useless requeueing.
-	SchedulerQueueingHints featuregate.Feature = "SchedulerQueueingHints"
-
 	// owner: @atosatto @yuanchen8911
 	// kep: http://kep.k8s.io/3902
 	//
@@ -1018,14 +1016,6 @@ const (
 	//
 	// When enabled, the apiserver ignores changes to status fields in writes to the ServiceCIDR root resource.
 	ServiceCIDRStatusFieldWiping featuregate.Feature = "ServiceCIDRStatusFieldWiping"
-
-	// owner: @gjkim42 @SergeyKanzhelev @matthyx @tzneal
-	// kep: http://kep.k8s.io/753
-	//
-	// Introduces sidecar containers, a new type of init container that starts
-	// before other containers but remains running for the full duration of the
-	// pod's lifecycle and will not block pod termination.
-	SidecarContainers featuregate.Feature = "SidecarContainers"
 
 	// owner: @michaelasp
 	// kep: http://kep.k8s.io/5647
@@ -1190,7 +1180,7 @@ const (
 	WinOverlay featuregate.Feature = "WinOverlay"
 
 	// owner: @jsturtevant
-	// kep: https://kep.k8s.io/4888
+	// kep: https://kep.k8s.io/4885
 	//
 	// Add CPU and Memory Affinity support to Windows nodes with CPUManager, MemoryManager and Topology manager
 	WindowsCPUAndMemoryAffinity featuregate.Feature = "WindowsCPUAndMemoryAffinity"
@@ -1487,6 +1477,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	HPAConfigurableTolerance: {
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.Beta},
+	},
+
+	HPAGeneration: {
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	HPAScaleToZero: {
@@ -1934,12 +1928,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
 	},
 
-	SchedulerQueueingHints: {
-		{Version: version.MustParse("1.28"), Default: false, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.32"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	},
-
 	SeparateTaintEvictionController: {
 		{Version: version.MustParse("1.29"), Default: true, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.37 (locked to default in 1.34)
@@ -1977,12 +1965,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	ServiceCIDRStatusFieldWiping: {
 		{Version: version.MustParse("1.0"), Default: false, PreRelease: featuregate.GA},
 		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Deprecated},
-	},
-
-	SidecarContainers: {
-		{Version: version.MustParse("1.28"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.29"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.33"), Default: true, LockToDefault: true, PreRelease: featuregate.GA}, // GA in 1.33 remove in 1.36
 	},
 
 	StaleControllerConsistencyDaemonSet: {
@@ -2479,6 +2461,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	HPAConfigurableTolerance: {},
 
+	HPAGeneration: {},
+
 	HPAScaleToZero: {},
 
 	HostnameOverride: {},
@@ -2653,8 +2637,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	SchedulerPopFromBackoffQ: {},
 
-	SchedulerQueueingHints: {},
-
 	SeparateTaintEvictionController: {},
 
 	ServiceAccountNodeAudienceRestriction: {},
@@ -2668,8 +2650,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	ServiceAccountTokenPodNodeInfo: {},
 
 	ServiceCIDRStatusFieldWiping: {},
-
-	SidecarContainers: {},
 
 	StaleControllerConsistencyDaemonSet: {featuregate.Feature(clientfeatures.AtomicFIFO)},
 
