@@ -29,6 +29,22 @@ import (
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/config"
 )
 
+// GzipBytes compresses data using gzip at best-compression level.
+func GzipBytes(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	gz, err := gzip.NewWriterLevel(&buf, flate.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := gz.Write(data); err != nil {
+		return nil, err
+	}
+	if err := gz.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 func gzipAndBase64Encode(fileBytes []byte) (string, error) {
 	var buffer bytes.Buffer
 	gz, err := gzip.NewWriterLevel(&buffer, flate.BestCompression)

@@ -80,6 +80,13 @@ PROVIDER_ID="aws:///$AVAILABILITY_ZONE/$INSTANCE_ID"
 PRIVATE_DNS_NAME=$(curl -s $META_URL/hostname --header "X-aws-ec2-metadata-token: $TOKEN")
 NODE_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
 
+IPV6_ADDR=""
+if [[ "{{IP_FAMILY}}" == "dual" ]]; then
+  IFACE_MAC=$(curl -s $META_URL/network/interfaces/macs/ --header "X-aws-ec2-metadata-token: $TOKEN" | head -n 1)
+  IPV6_ADDR=$(curl -sf "$META_URL/network/interfaces/macs/${IFACE_MAC}ipv6s" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
+  [ -n "$IPV6_ADDR" ] && NODE_IP="::"
+fi
+
 sed -i "s|{{PROVIDER_ID}}|$PROVIDER_ID|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{HOSTNAME_OVERRIDE}}|$PRIVATE_DNS_NAME|g" /etc/kubernetes/kubeadm-*.yaml
 sed -i "s|{{NODE_IP}}|$NODE_IP|g" /etc/kubernetes/kubeadm-*.yaml
@@ -102,6 +109,10 @@ if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   LOCAL_IP=$(curl -s $META_URL/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
   FIRST_TWO_OCTETS=$(echo $LOCAL_IP | cut -d'.' -f1,2)
   POD_CIDR=$(curl -s $META_URL/network/interfaces/macs/"$MAC"/vpc-ipv4-cidr-blocks --header "X-aws-ec2-metadata-token: $TOKEN" | grep "$FIRST_TWO_OCTETS.")
+  if [[ "{{IP_FAMILY}}" == "dual" ]]; then
+    VPC_IPV6_CIDR=$(curl -sf "$META_URL/network/interfaces/macs/${MAC}vpc-ipv6-cidr-blocks" --header "X-aws-ec2-metadata-token: $TOKEN" 2>/dev/null | head -n 1 || true)
+    [ -n "$VPC_IPV6_CIDR" ] && POD_CIDR="${VPC_IPV6_CIDR},${POD_CIDR}"
+  fi
 
   sed -i "s|{{BOOTSTRAP_TOKEN}}|{{KUBEADM_TOKEN}}|g" /etc/kubernetes/kubeadm-init.yaml
   EXTRA_SANS=$(curl -s --connect-timeout 3 $META_URL/public-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
@@ -109,6 +120,11 @@ if [[ ${KUBEADM_CONTROL_PLANE} == true ]]; then
   KUBERNETES_VERSION=$(kubelet --version | awk '{print $2}')
   sed -i "s|{{KUBERNETES_VERSION}}|$KUBERNETES_VERSION|g" /etc/kubernetes/kubeadm-init.yaml
   sed -i "s|{{POD_CIDR}}|$POD_CIDR|g" /etc/kubernetes/kubeadm-init.yaml
+  if [[ "{{IP_FAMILY}}" == "dual" && -n "$IPV6_ADDR" ]]; then
+    sed -i "s|{{ADVERTISE_ADDRESS}}|::|g" /etc/kubernetes/kubeadm-init.yaml
+  else
+    sed -i "s|{{ADVERTISE_ADDRESS}}|$LOCAL_IP|g" /etc/kubernetes/kubeadm-init.yaml
+  fi
 
   kubeadm init \
    --v 10 \
