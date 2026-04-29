@@ -2288,12 +2288,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.15"), Default: true, PreRelease: featuregate.Beta},
 	},
 
-	genericfeatures.StructuredAuthenticationConfiguration: {
-		{Version: version.MustParse("1.29"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.30"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA and LockToDefault in 1.34, remove in 1.37
-	},
-
 	genericfeatures.StructuredAuthenticationConfigurationEgressSelector: {
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
 	},
@@ -2778,11 +2772,9 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	genericfeatures.StorageVersionHash: {},
 
-	genericfeatures.StructuredAuthenticationConfiguration: {},
+	genericfeatures.StructuredAuthenticationConfigurationEgressSelector: {},
 
-	genericfeatures.StructuredAuthenticationConfigurationEgressSelector: {genericfeatures.StructuredAuthenticationConfiguration},
-
-	genericfeatures.StructuredAuthenticationConfigurationJWKSMetrics: {genericfeatures.StructuredAuthenticationConfiguration},
+	genericfeatures.StructuredAuthenticationConfigurationJWKSMetrics: {},
 
 	genericfeatures.TokenRequestServiceAccountUIDValidation: {},
 
