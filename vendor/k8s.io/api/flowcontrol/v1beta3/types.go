@@ -125,6 +125,7 @@ const (
 
 // FlowSchema defines the schema of a group of flows. Note that a flow is made up of a set of inbound API requests with
 // similar attributes and is identified by a pair of strings: the name of the FlowSchema and a "flow distinguisher".
+// +k8s:supportsSubresource="/status"
 type FlowSchema struct {
 	metav1.TypeMeta `json:",inline"`
 	// `metadata` is the standard object's metadata.
@@ -403,6 +404,7 @@ type FlowSchemaConditionType string
 // +k8s:prerelease-lifecycle-gen:replacement=flowcontrol.apiserver.k8s.io,v1,PriorityLevelConfiguration
 
 // PriorityLevelConfiguration represents the configuration of a priority level.
+// +k8s:supportsSubresource="/status"
 type PriorityLevelConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// `metadata` is the standard object's metadata.

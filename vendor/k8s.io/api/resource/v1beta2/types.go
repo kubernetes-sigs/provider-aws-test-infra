@@ -852,6 +852,7 @@ const (
 // DeviceTaintRule adds one taint to all devices which match the selector.
 // This has the same effect as if the taint was specified directly
 // in the ResourceSlice by the DRA driver.
+// +k8s:supportsSubresource="/status"
 type DeviceTaintRule struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata
