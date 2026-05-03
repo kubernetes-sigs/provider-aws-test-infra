@@ -755,6 +755,7 @@ type DeviceAttribute struct {
 	// +k8s:listType=atomic
 	// +k8s:alpha(since: "1.36")=+k8s:optional
 	// +k8s:alpha(since: "1.36")=+k8s:unionMember
+	// +k8s:alpha(since: "1.37")=+k8s:eachVal=+k8s:maxBytes=64
 	// +featureGate=DRAListTypeAttributes
 	StringValues []string `json:"strings,omitempty" protobuf:"bytes,8,opt,name=strings"`
 
@@ -1319,7 +1320,7 @@ type CELDeviceSelector struct {
 	//  - driver (string): the name of the driver which defines this device.
 	//  - attributes (map[string]object): the device's attributes, grouped by prefix
 	//    (e.g. device.attributes["dra.example.com"] evaluates to an object with all
-	//    of the attributes which were prefixed by "dra.example.com".
+	//    of the attributes which were prefixed by "dra.example.com").
 	//  - capacity (map[string]object): the device's capacities, grouped by prefix.
 	//  - allowMultipleAllocations (bool): the allowMultipleAllocations property of the device
 	//    (v1.34+ with the DRAConsumableCapacity feature enabled).
@@ -1351,6 +1352,15 @@ type CELDeviceSelector struct {
 	//
 	// A robust expression should check for the existence of attributes
 	// before referencing them.
+	//
+	// Common errors:
+	// - "no such key": Use optional chaining (.? followed by orValue())
+	//   or guarding the check with has() for optional fields.
+	//   See CEL Optional Types for details:
+	//   https://pkg.go.dev/github.com/google/cel-go@v0.17.4/cel#OptionalTypes
+	//
+	// For more CEL expression syntax and examples, see:
+	// https://kubernetes.io/docs/reference/using-api/cel/
 	//
 	// For ease of use, the cel.bind() function is enabled, and can be used
 	// to simplify expressions that access multiple attributes with the

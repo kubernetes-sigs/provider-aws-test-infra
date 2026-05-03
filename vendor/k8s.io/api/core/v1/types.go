@@ -360,6 +360,7 @@ const (
 // PersistentVolume (PV) is a storage resource provisioned by an administrator.
 // It is analogous to a node.
 // More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes
+// +k8s:supportsSubresource="/status"
 type PersistentVolume struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -510,6 +511,7 @@ type PersistentVolumeList struct {
 // +k8s:prerelease-lifecycle-gen:introduced=1.0
 
 // PersistentVolumeClaim is a user's request for and claim to a persistent volume
+// +k8s:supportsSubresource="/status"
 type PersistentVolumeClaim struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -5506,6 +5508,8 @@ type PodStatusResult struct {
 
 // Pod is a collection of containers that can run on a host. This resource is created
 // by clients and scheduled onto hosts.
+// +k8s:supportsSubresource="/status"
+// +k8s:supportsSubresource="/ephemeralcontainers"
 type Pod struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -5698,6 +5702,7 @@ type ReplicationControllerCondition struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:prerelease-lifecycle-gen:introduced=1.0
 // +k8s:supportsSubresource="/scale"
+// +k8s:supportsSubresource="/status"
 
 // ReplicationController represents the configuration of a replication controller.
 type ReplicationController struct {
@@ -6294,6 +6299,8 @@ type ServicePort struct {
 // Service is a named abstraction of software service (for example, mysql) consisting of local port
 // (for example 3306) that the proxy listens on, and the selector that determines which pods
 // will answer requests sent through the proxy.
+// +k8s:supportsSubresource="/status"
+// +k8s:supportsSubresource="/proxy"
 type Service struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -7029,6 +7036,8 @@ type ResourceList map[ResourceName]resource.Quantity
 
 // Node is a worker node in Kubernetes.
 // Each node will have a unique identifier in the cache (i.e. in etcd).
+// +k8s:supportsSubresource="/status"
+// +k8s:supportsSubresource="/proxy"
 type Node struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -7156,6 +7165,7 @@ type NamespaceCondition struct {
 
 // Namespace provides a scope for Names.
 // Use of multiple namespaces is optional.
+// +k8s:supportsSubresource="/status"
 type Namespace struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -7891,6 +7901,7 @@ type ResourceQuotaStatus struct {
 // +k8s:prerelease-lifecycle-gen:introduced=1.0
 
 // ResourceQuota sets aggregate quota restrictions enforced per namespace
+// +k8s:supportsSubresource="/status"
 type ResourceQuota struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
