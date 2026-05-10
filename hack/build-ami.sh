@@ -37,6 +37,8 @@ pushd "$(go env GOPATH)/src/k8s.io/kubernetes" >/dev/null
   KUBE_FULL_VERSION=$(hack/print-workspace-status.sh | grep gitVersion | awk '{print $2}')
   KUBE_VERSION=$(echo $KUBE_FULL_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+).*/v\1.\2.\3/')
 popd
+# Major.minor form (e.g. "1.35") — required by amazon-eks-ami Makefile's k8s= variable.
+K8S_MINOR=$(echo ${KUBE_VERSION} | sed -E 's/v([0-9]+)\.([0-9]+).*/\1.\2/')
 KUBE_DATE=$(date -u +'%Y-%m-%d')
 
 # Generate aws-iam-authenticator binaries
@@ -90,14 +92,6 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     sed -i 's/.*amazon-ec2-net-utils.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
     sed -i 's/sudo.*cri-tools.*$//' templates/*/provisioners/install-worker.sh >/dev/null 2>&1 || true
 
-    cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
-    cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
-    cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
-    cat <<< "$(jq --arg instance_profile ${INSTANCE_PROFILE_NAME:-'packer-instance-profile'} '.iam_instance_profile = $instance_profile' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
-    cat <<< "$(jq --arg pause_container_image ${PAUSE_CONTAINER_IMAGE:-'registry.k8s.io/pause:3.10'} '.pause_container_image = $pause_container_image' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
-    cat <<< "$(jq --arg containerd_version ${CONTAINERD_VERSION:-"1.7.*"} '.containerd_version = $containerd_version' templates/al2/variables-default.json)" > templates/al2/variables-default.json || true
-
-
     cat <<< "$(jq --arg bucket ${S3_BUCKET:-'provider-aws-test-infra'} '.binary_bucket_name = $bucket' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
     cat <<< "$(jq --arg bucket_region ${AWS_REGION:-'us-east-1'} '.binary_bucket_region = $bucket_region' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
     cat <<< "$(jq --arg aws_region ${AWS_REGION:-'us-east-1'} '.aws_region = $aws_region' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
@@ -105,7 +99,7 @@ pushd "$(go env GOPATH)/src/github.com/awslabs/amazon-eks-ami" >/dev/null
     cat <<< "$(jq --arg pause_container_image ${PAUSE_CONTAINER_IMAGE:-'registry.k8s.io/pause:3.10'} '.pause_container_image = $pause_container_image' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
     cat <<< "$(jq --arg containerd_version ${CONTAINERD_VERSION:-"1.7.*"} '.containerd_version = $containerd_version' templates/al2023/variables-default.json)" > templates/al2023/variables-default.json || true
 
-    make k8s kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
+    make k8s k8s=${K8S_MINOR} kubernetes_version=${KUBE_VERSION} kubernetes_build_date=${KUBE_DATE} \
       pull_cni_from_github=true arch=${BUILD_EKS_AMI_ARCH:-"x86_64"} os_distro=${BUILD_EKS_AMI_OS:-"al2023"} || true
   fi
   ami_id=$(aws ec2 describe-images --region=${AWS_REGION:-"us-east-1"} --filters Name=name,Values="$AMI_NAME" --query 'Images[*].[ImageId]' --output text --max-items 1 | head -1)
