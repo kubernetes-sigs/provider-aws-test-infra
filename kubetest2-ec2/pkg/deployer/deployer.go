@@ -145,6 +145,7 @@ type deployer struct {
 	SSHUser            string `flag:"ssh-user" desc:"The SSH user to use for SSH access to instances"`
 	SSHEnv             string `flag:"ssh-env" desc:"Use predefined ssh options for environment."`
 	NumNodes           int    `flag:"num-nodes" desc:"Number of nodes in the cluster."`
+	IPFamily           string `flag:"ip-family" desc:"IP family for cluster networking: ipv4 (default), ipv6, or dual. When ipv6 or dual is set, instances are launched with an IPv6 address and only IPv6-enabled subnets are eligible. Configuring kubeadm/kubelet for dual-stack remains the caller's responsibility via user-data."`
 
 	runner  *AWSRunner
 	logsDir string

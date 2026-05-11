@@ -598,7 +598,7 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 	if a.subnetID == "" {
 		var err error
 		var vpcID string
-		a.subnetID, vpcID, err = utils.PickSubnetID(a.ec2Service)
+		a.subnetID, vpcID, err = utils.PickSubnetID(a.ec2Service, a.deployer.IPFamily)
 		if err != nil {
 			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, vpcID)
 		}
@@ -611,7 +611,8 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		a.deployer.ClusterID,
 		a.controlPlaneIP,
 		img,
-		a.subnetID)
+		a.subnetID,
+		a.deployer.IPFamily)
 	if err != nil {
 		return nil, fmt.Errorf("unable to launch instance : %w", err)
 	}
