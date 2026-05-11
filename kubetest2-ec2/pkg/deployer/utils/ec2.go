@@ -28,10 +28,19 @@ type InternalAWSImage struct {
 }
 
 func LaunchNewInstance(ec2Service *ec2v2.Client, iamService *iamv2.Client,
-	clusterID string, controlPlaneIP string, img InternalAWSImage, subnetID string) (*ec2typesv2.Instance, error) {
+	clusterID string, controlPlaneIP string, img InternalAWSImage, subnetID string, ipFamily string) (*ec2typesv2.Instance, error) {
 	images, err := ec2Service.DescribeImages(context.TODO(), &ec2v2.DescribeImagesInput{ImageIds: []string{img.AmiID}})
 	if err != nil {
 		return nil, fmt.Errorf("describing images: %w", err)
+	}
+
+	netIface := ec2typesv2.InstanceNetworkInterfaceSpecification{
+		SubnetId:                 awsv2.String(subnetID),
+		AssociatePublicIpAddress: awsv2.Bool(true),
+		DeviceIndex:              awsv2.Int32(0),
+	}
+	if ipFamily == "ipv6" || ipFamily == "dual" {
+		netIface.Ipv6AddressCount = awsv2.Int32(1)
 	}
 
 	name := clusterID + uuid.New().String()[:8]
@@ -44,13 +53,7 @@ func LaunchNewInstance(ec2Service *ec2v2.Client, iamService *iamv2.Client,
 			HttpEndpoint: "enabled",
 			HttpTokens:   "required",
 		},
-		NetworkInterfaces: []ec2typesv2.InstanceNetworkInterfaceSpecification{
-			{
-				SubnetId:                 awsv2.String(subnetID),
-				AssociatePublicIpAddress: awsv2.Bool(true),
-				DeviceIndex:              awsv2.Int32(0),
-			},
-		},
+		NetworkInterfaces: []ec2typesv2.InstanceNetworkInterfaceSpecification{netIface},
 		TagSpecifications: []ec2typesv2.TagSpecification{
 			{
 				ResourceType: ec2typesv2.ResourceTypeInstance,
@@ -127,22 +130,30 @@ func WaitForInstanceToRun(ec2Service *ec2v2.Client, instance *ec2typesv2.Instanc
 	return instance
 }
 
-func PickSubnetID(svc *ec2v2.Client) (string, string, error) {
+func PickSubnetID(svc *ec2v2.Client, ipFamily string) (string, string, error) {
 	defaultVpcID, err := getDefaultVPC(svc)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get default VPC: %v", err)
 	}
 	klog.Infof("Default VPC ID: %s\n", defaultVpcID)
 
-	// Get subnet IDs for the default VPC
-	subnetIDs, err := getSubnetIDs(svc, defaultVpcID)
+	// Get subnet IDs for the default VPC. When the caller asked for an IPv6
+	// or dual-stack cluster, restrict to subnets that already have an IPv6
+	// CIDR association — instance launch would otherwise fail with
+	// InvalidParameterValue: ipv6AddressCount cannot be specified on a subnet
+	// without IPv6 enabled.
+	requireIPv6 := ipFamily == "ipv6" || ipFamily == "dual"
+	subnetIDs, err := getSubnetIDs(svc, defaultVpcID, requireIPv6)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get subnet IDs: %v", err)
 	}
 
 	// Print the results
-	klog.Infof("Subnet IDs: %v", subnetIDs)
+	klog.Infof("Subnet IDs (ipFamily=%q, requireIPv6=%v): %v", ipFamily, requireIPv6, subnetIDs)
 	if len(subnetIDs) == 0 {
+		if requireIPv6 {
+			return "", "", fmt.Errorf("No IPv6-enabled subnets found in the default VPC %s; enable an IPv6 CIDR on at least one subnet or run without --ip-family=%s", defaultVpcID, ipFamily)
+		}
 		return "", "", fmt.Errorf("No subnets found in the default VPC: %s", defaultVpcID)
 	}
 	randomSubnetID := subnetIDs[rand.Intn(len(subnetIDs))]
@@ -172,7 +183,7 @@ func getDefaultVPC(svc *ec2v2.Client) (string, error) {
 	return *result.Vpcs[0].VpcId, nil
 }
 
-func getSubnetIDs(svc *ec2v2.Client, vpcID string) ([]string, error) {
+func getSubnetIDs(svc *ec2v2.Client, vpcID string, requireIPv6 bool) ([]string, error) {
 	input := &ec2v2.DescribeSubnetsInput{
 		Filters: []ec2typesv2.Filter{
 			{
@@ -193,8 +204,23 @@ func getSubnetIDs(svc *ec2v2.Client, vpcID string) ([]string, error) {
 		if *subnet.AvailabilityZone == "us-east-1e" {
 			continue
 		}
+		if requireIPv6 && !hasIPv6CIDR(subnet) {
+			continue
+		}
 		subnetIDs = append(subnetIDs, *subnet.SubnetId)
 	}
 
 	return subnetIDs, nil
+}
+
+// hasIPv6CIDR returns true when the subnet has at least one associated IPv6
+// CIDR block that is in the associated state (i.e. usable by instances).
+func hasIPv6CIDR(subnet ec2typesv2.Subnet) bool {
+	for _, assoc := range subnet.Ipv6CidrBlockAssociationSet {
+		if assoc.Ipv6CidrBlockState != nil &&
+			assoc.Ipv6CidrBlockState.State == ec2typesv2.SubnetCidrBlockStateCodeAssociated {
+			return true
+		}
+	}
+	return false
 }
