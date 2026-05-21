@@ -107,7 +107,7 @@ require (
 	k8s.io/component-base v0.29.2 // indirect
 	k8s.io/component-helpers v0.29.2 // indirect
 	k8s.io/controller-manager v0.29.2 // indirect
-	k8s.io/kube-openapi v0.0.0-20260511211612-da4e56fe5676 // indirect
+	k8s.io/kube-openapi v0.0.0-20260519202549-bbf5c5577288 // indirect
 	k8s.io/kubectl v0.29.2 // indirect
 	k8s.io/kubelet v0.29.2 // indirect
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
