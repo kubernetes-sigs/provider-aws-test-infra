@@ -1,4 +1,4 @@
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
@@ -9,18 +9,30 @@ nodeRegistration:
   criSocket: unix:///run/containerd/containerd.sock
   name: {{HOSTNAME_OVERRIDE}}
   kubeletExtraArgs:
-    feature-gates: {{FEATURE_GATES}}
-    cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
-    provider-id: {{PROVIDER_ID}}
-    node-ip: {{NODE_IP}}
-    hostname-override: {{HOSTNAME_OVERRIDE}}
-    image-credential-provider-bin-dir: /usr/local/bin
-    image-credential-provider-config: /etc/kubernetes/credential-provider.yaml
-    resolv-conf: /run/systemd/resolve/resolv.conf
-    system-cgroups: /system.slice
-    runtime-cgroups: /runtime.slice
-    kubelet-cgroups: /runtime.slice
-    cgroup-root: /
+  - name: feature-gates
+    value: {{FEATURE_GATES}}
+  - name: cloud-provider
+    value: {{EXTERNAL_CLOUD_PROVIDER}}
+  - name: provider-id
+    value: {{PROVIDER_ID}}
+  - name: node-ip
+    value: {{NODE_IP}}
+  - name: hostname-override
+    value: {{HOSTNAME_OVERRIDE}}
+  - name: image-credential-provider-bin-dir
+    value: /usr/local/bin
+  - name: image-credential-provider-config
+    value: /etc/kubernetes/credential-provider.yaml
+  - name: resolv-conf
+    value: /run/systemd/resolve/resolv.conf
+  - name: system-cgroups
+    value: /system.slice
+  - name: runtime-cgroups
+    value: /runtime.slice
+  - name: kubelet-cgroups
+    value: /runtime.slice
+  - name: cgroup-root
+    value: /
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
