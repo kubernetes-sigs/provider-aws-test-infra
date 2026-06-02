@@ -120,7 +120,7 @@ mkdir -p /var/log/containers/
 chmod -R a+rx /var/log/containers/
 
 cat << EOF > /etc/kubernetes/kubeadm-join.yaml
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
@@ -131,19 +131,32 @@ nodeRegistration:
   criSocket: unix:///run/containerd/containerd.sock
   name: {{HOSTNAME_OVERRIDE}}
   kubeletExtraArgs:
-    feature-gates: {{FEATURE_GATES}}
-    node-labels: {{NODE_LABELS}}
-    cloud-provider: {{EXTERNAL_CLOUD_PROVIDER}}
-    provider-id: {{PROVIDER_ID}}
-    node-ip: {{NODE_IP}}
-    hostname-override: {{HOSTNAME_OVERRIDE}}
-    image-credential-provider-bin-dir: /etc/eks/image-credential-provider/
-    image-credential-provider-config: /etc/eks/image-credential-provider/config.json
-    resolv-conf: $RESOLVE_CONF
-    system-cgroups: /system.slice
-    runtime-cgroups: /runtime.slice
-    kubelet-cgroups: /runtime.slice
-    cgroup-root: /
+  - name: feature-gates
+    value: {{FEATURE_GATES}}
+  - name: node-labels
+    value: {{NODE_LABELS}}
+  - name: cloud-provider
+    value: {{EXTERNAL_CLOUD_PROVIDER}}
+  - name: provider-id
+    value: {{PROVIDER_ID}}
+  - name: node-ip
+    value: {{NODE_IP}}
+  - name: hostname-override
+    value: {{HOSTNAME_OVERRIDE}}
+  - name: image-credential-provider-bin-dir
+    value: /etc/eks/image-credential-provider/
+  - name: image-credential-provider-config
+    value: /etc/eks/image-credential-provider/config.json
+  - name: resolv-conf
+    value: $RESOLVE_CONF
+  - name: system-cgroups
+    value: /system.slice
+  - name: runtime-cgroups
+    value: /runtime.slice
+  - name: kubelet-cgroups
+    value: /runtime.slice
+  - name: cgroup-root
+    value: /
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
