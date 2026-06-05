@@ -470,6 +470,12 @@ const (
 	// Allows to delegate reconciliation of a Job object to an external controller.
 	JobManagedBy featuregate.Feature = "JobManagedBy"
 
+	// owner: @adrianmoisey @danwinship
+	// kep: https://kep.k8s.io/5495
+	//
+	// Allow use of IPVS mode in kube-proxy
+	KubeProxyIPVS featuregate.Feature = "KubeProxyIPVS"
+
 	// owner: @marquiz
 	// kep: http://kep.k8s.io/4033
 	//
@@ -1307,6 +1313,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	DRAExtendedResource: {
 		{Version: version.MustParse("1.34"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.37; remove in 1.40
 	},
 
 	DRAListTypeAttributes: {
@@ -1493,6 +1500,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.35"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.38
 	},
 
+	KubeProxyIPVS: {
+		{Version: version.MustParse("1.11"), Default: true, PreRelease: featuregate.GA},
+	},
+
 	KubeletCgroupDriverFromCRI: {
 		{Version: version.MustParse("1.28"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
@@ -1586,6 +1597,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	MaxUnavailableStatefulSet: {
 		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	MemoryQoS: {
@@ -2195,6 +2207,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	genericfeatures.WatchCacheInitializationPostStartHook: {
 		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	},
 
 	genericfeatures.WatchList: {
@@ -2358,6 +2371,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	InPlacePodVerticalScalingInitContainers: {InPlacePodVerticalScaling, NodeDeclaredFeatures},
 
 	JobManagedBy: {},
+
+	KubeProxyIPVS: {},
 
 	KubeletCgroupDriverFromCRI: {},
 
