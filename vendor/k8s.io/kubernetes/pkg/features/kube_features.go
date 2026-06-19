@@ -376,11 +376,6 @@ const (
 
 	// owner: @erictune @wojtek-t
 	//
-	// Enables support for gang scheduling in kube-scheduler.
-	GangScheduling featuregate.Feature = "GangScheduling"
-
-	// owner: @erictune @wojtek-t
-	//
 	// Enables support for generic Workload API.
 	GenericWorkload featuregate.Feature = "GenericWorkload"
 
@@ -745,18 +740,6 @@ const (
 	//
 	// Enables specifying resources at pod-level.
 	PodLevelResources featuregate.Feature = "PodLevelResources"
-
-	// owner: @AxeZhan
-	// kep: http://kep.k8s.io/3960
-	//
-	// Enables SleepAction in container lifecycle hooks
-	PodLifecycleSleepAction featuregate.Feature = "PodLifecycleSleepAction"
-
-	// owner: @sreeram-venkitesh
-	// kep: http://kep.k8s.io/4818
-	//
-	// Allows zero value for sleep duration in SleepAction in container lifecycle hooks
-	PodLifecycleSleepActionAllowZero featuregate.Feature = "PodLifecycleSleepActionAllowZero"
 
 	// owner: @knight42
 	// kep: https://kep.k8s.io/3288
@@ -1169,13 +1152,6 @@ const (
 	// Enables support for joining Windows containers to a hosts' network namespace.
 	WindowsHostNetwork featuregate.Feature = "WindowsHostNetwork"
 
-	// owner: @wojtek-t
-	// kep: https://kep.k8s.io/5710
-	//
-	// Enables support for workload-aware preemption in pod group scheduling cycle
-	// and related PodGroup and Workload API fields.
-	WorkloadAwarePreemption featuregate.Feature = "WorkloadAwarePreemption"
-
 	// owner: @helayoty @mm4tt @wojtek-t
 	// kep: https://kep.k8s.io/5547
 	//
@@ -1420,10 +1396,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	},
-
-	GangScheduling: {
-		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
 	GenericWorkload: {
@@ -1717,18 +1689,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
 	},
 
-	PodLifecycleSleepAction: {
-		{Version: version.MustParse("1.29"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.30"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.34; remove in 1.37
-	},
-
-	PodLifecycleSleepActionAllowZero: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // GA in 1.34, remove in 1.37
-	},
-
 	PodLogsQuerySplitStreams: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 	},
@@ -1942,6 +1902,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	StorageCapacityScoring: {
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.Beta},
 	},
 
 	StorageNamespaceIndex: {
@@ -2044,10 +2005,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	WindowsHostNetwork: {
 		{Version: version.MustParse("1.26"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Deprecated},
-	},
-
-	WorkloadAwarePreemption: {
-		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
 	WorkloadWithJob: {
@@ -2234,6 +2191,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
 	},
 
+	genericfeatures.WatchListCompression: {
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.Beta},
+	},
+
 	genericfeatures.WebhookRoundTripLoadBalancing: {
 		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.Beta},
 	},
@@ -2358,8 +2319,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	ExternalServiceAccountTokenSigner: {},
 
-	GangScheduling: {GenericWorkload},
-
 	GenericWorkload: {},
 
 	GitRepoVolumeDriver: {},
@@ -2473,10 +2432,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	PodLevelResourceManagers: {PodLevelResources},
 
 	PodLevelResources: {},
-
-	PodLifecycleSleepAction: {},
-
-	PodLifecycleSleepActionAllowZero: {PodLifecycleSleepAction},
 
 	PodLogsQuerySplitStreams: {},
 
@@ -2606,8 +2561,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 
 	WindowsHostNetwork: {},
 
-	WorkloadAwarePreemption: {GangScheduling},
-
 	WorkloadWithJob: {GenericWorkload},
 
 	apiextensionsfeatures.CRDObservedGenerationTracking: {},
@@ -2680,6 +2633,8 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	genericfeatures.WatchCacheInitializationPostStartHook: {},
 
 	genericfeatures.WatchList: {},
+
+	genericfeatures.WatchListCompression: {},
 
 	genericfeatures.WebhookRoundTripLoadBalancing: {},
 
