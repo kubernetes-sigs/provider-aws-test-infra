@@ -15,7 +15,7 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
     sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
     tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
     rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-    HOME=/root cilium install --version 1.18.4 --set cni.chainingMode=portmap --set kubeProxyReplacement=false --set socketLB.enabled=false --set sessionAffinity=true --set externalIPs.enabled=true --set nodePort.enabled=true --set hostPort.enabled=false --set cluster.name=kubernetes --set ipam.mode=kubernetes $KC
+    HOME=/root cilium install --version 1.19.6 --set cni.chainingMode=portmap --set kubeProxyReplacement=false --set socketLB.enabled=false --set sessionAffinity=true --set externalIPs.enabled=true --set nodePort.enabled=true --set hostPort.enabled=false --set cluster.name=kubernetes --set ipam.mode=kubernetes $KC
     HOME=/root cilium status --wait $KC
   fi
   # shellcheck disable=SC2050
