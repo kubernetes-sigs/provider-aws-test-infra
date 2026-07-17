@@ -505,6 +505,7 @@ func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bo
 		data = strings.ReplaceAll(data, "{{STAGING_VERSION}}", version)
 		data = strings.ReplaceAll(data, "{{KUBEADM_TOKEN}}", a.token)
 		data = strings.ReplaceAll(data, "{{KUBEADM_CERTIFICATE_KEY}}", a.certificateKey)
+		data = strings.ReplaceAll(data, "{{EXTERNAL_CLOUD_PROVIDER}}", provider)
 		return data
 	})
 	if err != nil {
