@@ -113,6 +113,15 @@ const (
 	// When a scale operation is performed with this strategy, new Pods will be
 	// created from the specification version indicated by the StatefulSet's updateRevision.
 	OnDeleteStatefulSetStrategyType StatefulSetUpdateStrategyType = "OnDelete"
+	// RecreateStatefulSetStrategyType indicates that all existing pods will be
+	// deleted and fully terminated before any new-revision pods are created.
+	// This ensures that old and new revision Pods never run at the same time.
+	// This is an alpha type and requires enabling StatefulSetRecreateStrategy feature gate.
+	// Switching to the Recreate strategy is allowed when the feature gate is enabled,
+	// and switching away from it to a different update strategy is also allowed.
+	//
+	// +featureGate=StatefulSetRecreateStrategy
+	RecreateStatefulSetStrategyType StatefulSetUpdateStrategyType = "Recreate"
 )
 
 // RollingUpdateStatefulSetStrategy is used to communicate parameter for RollingUpdateStatefulSetStrategyType.
@@ -225,6 +234,7 @@ type StatefulSetSpec struct {
 	// +optional
 	// +k8s:alpha(since: "1.37")=+k8s:immutable
 	// +k8s:alpha(since: "1.37")=+k8s:optional
+	// +k8s:alpha(since: "1.37")=+k8s:eachVal=+k8s:opaqueType
 	// +listType=atomic
 	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty" protobuf:"bytes,4,rep,name=volumeClaimTemplates"`
 
@@ -335,6 +345,12 @@ type StatefulSetStatus struct {
 }
 
 type StatefulSetConditionType string
+
+const (
+	// StatefulSetProgressing means the StatefulSet is progressing through an update.
+	// This condition is an alpha type and requires enabling StatefulSetRecreateStrategy feature gate.
+	StatefulSetProgressing StatefulSetConditionType = "Progressing"
+)
 
 // StatefulSetCondition describes the state of a statefulset at a certain point.
 type StatefulSetCondition struct {

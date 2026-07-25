@@ -46,6 +46,7 @@ message LocalSubjectAccessReview {
   // metadata is the standard list metadata.
   // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
   // +optional
+  // +k8s:opaqueType
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // spec holds information about the request being evaluated.  spec.namespace must be equal to the namespace
@@ -156,6 +157,7 @@ message SelfSubjectAccessReview {
   // metadata is the standard list metadata.
   // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
   // +optional
+  // +k8s:opaqueType
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // spec holds information about the request being evaluated.  user and groups must be empty
@@ -171,10 +173,14 @@ message SelfSubjectAccessReview {
 message SelfSubjectAccessReviewSpec {
   // resourceAttributes describes information for a resource access request
   // +optional
+  // +k8s:alpha(since: "1.37")=+k8s:optional
+  // +k8s:alpha(since: "1.37")=+k8s:unionMember
   optional ResourceAttributes resourceAttributes = 1;
 
   // nonResourceAttributes describes information for a non-resource access request
   // +optional
+  // +k8s:alpha(since: "1.37")=+k8s:optional
+  // +k8s:alpha(since: "1.37")=+k8s:unionMember
   optional NonResourceAttributes nonResourceAttributes = 2;
 }
 
@@ -189,6 +195,7 @@ message SelfSubjectRulesReview {
   // metadata is the standard list metadata.
   // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
   // +optional
+  // +k8s:opaqueType
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // spec holds information about the request being evaluated.
@@ -211,6 +218,7 @@ message SubjectAccessReview {
   // metadata is the standard list metadata.
   // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
   // +optional
+  // +k8s:opaqueType
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // spec holds information about the request being evaluated
@@ -226,10 +234,14 @@ message SubjectAccessReview {
 message SubjectAccessReviewSpec {
   // resourceAttributes describes information for a resource access request
   // +optional
+  // +k8s:alpha(since: "1.37")=+k8s:optional
+  // +k8s:alpha(since: "1.37")=+k8s:unionMember
   optional ResourceAttributes resourceAttributes = 1;
 
   // nonResourceAttributes describes information for a non-resource access request
   // +optional
+  // +k8s:alpha(since: "1.37")=+k8s:optional
+  // +k8s:alpha(since: "1.37")=+k8s:unionMember
   optional NonResourceAttributes nonResourceAttributes = 2;
 
   // user is the user you're testing for.
