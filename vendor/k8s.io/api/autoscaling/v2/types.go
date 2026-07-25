@@ -60,16 +60,16 @@ type HorizontalPodAutoscalerSpec struct {
 	// metric is configured.  Scaling is active as long as at least one metric value is
 	// available.
 	// +optional
-	// +k8s:alpha(since: "1.36")=+k8s:optional
-	// +k8s:alpha(since: "1.36")=+k8s:ifEnabled(HPAScaleToZero)=+k8s:minimum=0
-	// +k8s:alpha(since: "1.36")=+k8s:ifDisabled(HPAScaleToZero)=+k8s:minimum=1
+	// +k8s:beta(since: "1.37")=+k8s:optional
+	// +k8s:beta(since: "1.37")=+k8s:ifEnabled(HPAScaleToZero)=+k8s:minimum=0
+	// +k8s:beta(since: "1.37")=+k8s:ifDisabled(HPAScaleToZero)=+k8s:minimum=1
 	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,2,opt,name=minReplicas"`
 
 	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
 	// It cannot be less that minReplicas.
 	// +required
-	// +k8s:alpha(since: "1.36")=+k8s:required
-	// +k8s:alpha(since: "1.36")=+k8s:minimum=1
+	// +k8s:beta(since: "1.37")=+k8s:required
+	// +k8s:beta(since: "1.37")=+k8s:minimum=1
 	MaxReplicas int32 `json:"maxReplicas" protobuf:"varint,3,opt,name=maxReplicas"`
 
 	// metrics contains the specifications for which to use to calculate the
@@ -82,6 +82,7 @@ type HorizontalPodAutoscalerSpec struct {
 	// If not set, the default metric will be set to 80% average CPU utilization.
 	// +listType=atomic
 	// +optional
+	// +k8s:alpha(since: "1.37")=+k8s:optional
 	Metrics []MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
 
 	// behavior configures the scaling behavior of the target
@@ -94,9 +95,11 @@ type HorizontalPodAutoscalerSpec struct {
 // CrossVersionObjectReference contains enough information to let you identify the referred resource.
 type CrossVersionObjectReference struct {
 	// kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+	// +k8s:alpha(since: "1.37")=+k8s:required
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 
 	// name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+	// +k8s:alpha(since: "1.37")=+k8s:required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 
 	// apiVersion is the API version of the referent
@@ -114,6 +117,8 @@ type MetricSpec struct {
 	// object refers to a metric describing a single kubernetes object
 	// (for example, hits-per-second on an Ingress object).
 	// +optional
+	// +k8s:alpha(since: "1.37")=+k8s:optional
+	// +k8s:alpha(since: "1.37")=+k8s:opaqueType
 	Object *ObjectMetricSource `json:"object,omitempty" protobuf:"bytes,2,opt,name=object"`
 
 	// pods refers to a metric describing each pod in the current scale target
@@ -188,8 +193,7 @@ const (
 // window is chosen.
 //
 // The tolerance is applied to the metric values and prevents scaling too
-// eagerly for small metric variations. (Note that setting a tolerance requires
-// the beta HPAConfigurableTolerance feature gate to be enabled.)
+// eagerly for small metric variations.
 type HPAScalingRules struct {
 	// stabilizationWindowSeconds is the number of seconds for which past recommendations should be
 	// considered while scaling up or scaling down.
@@ -221,9 +225,6 @@ type HPAScalingRules struct {
 	// For example, if autoscaling is configured with a memory consumption target of 100Mi,
 	// and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
 	// triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
-	//
-	// This is an beta field and requires the HPAConfigurableTolerance feature
-	// gate to be enabled.
 	//
 	// +featureGate=HPAConfigurableTolerance
 	// +optional
@@ -425,6 +426,7 @@ type HorizontalPodAutoscalerStatus struct {
 	// currentMetrics is the last read state of the metrics used by this autoscaler.
 	// +listType=atomic
 	// +optional
+	// +k8s:alpha(since: "1.37")=+k8s:optional
 	CurrentMetrics []MetricStatus `json:"currentMetrics" protobuf:"bytes,5,rep,name=currentMetrics"`
 
 	// conditions is the set of conditions required for this autoscaler to scale its target,
@@ -494,6 +496,8 @@ type MetricStatus struct {
 	// object refers to a metric describing a single kubernetes object
 	// (for example, hits-per-second on an Ingress object).
 	// +optional
+	// +k8s:alpha(since: "1.37")=+k8s:optional
+	// +k8s:alpha(since: "1.37")=+k8s:opaqueType
 	Object *ObjectMetricStatus `json:"object,omitempty" protobuf:"bytes,2,opt,name=object"`
 
 	// pods refers to a metric describing each pod in the current scale target

@@ -177,12 +177,12 @@ type CertificateSigningRequestStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	// +optional
-	// +k8s:alpha(since: "1.36")=+k8s:listType=map
-	// +k8s:alpha(since: "1.36")=+k8s:listMapKey=type
-	// +k8s:alpha(since: "1.36")=+k8s:customUnique
-	// +k8s:alpha(since: "1.36")=+k8s:optional
-	// +k8s:alpha(since: "1.36")=+k8s:item(type: "Approved")=+k8s:zeroOrOneOfMember
-	// +k8s:alpha(since: "1.36")=+k8s:item(type: "Denied")=+k8s:zeroOrOneOfMember
+	// +k8s:beta(since: "1.37")=+k8s:listType=map
+	// +k8s:beta(since: "1.37")=+k8s:listMapKey=type
+	// +k8s:beta(since: "1.37")=+k8s:customUnique
+	// +k8s:beta(since: "1.37")=+k8s:optional
+	// +k8s:beta(since: "1.37")=+k8s:item(type: "Approved")=+k8s:zeroOrOneOfMember
+	// +k8s:beta(since: "1.37")=+k8s:item(type: "Denied")=+k8s:zeroOrOneOfMember
 	Conditions []CertificateSigningRequestCondition `json:"conditions,omitempty" protobuf:"bytes,1,rep,name=conditions"`
 
 	// If request was approved, the controller will place the issued certificate here.
@@ -274,6 +274,7 @@ const (
 // +genclient:nonNamespaced
 // +k8s:prerelease-lifecycle-gen:introduced=1.33
 // +k8s:prerelease-lifecycle-gen:deprecated=1.37
+// +k8s:prerelease-lifecycle-gen:replacement=certificates.k8s.io,v1,ClusterTrustBundle
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterTrustBundle is a cluster-scoped container for X.509 trust anchors
@@ -286,7 +287,7 @@ const (
 // to a cluster can read ClusterTrustBundles by impersonating a serviceaccount
 // that they have access to.
 //
-// It can be optionally associated with a particular assigner, in which case it
+// It can be optionally associated with a particular signer, in which case it
 // contains one valid set of trust anchors for that signer. Signers may have
 // multiple associated ClusterTrustBundles; each is an independent set of trust
 // anchors for that signer. Admission control is used to enforce that only users
@@ -344,6 +345,7 @@ type ClusterTrustBundleSpec struct {
 
 // +k8s:prerelease-lifecycle-gen:introduced=1.33
 // +k8s:prerelease-lifecycle-gen:deprecated=1.37
+// +k8s:prerelease-lifecycle-gen:replacement=certificates.k8s.io,v1,ClusterTrustBundleList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterTrustBundleList is a collection of ClusterTrustBundle objects
@@ -361,6 +363,8 @@ type ClusterTrustBundleList struct {
 
 // +genclient
 // +k8s:prerelease-lifecycle-gen:introduced=1.35
+// +k8s:prerelease-lifecycle-gen:deprecated=1.37
+// +k8s:prerelease-lifecycle-gen:replacement=certificates.k8s.io,v1,PodCertificateRequest
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // PodCertificateRequest encodes a pod requesting a certificate from a given
@@ -624,6 +628,8 @@ const (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:prerelease-lifecycle-gen:introduced=1.35
+// +k8s:prerelease-lifecycle-gen:deprecated=1.37
+// +k8s:prerelease-lifecycle-gen:replacement=certificates.k8s.io,v1,PodCertificateRequestList
 
 // PodCertificateRequestList is a collection of PodCertificateRequest objects
 type PodCertificateRequestList struct {
