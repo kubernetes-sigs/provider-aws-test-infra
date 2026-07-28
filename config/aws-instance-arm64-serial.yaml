@@ -3,7 +3,7 @@ images:
     ssm_path: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64
     instance_type: m6g.xlarge
     user_data_file: al2023-6.1.yaml
-  ubuntu-2404:
-    ssm_path: /aws/service/canonical/ubuntu/server/24.04/stable/20250305/arm64/hvm/ebs-gp3/ami-id
+  ubuntu-2604:
+    ssm_path: /aws/service/canonical/ubuntu/server/26.04/stable/20260722/arm64/hvm/ebs-gp3/ami-id
     instance_type: m6g.xlarge
-    user_data_file: ubuntu2404.yaml
+    user_data_file: ubuntu2604.yaml

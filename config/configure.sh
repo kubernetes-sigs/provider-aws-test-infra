@@ -71,14 +71,14 @@ fetch_env() {
     echo "${tmp_env_content}" > "${tmp_env_file}"
     # Convert the yaml format file into a shell-style file.
     eval $(${PYTHON} -c '''
-import pipes,sys,yaml
+import shlex,sys,yaml
 # check version of python and call methods appropriate for that version
 if sys.version_info[0] < 3:
     items = yaml.load(sys.stdin).iteritems()
 else:
     items = yaml.load(sys.stdin, Loader=yaml.BaseLoader).items()
 for k,v in items:
-  print("readonly {var}={value}".format(var = k, value = pipes.quote(str(v))))
+  print("readonly {var}={value}".format(var = k, value = shlex.quote(str(v))))
 ''' < "${tmp_env_file}" > "${CONTAINERD_HOME}/${env_file_name}")
     rm -f "${tmp_env_file}"
   )
