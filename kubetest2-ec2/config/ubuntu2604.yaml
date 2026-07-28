@@ -3,7 +3,6 @@ system_info:
   default_user:
     name: ec2-user
     groups: root
-package_upgrade: true
 package_update: true
 packages:
     - nfs-common
@@ -94,7 +93,7 @@ runcmd:
   - "sed -i \"s/^.*ReadEtcHosts.*/ReadEtcHosts=no/\" /etc/systemd/resolved.conf"
   - "sed -i \"s/^MACAddressPolicy=.*/MACAddressPolicy=none/\" /usr/lib/systemd/network/99-default.link"
   - systemctl restart systemd-resolved
-  - rm /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
+  - rm -f /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
   - systemctl restart systemd-logind
   - systemctl daemon-reload
   - systemctl enable containerd-installation.service
