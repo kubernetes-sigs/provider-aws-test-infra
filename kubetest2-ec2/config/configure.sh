@@ -107,10 +107,8 @@ else
 fi
 
 TARBALL_GCS_NAME="${pkg_prefix}-${version}.linux-${ARCH}.tar.gz"
-ALT_TARBALL_GCS_NAME="${pkg_prefix}-${version}-linux-${ARCH}.tar.gz"
 # TARBALL_GCS_PATH is the path to download cri-containerd tarball for node e2e.
 TARBALL_GCS_PATH="https://storage.googleapis.com/${deploy_path}/${TARBALL_GCS_NAME}"
-ALT_TARBALL_GCS_PATH="https://storage.googleapis.com/${deploy_path}/${ALT_TARBALL_GCS_NAME}"
 # TARBALL is the name of the tarball after being downloaded.
 TARBALL="containerd.tar.gz"
 # CONTAINERD_TAR_SHA1 is the sha1sum of containerd tarball.
@@ -126,11 +124,7 @@ if [ -z "${version}" ]; then
     exit 1
   fi
 else
-  # Download and untar the release tar ball, there are two alternate names for the
-  # tar.gz files unfortunately, so this is a temporary respite until the fixes
-  # are in place
-  $(set +x; curl -X GET "${HEADERS[@]}" -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 \
-    --retry-delay 10 "${ALT_TARBALL_GCS_PATH}") || \
+  # Download and untar the release tar ball.
   $(set +x; curl -X GET "${HEADERS[@]}" -f --ipv4 -Lo "${TARBALL}" --connect-timeout 20 --max-time 300 --retry 6 \
     --retry-delay 10 "${TARBALL_GCS_PATH}")
   tar xvf "${TARBALL}"
