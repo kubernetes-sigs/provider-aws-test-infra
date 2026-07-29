@@ -71,6 +71,7 @@ runcmd:
   - sudo systemctl restart systemd-resolved
   - sudo rm -f /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
   - sudo systemctl restart systemd-logind
+  - sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0 || true
   # Stop the existing containerd service if there is one. (for Docker 18.09+)
   - systemctl is-active containerd && systemctl stop containerd
   - systemctl daemon-reload
