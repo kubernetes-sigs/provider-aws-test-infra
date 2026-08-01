@@ -68,6 +68,25 @@ func GenerateSSHKeypair() (*TemporarySSHKey, error) {
 	}, nil
 }
 
+// SaveSSHKeyAs writes key to ~/.ssh/<keyPrefix> and ~/.ssh/<keyPrefix>.pub and
+// sets key.PrivateKeyPath, mirroring the layout that LoadExistingSSHKey expects.
+func SaveSSHKeyAs(key *TemporarySSHKey, keyPrefix string) error {
+	home := os.Getenv("HOME")
+	sshDir := home + "/.ssh"
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
+		return fmt.Errorf("creating .ssh dir: %w", err)
+	}
+	privPath := sshDir + "/" + keyPrefix
+	if err := os.WriteFile(privPath, key.Private, 0600); err != nil {
+		return fmt.Errorf("writing private key: %w", err)
+	}
+	if err := os.WriteFile(privPath+".pub", key.Public, 0644); err != nil {
+		return fmt.Errorf("writing public key: %w", err)
+	}
+	key.PrivateKeyPath = privPath
+	return nil
+}
+
 func LocalSSHKeyExists(keyPrefix string) bool {
 	home := os.Getenv("HOME")
 	if _, err := os.Stat(home + "/.ssh/" + keyPrefix); err == nil {
