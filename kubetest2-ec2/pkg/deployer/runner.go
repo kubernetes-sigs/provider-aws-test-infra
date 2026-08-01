@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
@@ -59,6 +60,7 @@ type AWSRunner struct {
 	certificateKey     string
 	controlPlaneIP     string
 	subnetID           string
+	sshKeyMu           sync.Mutex // guards kube_aws_rsa creation in assignNewSSHKey
 }
 
 type awsInstance struct {
@@ -656,11 +658,26 @@ func (a *AWSRunner) assignNewSSHKey(testInstance *awsInstance) error {
 		}
 	}
 	if key == nil {
-		// create our new key
-		klog.Infof("assigning new SSH key-pair for %s@%s", a.deployer.SSHUser, testInstance.publicIP)
-		key, err = utils.GenerateSSHKeypair()
+		// No pre-existing user key. Use/create the shared kube_aws_rsa key.
+		// isAWSInstanceRunning runs concurrently (one goroutine per node), so
+		// without a lock all goroutines could see no key on disk, each generate
+		// a different keypair, and write different public keys to each node's
+		// authorized_keys — leaving the e2e framework holding whichever private
+		// key won the file-write race and unable to SSH to the other nodes.
+		a.sshKeyMu.Lock()
+		if utils.LocalSSHKeyExists("kube_aws_rsa") {
+			klog.Info("loading existing kube_aws_rsa key")
+			key, err = utils.LoadExistingSSHKey("kube_aws_rsa")
+		} else {
+			klog.Infof("assigning new SSH key-pair for %s@%s", a.deployer.SSHUser, testInstance.publicIP)
+			key, err = utils.GenerateSSHKeypair()
+			if err == nil {
+				err = utils.SaveSSHKeyAs(key, "kube_aws_rsa")
+			}
+		}
+		a.sshKeyMu.Unlock()
 		if err != nil {
-			return fmt.Errorf("creating SSH key, %w", err)
+			return fmt.Errorf("error with kube_aws_rsa SSH key: %w", err)
 		}
 	}
 	testInstance.sshKey = key
