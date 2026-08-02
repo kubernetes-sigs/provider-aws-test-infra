@@ -168,6 +168,20 @@ func (d *deployer) Up() error {
 		return err
 	}
 
+	// EC2 nodes advertise only an InternalIP, which the k8s e2e framework
+	// cannot dial from outside the VPC ("No ssh-able nodes"). Route the
+	// framework's SSH through the control plane as a bastion: every node
+	// trusts the shared key that assignNewSSHKey persisted, and the ginkgo
+	// tester subprocess inherits these env vars.
+	if len(runner.instances) > 0 && runner.instances[0].publicIP != "" {
+		if _, ok := os.LookupEnv("KUBE_SSH_BASTION"); !ok {
+			os.Setenv("KUBE_SSH_BASTION", runner.instances[0].publicIP+":22")
+		}
+		if _, ok := os.LookupEnv("KUBE_SSH_USER"); !ok {
+			os.Setenv("KUBE_SSH_USER", d.SSHUser)
+		}
+	}
+
 	d.waitForKubectlNodes()
 	d.waitForKubectlNodesToBeReady()
 
