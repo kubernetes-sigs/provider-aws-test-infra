@@ -110,6 +110,45 @@ func LaunchNewInstance(ec2Service *ec2v2.Client, iamService *iamv2.Client,
 	return WaitForInstanceToRun(ec2Service, &rsv.Instances[0]), nil
 }
 
+// EnsureSSHSelfIngress allows TCP 22 between instances that share the VPC's
+// default security group (instances launch without an explicit group, so they
+// all land in it). The e2e framework reaches worker nodes by tunneling SSH
+// through the control plane (KUBE_SSH_BASTION); that second hop targets a
+// node's private IP and only a security group rule can admit it. A rule that
+// already exists returns InvalidPermission.Duplicate, which counts as success.
+func EnsureSSHSelfIngress(svc *ec2v2.Client, vpcID string) error {
+	out, err := svc.DescribeSecurityGroups(context.TODO(), &ec2v2.DescribeSecurityGroupsInput{
+		Filters: []ec2typesv2.Filter{
+			{Name: awsv2.String("vpc-id"), Values: []string{vpcID}},
+			{Name: awsv2.String("group-name"), Values: []string{"default"}},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("describing default security group of vpc %s: %w", vpcID, err)
+	}
+	if len(out.SecurityGroups) == 0 {
+		return fmt.Errorf("no default security group in vpc %s", vpcID)
+	}
+	groupID := out.SecurityGroups[0].GroupId
+	_, err = svc.AuthorizeSecurityGroupIngress(context.TODO(), &ec2v2.AuthorizeSecurityGroupIngressInput{
+		GroupId: groupID,
+		IpPermissions: []ec2typesv2.IpPermission{{
+			IpProtocol:       awsv2.String("tcp"),
+			FromPort:         awsv2.Int32(22),
+			ToPort:           awsv2.Int32(22),
+			UserIdGroupPairs: []ec2typesv2.UserIdGroupPair{{GroupId: groupID}},
+		}},
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
+			return nil
+		}
+		return fmt.Errorf("authorizing ssh ingress on security group %s: %w", *groupID, err)
+	}
+	klog.Infof("allowed ssh (tcp/22) between instances in security group %s", *groupID)
+	return nil
+}
+
 func WaitForInstanceToRun(ec2Service *ec2v2.Client, instance *ec2typesv2.Instance) *ec2typesv2.Instance {
 	for i := 0; i < 30; i++ {
 		if i > 0 {

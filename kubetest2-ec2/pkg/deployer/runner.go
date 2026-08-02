@@ -605,6 +605,11 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		if err != nil {
 			return nil, fmt.Errorf("picking subnet: %w in vpc (%s)", err, vpcID)
 		}
+		// Best effort: the KUBE_SSH_BASTION hop needs tcp/22 between
+		// instances; do not fail if the CI role cannot edit the group.
+		if err := utils.EnsureSSHSelfIngress(a.ec2Service, vpcID); err != nil {
+			klog.Warningf("could not ensure ssh ingress within default security group: %v", err)
+		}
 	}
 
 	var instance *ec2typesv2.Instance
