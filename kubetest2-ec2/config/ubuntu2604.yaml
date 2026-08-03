@@ -96,6 +96,7 @@ runcmd:
   - systemctl restart systemd-resolved
   - rm -f /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
   - systemctl restart systemd-logind
+  - '[ "$(uname -m)" != "aarch64" ] || echo never > /sys/kernel/mm/transparent_hugepage/hugepages-2048kB/enabled || true'
   - systemctl daemon-reload
   - systemctl enable containerd-installation.service
   - systemctl enable containerd.service
