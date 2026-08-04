@@ -126,6 +126,12 @@ PARALLELISM=8 hack/make-rules/test-e2e-node.sh
 ```
 
 
+## Presubmit Coverage
+
+Changes to files under `kubetest2-ec2/` (and to `go.mod`, `go.sum`, or `vendor/`)
+automatically trigger the optional `pull-kubernetes-e2e-ec2-alpha-canary` presubmit,
+which builds kubetest2-ec2 from the pull request and runs a cluster e2e against it.
+
 ## Reference Implementations
 
 See individual READMEs for more information
