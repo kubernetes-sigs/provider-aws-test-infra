@@ -1852,6 +1852,7 @@ message EventList {
 
 // EventSeries contain information on series of events, i.e. thing that was/is happening
 // continuously for some time.
+// +structType=atomic
 message EventSeries {
   // Number of occurrences in this series up to the last heartbeat time
   optional int32 count = 1;
@@ -2522,11 +2523,11 @@ message LimitRangeItem {
   // +optional
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> min = 3;
 
-  // Default resource requirement limit value by resource name if resource limit is omitted.
+  // Default specifies resource limit values by resource name. These are applied to containers which do not specify their own limits for those resources.
   // +optional
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> default = 4;
 
-  // DefaultRequest is the default resource requirement request value by resource name if resource request is omitted.
+  // DefaultRequest specifies resource request values by resource name. These are applied to containers which do not specify their own requests for those resources.
   // +optional
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> defaultRequest = 5;
 
@@ -3128,6 +3129,8 @@ message NodeSpec {
   // +optional
   // +patchStrategy=merge
   // +listType=set
+  // +k8s:alpha(since: "1.38")=+k8s:optional
+  // +k8s:alpha(since: "1.38")=+k8s:update=NoUnset
   repeated string podCIDRs = 7;
 
   // ID of the node assigned by the cloud provider in the format: <ProviderName>://<ProviderSpecificNodeID>

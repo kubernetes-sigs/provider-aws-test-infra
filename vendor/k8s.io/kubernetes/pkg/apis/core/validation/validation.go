@@ -7685,15 +7685,13 @@ func ValidateNodeUpdate(node, oldNode *core.Node) field.ErrorList {
 
 	// Allow the controller manager to assign a CIDR to a node if it doesn't have one.
 	if len(oldNode.Spec.PodCIDRs) > 0 {
-		// compare the entire slice
-		if len(oldNode.Spec.PodCIDRs) != len(node.Spec.PodCIDRs) {
+		if len(node.Spec.PodCIDRs) == 0 {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "podCIDRs"), nil, "field cannot be cleared once set").WithOrigin("update").MarkCoveredByDeclarative())
+		} else if !apiequality.Semantic.DeepEqual(oldNode.Spec.PodCIDRs, node.Spec.PodCIDRs) {
+			// Modification of an already-assigned podCIDRs is not expressible with
+			// +k8s:update yet: NoModify is rejected on list fields, and the
+			// per-item form does not correlate changed values in a listType=set.
 			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "podCIDRs"), "node updates may not change podCIDR except from \"\" to valid"))
-		} else {
-			for idx, value := range oldNode.Spec.PodCIDRs {
-				if value != node.Spec.PodCIDRs[idx] {
-					allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "podCIDRs"), "node updates may not change podCIDR except from \"\" to valid"))
-				}
-			}
 		}
 	}
 
@@ -8545,12 +8543,24 @@ func ValidateResourceQuotaSpec(resourceQuotaSpec *core.ResourceQuotaSpec, fld *f
 	return allErrs
 }
 
+// isIntegerResourceValue reports whether q may be used where whole units are
+// required. Wherever the milli projection fits in an int64 this is the check
+// that has always been applied, so values it accepted, such as 1.9999, still
+// pass. Past that range only an exact whole number passes.
+func isIntegerResourceValue(q resource.Quantity) bool {
+	if _, integer := q.AsScale(0); integer {
+		return true
+	}
+	milli, ok := q.AsMilliInt64()
+	return ok && milli%1000 == 0
+}
+
 // ValidateResourceQuantityValue enforces that specified quantity is valid for specified resource
 func ValidateResourceQuantityValue(resource core.ResourceName, value resource.Quantity, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, ValidateNonnegativeQuantity(value, fldPath)...)
 	if helper.IsIntegerResourceName(resource) {
-		if value.MilliValue()%int64(1000) != int64(0) {
+		if !isIntegerResourceValue(value) {
 			allErrs = append(allErrs, field.Invalid(fldPath, value, isNotIntegerErrorMsg))
 		}
 	}

@@ -6919,6 +6919,8 @@ type NodeSpec struct {
 	// +optional
 	// +patchStrategy=merge
 	// +listType=set
+	// +k8s:alpha(since: "1.38")=+k8s:optional
+	// +k8s:alpha(since: "1.38")=+k8s:update=NoUnset
 	PodCIDRs []string `json:"podCIDRs,omitempty" protobuf:"bytes,7,opt,name=podCIDRs" patchStrategy:"merge"`
 
 	// ID of the node assigned by the cloud provider in the format: <ProviderName>://<ProviderSpecificNodeID>
@@ -8072,6 +8074,7 @@ type Event struct {
 
 // EventSeries contain information on series of events, i.e. thing that was/is happening
 // continuously for some time.
+// +structType=atomic
 type EventSeries struct {
 	// Number of occurrences in this series up to the last heartbeat time
 	Count int32 `json:"count,omitempty" protobuf:"varint,1,name=count"`
@@ -8125,10 +8128,10 @@ type LimitRangeItem struct {
 	// Min usage constraints on this kind by resource name.
 	// +optional
 	Min ResourceList `json:"min,omitempty" protobuf:"bytes,3,rep,name=min,casttype=ResourceList,castkey=ResourceName"`
-	// Default resource requirement limit value by resource name if resource limit is omitted.
+	// Default specifies resource limit values by resource name. These are applied to containers which do not specify their own limits for those resources.
 	// +optional
 	Default ResourceList `json:"default,omitempty" protobuf:"bytes,4,rep,name=default,casttype=ResourceList,castkey=ResourceName"`
-	// DefaultRequest is the default resource requirement request value by resource name if resource request is omitted.
+	// DefaultRequest specifies resource request values by resource name. These are applied to containers which do not specify their own requests for those resources.
 	// +optional
 	DefaultRequest ResourceList `json:"defaultRequest,omitempty" protobuf:"bytes,5,rep,name=defaultRequest,casttype=ResourceList,castkey=ResourceName"`
 	// MaxLimitRequestRatio if specified, the named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.

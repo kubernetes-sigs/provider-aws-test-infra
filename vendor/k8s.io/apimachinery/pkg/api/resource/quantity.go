@@ -36,20 +36,31 @@ import (
 //
 // The serialization format is:
 //
-//	<quantity>        ::= <signedNumber><suffix>
-//	    (Note that <suffix> may be empty, from the "" case in <decimalSI>.)
-//	<digit>           ::= 0 | 1 | ... | 9
-//	<digits>          ::= <digit> | <digit><digits>
-//	<number>          ::= <digits> | <digits>.<digits> | <digits>. | .<digits>
-//	<sign>            ::= "+" | "-"
-//	<signedNumber>    ::= <number> | <sign><number>
-//	<signedDigits>    ::= <digits> | <sign><digits>
-//	<suffix>          ::= <binarySI> | <decimalExponent> | <decimalSI>
-//	<binarySI>        ::= Ki | Mi | Gi | Ti | Pi | Ei
-//	    (International System of units; See: http://physics.nist.gov/cuu/Units/binary.html)
-//	<decimalSI>       ::= n | u | m | "" | k | M | G | T | P | E
-//	    (Note that 1024 = 1Ki but 1000 = 1k; I didn't choose the capitalization.)
-//	<decimalExponent> ::= "e" <signedDigits> | "E" <signedDigits>
+// - `<quantity>`: `<signedNumber><suffix>`
+//
+// - `<digit>`: `0 | 1 | ... | 9`
+//
+// - `<digits>`: `<digit> | <digit><digits>`
+//
+// - `<number>`: `<digits> | <digits>.<digits> | <digits>. | .<digits>`
+//
+// - `<sign>`: `"+" | "-"`
+//
+// - `<signedNumber>`: `<number> | <sign><number>`
+//
+// - `<signedDigits>`: `<digits> | <sign><digits>`
+//
+// - `<suffix>`: `<binarySI> | <decimalExponent> | <decimalSI>`
+//
+// - `<binarySI>`: `Ki | Mi | Gi | Ti | Pi | Ei`
+//
+// - `<decimalSI>`: `n | u | m | "" | k | M | G | T | P | E`
+//
+// - `<decimalExponent>`: `"e" <signedDigits> | "E" <signedDigits>`
+//
+// Note that `<suffix>` may be empty, from the `""` case in `<decimalSI>`.
+// For `<binarySI>`, 1024 = 1Ki but 1000 = 1k; I didn't choose the
+// capitalization. See http://physics.nist.gov/cuu/Units/binary.html.
 //
 // A decimal quantity is not capped at 2^63-1 in magnitude, and no quantity is
 // limited to three decimal places: "18446744073709551616" keeps its value, and
@@ -66,16 +77,19 @@ import (
 // This means that Exponent/suffix will be adjusted up or down (with a
 // corresponding increase or decrease in Mantissa) such that:
 //
-//   - No precision is lost
-//   - No fractional digits will be emitted
-//   - The exponent (or suffix) is as large as possible.
+// - No precision is lost
+//
+// - No fractional digits will be emitted
+//
+// - The exponent (or suffix) is as large as possible.
 //
 // The sign will be omitted unless the number is negative.
 //
 // Examples:
 //
-//   - 1.5 will be serialized as "1500m"
-//   - 1.5Gi will be serialized as "1536Mi"
+// - 1.5 will be serialized as "1500m"
+//
+// - 1.5Gi will be serialized as "1536Mi"
 //
 // Note that the quantity will NEVER be internally represented by a
 // floating point number. That is the whole point of this exercise.
@@ -291,10 +305,13 @@ func ParseQuantity(str string) (Quantity, error) {
 	precision := int32(0)
 	scale := int32(0)
 	mantissa := int64(1)
+	forceRecanonicalize := false
 	switch format {
 	case DecimalExponent, DecimalSI:
 		scale = exponent
 		precision = maxInt64Factors - int32(len(num)+len(denom))
+		// preserves compatibility with recanonicalizing integers >18 digits long, even if they are in int64 range
+		forceRecanonicalize = precision <= 0
 	case BinarySI:
 		scale = 0
 		switch {
@@ -315,27 +332,40 @@ func ParseQuantity(str string) (Quantity, error) {
 		if scale >= int32(Nano) {
 			shifted := num + denom
 
-			var value int64
-			value, err := strconv.ParseInt(shifted, 10, 64)
-			if err != nil {
-				return Quantity{}, ErrNumeric
-			}
-			if result, ok := int64Multiply(value, int64(mantissa)); ok {
-				if !positive {
-					result = -result
+			uvalue, err := strconv.ParseUint(shifted, 10, 64)
+			if err == nil {
+				var value int64
+				signApplied := false
+				inRange := false
+				if uvalue <= math.MaxInt64 {
+					// fits in positive int64 range
+					value = int64(uvalue)
+					inRange = true
+				} else if !positive && uvalue == uint64(math.MaxInt64)+1 {
+					// special case: absolute value of math.MinInt64
+					value = math.MinInt64 // already negative, skip negation later
+					signApplied = true
+					inRange = true
 				}
-				// if the number is in canonical form, reuse the string
-				switch format {
-				case BinarySI:
-					if exponent%10 == 0 && (value&0x07 != 0) {
-						return Quantity{i: int64Amount{value: result, scale: Scale(scale)}, Format: format, s: str}, nil
-					}
-				default:
-					if scale%3 == 0 && !strings.HasSuffix(shifted, "000") && shifted[0] != '0' {
-						return Quantity{i: int64Amount{value: result, scale: Scale(scale)}, Format: format, s: str}, nil
+				if inRange {
+					if result, ok := int64Multiply(value, int64(mantissa)); ok {
+						if !positive && !signApplied {
+							result = -result
+						}
+						// if the number is in canonical form, reuse the string
+						switch format {
+						case BinarySI:
+							if !forceRecanonicalize && exponent%10 == 0 && (value&0x07 != 0) {
+								return Quantity{i: int64Amount{value: result, scale: Scale(scale)}, Format: format, s: str}, nil
+							}
+						default:
+							if !forceRecanonicalize && scale%3 == 0 && !strings.HasSuffix(shifted, "000") && shifted[0] != '0' {
+								return Quantity{i: int64Amount{value: result, scale: Scale(scale)}, Format: format, s: str}, nil
+							}
+						}
+						return Quantity{i: int64Amount{value: result, scale: Scale(scale)}, Format: format}, nil
 					}
 				}
-				return Quantity{i: int64Amount{value: result, scale: Scale(scale)}, Format: format}, nil
 			}
 		}
 	}
@@ -665,14 +695,14 @@ func (q *Quantity) Cmp(y Quantity) int {
 	if q.d.Dec == nil && y.d.Dec == nil {
 		return q.i.Cmp(y.i)
 	}
-	return q.AsDec().Cmp(y.AsDec())
+	return cmpDec(q.AsDec(), y.AsDec())
 }
 
 // CmpInt64 returns 0 if the quantity is equal to y, -1 if the quantity is less than y, or 1 if the
 // quantity is greater than y.
 func (q *Quantity) CmpInt64(y int64) int {
 	if q.d.Dec != nil {
-		return q.d.Dec.Cmp(inf.NewDec(y, inf.Scale(0)))
+		return cmpDec(q.d.Dec, inf.NewDec(y, inf.Scale(0)))
 	}
 	return q.i.Cmp(int64Amount{value: y})
 }
@@ -838,35 +868,47 @@ func NewScaledQuantity(value int64, scale Scale) *Quantity {
 	}
 }
 
-// Value returns the unscaled value of q rounded up to the nearest integer away
-// from 0. This silently overflows an int64 for a quantity larger than MaxInt64;
-// an overflowed result is undefined and must not be used. To avoid overflow,
-// compare q against a bound with Quantity.Cmp before converting.
+// Value returns the value of q rounded to an integer, away from zero. It
+// saturates to math.MinInt64 or math.MaxInt64 when the value does not fit;
+// call AsScaledInt64 to detect that.
 func (q *Quantity) Value() int64 {
-	return q.ScaledValue(0)
+	value, _ := q.AsScaledInt64(0)
+	return value
 }
 
-// MilliValue returns the value of ceil(q * 1000). This silently overflows an
-// int64 for a large enough q; an overflowed result is undefined and must not be
-// used. To avoid overflow for a non-negative q, compare q against
-// MaxMilliQuantity() with Quantity.Cmp before converting.
+// MilliValue returns the value of q*1000 rounded to an integer, away from zero.
+// It saturates like Value; call AsMilliInt64 to detect overflow.
 func (q *Quantity) MilliValue() int64 {
-	return q.ScaledValue(Milli)
+	value, _ := q.AsMilliInt64()
+	return value
 }
 
-// ScaledValue returns the value of ceil(q / 10^scale).
-// For example, NewQuantity(1, DecimalSI).ScaledValue(Milli) returns 1000.
-// This silently overflows an int64 for a large enough q; an overflowed result is
-// undefined and must not be used. To avoid overflow for a non-negative q at the
-// milli scale, compare q against MaxMilliQuantity() with Quantity.Cmp before
-// converting.
+// ScaledValue returns the value of q/10^scale rounded to an integer, away from
+// zero. It saturates like Value; call AsScaledInt64 to detect overflow.
 func (q *Quantity) ScaledValue(scale Scale) int64 {
+	value, _ := q.AsScaledInt64(scale)
+	return value
+}
+
+// AsScaledInt64 returns the value of q/10^scale as an int64, rounded away from
+// zero. ok is false when the value overflows int64, and then value saturates to
+// math.MinInt64 or math.MaxInt64. The int64 and inf.Dec backends agree for
+// values both can represent; a source scale near the int32 minimum is not
+// representable in inf.Dec, so calling q.ToDec() first can differ there.
+func (q *Quantity) AsScaledInt64(scale Scale) (value int64, ok bool) {
 	if q.d.Dec == nil {
-		i, _ := q.i.AsScaledInt64(scale)
-		return i
+		return q.i.AsScaledInt64(scale)
 	}
 	dec := q.d.Dec
-	return scaledValue(dec.UnscaledBig(), int(dec.Scale()), int(scale.infScale()))
+	// Negate after widening: inf.Scale(-math.MinInt32) overflows back to itself.
+	return scaledValue(dec.UnscaledBig(), int64(dec.Scale()), -int64(scale))
+}
+
+// AsMilliInt64 returns the value of q*1000 as an int64, rounded away from zero.
+// ok is false when the value overflows int64, and then value saturates as
+// AsScaledInt64 describes.
+func (q *Quantity) AsMilliInt64() (value int64, ok bool) {
+	return q.AsScaledInt64(Milli)
 }
 
 // Set sets q's value to be value.
