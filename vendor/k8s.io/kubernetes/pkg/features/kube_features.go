@@ -1041,12 +1041,6 @@ const (
 	// Enables PreQueueingHint extension point to narrow pod evaluation on events.
 	SchedulerPreQueueingHints featuregate.Feature = "SchedulerPreQueueingHints"
 
-	// owner: @atosatto @yuanchen8911
-	// kep: http://kep.k8s.io/3902
-	//
-	// Decouples Taint Eviction Controller, performing taint-based Pod eviction, from Node Lifecycle Controller.
-	SeparateTaintEvictionController featuregate.Feature = "SeparateTaintEvictionController"
-
 	// owner: @aramase
 	// kep: https://kep.k8s.io/4412
 	//
@@ -1266,12 +1260,6 @@ const (
 	// Enables support for graceful shutdown windows node.
 	WindowsGracefulNodeShutdown featuregate.Feature = "WindowsGracefulNodeShutdown"
 
-	// owner: @marosset
-	// kep: https://kep.k8s.io/3503
-	//
-	// Enables support for joining Windows containers to a hosts' network namespace.
-	WindowsHostNetwork featuregate.Feature = "WindowsHostNetwork"
-
 	// owner: @helayoty @mm4tt @wojtek-t
 	// kep: https://kep.k8s.io/5547
 	//
@@ -1422,14 +1410,16 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 
 	DRADeviceTaintRules: {
 		{Version: version.MustParse("1.35"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Beta},                    // Depends on an off-by-default beta API.
-		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.GA, LockToDefault: false}, // LockToDefault: true in 1.38; remove in 1.41
+		{Version: version.MustParse("1.36"), Default: false, PreRelease: featuregate.Beta}, // Depends on an off-by-default beta API.
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.GA, LockToDefault: false},
+		{Version: version.MustParse("1.38"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // locked in 1.38; remove in 1.41
 	},
 
 	DRADeviceTaints: {
 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.36"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.GA, LockToDefault: false}, // LockToDefault: true in 1.38; remove in 1.41
+		{Version: version.MustParse("1.37"), Default: true, PreRelease: featuregate.GA, LockToDefault: false},
+		{Version: version.MustParse("1.38"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // locked in 1.38; remove in 1.41
 	},
 
 	DRAExtendedResource: {
@@ -2025,11 +2015,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 		{Version: version.MustParse("1.37"), Default: false, PreRelease: featuregate.Alpha},
 	},
 
-	SeparateTaintEvictionController: {
-		{Version: version.MustParse("1.29"), Default: true, PreRelease: featuregate.Beta},
-		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // remove in 1.37 (locked to default in 1.34)
-	},
-
 	ServiceAccountNodeAudienceRestriction: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Beta},
 		{Version: version.MustParse("1.33"), Default: true, PreRelease: featuregate.Beta},
@@ -2195,11 +2180,6 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
 	WindowsGracefulNodeShutdown: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.34"), Default: true, PreRelease: featuregate.Beta},
-	},
-
-	WindowsHostNetwork: {
-		{Version: version.MustParse("1.26"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Deprecated},
 	},
 
 	WorkloadWithJob: {
@@ -2712,8 +2692,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	SchedulerPopFromBackoffQ:  {},
 	SchedulerPreQueueingHints: {},
 
-	SeparateTaintEvictionController: {},
-
 	ServiceAccountNodeAudienceRestriction: {},
 
 	ServiceAccountTokenJTI: {},
@@ -2779,8 +2757,6 @@ var defaultKubernetesFeatureGateDependencies = map[featuregate.Feature][]feature
 	WindowsCPUAndMemoryAffinity: {},
 
 	WindowsGracefulNodeShutdown: {GracefulNodeShutdown},
-
-	WindowsHostNetwork: {},
 
 	WorkloadWithJob: {GenericWorkload},
 
