@@ -189,7 +189,7 @@ func (d *deployer) Up() error {
 	// This ensures run-post-install.sh has finished deploying cluster resources
 	// like Cilium CNI and NVIDIA device plugin (if enabled).
 	if err := d.waitForCloudInitComplete(); err != nil {
-		klog.Warningf("cloud-init wait failed (continuing anyway): %v", err)
+		return err
 	}
 
 	if d.ExternalCloudProvider {
@@ -258,29 +258,20 @@ func (d *deployer) waitForCloudInitComplete() error {
 	for time.Now().Before(deadline) {
 		// Use "cloud-init status" to check completion
 		// --wait flag would block, so we poll instead for better logging
-		output, err := remote.SSH(controlPlane.instanceID, "cloud-init", "status")
-		if err != nil {
-			klog.V(2).Infof("cloud-init status check failed (retrying): %v", err)
-			time.Sleep(pollInterval)
-			continue
-		}
-
-		// cloud-init status returns "status: done" when complete
-		if strings.Contains(output, "status: done") {
+		// Exit code is not reliable: cloud-init exits 2 on recoverable
+		// warnings even when done, so decide on the printed status.
+		output, _ := remote.SSH(controlPlane.instanceID, "cloud-init", "status")
+		switch {
+		case strings.Contains(output, "status: done"):
 			klog.Info("cloud-init completed successfully")
 			return nil
+		case strings.Contains(output, "status: error"):
+			return fmt.Errorf("cloud-init failed on control plane, see cloud-init-output.log: %s", strings.TrimSpace(output))
 		}
-
-		// Check for error status
-		if strings.Contains(output, "status: error") {
-			klog.Warningf("cloud-init reported error status: %s", output)
-			return fmt.Errorf("cloud-init failed with error status")
-		}
-
-		klog.V(2).Infof("cloud-init still running, waiting... (status: %s)",
-			strings.TrimSpace(output))
+		klog.V(2).Infof("cloud-init not done yet (%s)", strings.TrimSpace(output))
 		time.Sleep(pollInterval)
 	}
 
-	return fmt.Errorf("timeout waiting for cloud-init to complete after %v", timeout)
+	klog.Warningf("timeout waiting for cloud-init after %v (continuing anyway)", timeout)
+	return nil
 }
