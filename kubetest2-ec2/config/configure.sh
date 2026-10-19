@@ -129,6 +129,17 @@ else
     --retry-delay 10 "${TARBALL_GCS_PATH}")
   tar xvf "${TARBALL}"
   rm -f "${TARBALL}"
+  # The tarball's runc is linked against the builder's glibc, which may be newer
+  # than the node's (kubernetes/kubernetes#142987); fall back to the static release.
+  if ! usr/local/sbin/runc --version >/dev/null 2>&1; then
+    branch="main"
+    [[ "${deploy_path##*/}" == release-* ]] && branch="release/${deploy_path##*/release-}"
+    runc_version="${RUNC_VERSION:-$(curl -fsSL --retry 6 --retry-delay 3 \
+      "https://raw.githubusercontent.com/containerd/containerd/${branch}/script/setup/runc-version")}"
+    curl -fsSL --retry 6 --retry-delay 10 -o usr/local/sbin/runc \
+      "https://github.com/opencontainers/runc/releases/download/${runc_version}/runc.${ARCH}"
+    chmod 755 usr/local/sbin/runc
+  fi
   # copy `runc` in ${CONTAINERD_HOME} to a directory in PATH as well
   cp usr/local/sbin/runc /bin/runc || true
 fi
