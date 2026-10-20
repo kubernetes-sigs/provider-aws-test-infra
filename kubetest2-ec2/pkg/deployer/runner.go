@@ -394,16 +394,16 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to load controlplane user data %s : %w", a.deployer.UserDataFile, err)
 	}
-	if len(userControlPlane) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userControlPlane), userControlPlane)
+	if err := checkUserDataSize("control plane", userControlPlane); err != nil {
+		return nil, err
 	}
 
 	userDataWorkerNode, err := a.getUserData(a.deployer.WorkerUserDataFile, version, false)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load worker user data %s : %w", a.deployer.WorkerUserDataFile, err)
 	}
-	if len(userDataWorkerNode) > 16384 { // 16KB
-		return nil, fmt.Errorf("worker user data is too large, must be less than 16384 bytes, is %d\n\n%s", len(userDataWorkerNode), userDataWorkerNode)
+	if err := checkUserDataSize("worker", userDataWorkerNode); err != nil {
+		return nil, err
 	}
 
 	klog.Infof("using %s for control plane image", a.deployer.Image)
@@ -423,6 +423,20 @@ func (a *AWSRunner) prepareAWSImages() ([]utils.InternalAWSImage, error) {
 		})
 	}
 	return ret, nil
+}
+
+// checkUserDataSize verifies the user data fits within the 16KB EC2 limit once
+// gzipped, which is how it is sent to RunInstances.
+func checkUserDataSize(role string, userData string) error {
+	compressed, err := utils.GzipBytes([]byte(userData))
+	if err != nil {
+		return fmt.Errorf("compressing %s user data: %w", role, err)
+	}
+	klog.Infof("%s user data is %d bytes, %d bytes gzipped", role, len(userData), len(compressed))
+	if len(compressed) > 16384 { // 16KB
+		return fmt.Errorf("%s user data is too large, must be less than 16384 bytes gzipped, is %d\n\n%s", role, len(compressed), userData)
+	}
+	return nil
 }
 
 func (a *AWSRunner) getUserData(dataFile string, version string, controlPlane bool) (string, error) {

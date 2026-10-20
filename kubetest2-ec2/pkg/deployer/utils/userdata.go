@@ -29,22 +29,33 @@ import (
 	"sigs.k8s.io/provider-aws-test-infra/kubetest2-ec2/config"
 )
 
-func gzipAndBase64Encode(fileBytes []byte) (string, error) {
+// GzipBytes compresses data with gzip at the best compression level. cloud-init
+// transparently decompresses gzipped user data, which lets us stay under the
+// 16KB EC2 user data limit.
+func GzipBytes(data []byte) ([]byte, error) {
 	var buffer bytes.Buffer
 	gz, err := gzip.NewWriterLevel(&buffer, flate.BestCompression)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if _, err := gz.Write(fileBytes); err != nil {
-		return "", err
+	if _, err := gz.Write(data); err != nil {
+		return nil, err
 	}
 	if err := gz.Flush(); err != nil {
-		return "", err
+		return nil, err
 	}
 	if err := gz.Close(); err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
+}
+
+func gzipAndBase64Encode(fileBytes []byte) (string, error) {
+	compressed, err := GzipBytes(fileBytes)
+	if err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(buffer.Bytes()), nil
+	return base64.StdEncoding.EncodeToString(compressed), nil
 }
 
 func FetchConfigureScript(userDataFile string, replace func(string) string) (string, error) {
