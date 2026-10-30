@@ -9,6 +9,7 @@ import (
 	ec2typesv2 "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	iamv2 "github.com/aws/aws-sdk-go-v2/service/iam"
 	"math/rand"
+	"slices"
 	"strings"
 	"time"
 
@@ -114,6 +115,15 @@ func LaunchNewInstance(ec2Service *ec2v2.Client, iamService *iamv2.Client,
 	return WaitForInstanceToRun(ec2Service, &rsv.Instances[0]), nil
 }
 
+// IsCapacityError reports whether RunInstances failed for a reason that is
+// specific to the subnet or its availability zone, so the same launch can
+// succeed in another subnet.
+func IsCapacityError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "InsufficientInstanceCapacity") ||
+		strings.Contains(msg, "InsufficientFreeAddressesInSubnet")
+}
+
 // EnsureSSHSelfIngress allows TCP 22 between instances that share the VPC's
 // default security group (instances launch without an explicit group, so they
 // all land in it). The e2e framework reaches worker nodes by tunneling SSH
@@ -173,7 +183,7 @@ func WaitForInstanceToRun(ec2Service *ec2v2.Client, instance *ec2typesv2.Instanc
 	return instance
 }
 
-func PickSubnetID(svc *ec2v2.Client, ipFamily string) (string, string, error) {
+func PickSubnetID(svc *ec2v2.Client, ipFamily string, exclude ...string) (string, string, error) {
 	defaultVpcID, err := getDefaultVPC(svc)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get default VPC: %v", err)
@@ -186,7 +196,7 @@ func PickSubnetID(svc *ec2v2.Client, ipFamily string) (string, string, error) {
 	// InvalidParameterValue: ipv6AddressCount cannot be specified on a subnet
 	// without IPv6 enabled.
 	requireIPv6 := ipFamily == "ipv6" || ipFamily == "dual"
-	subnetIDs, err := getSubnetIDs(svc, defaultVpcID, requireIPv6)
+	subnetIDs, err := getSubnetIDs(svc, defaultVpcID, requireIPv6, exclude)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get subnet IDs: %v", err)
 	}
@@ -196,6 +206,9 @@ func PickSubnetID(svc *ec2v2.Client, ipFamily string) (string, string, error) {
 	if len(subnetIDs) == 0 {
 		if requireIPv6 {
 			return "", "", fmt.Errorf("No IPv6-enabled subnets found in the default VPC %s; enable an IPv6 CIDR on at least one subnet or run without --ip-family=%s", defaultVpcID, ipFamily)
+		}
+		if len(exclude) > 0 {
+			return "", "", fmt.Errorf("No subnet other than %v is usable in the default VPC %s", exclude, defaultVpcID)
 		}
 		return "", "", fmt.Errorf("No subnets found in the default VPC: %s", defaultVpcID)
 	}
@@ -226,7 +239,15 @@ func getDefaultVPC(svc *ec2v2.Client) (string, error) {
 	return *result.Vpcs[0].VpcId, nil
 }
 
-func getSubnetIDs(svc *ec2v2.Client, vpcID string, requireIPv6 bool) ([]string, error) {
+// minFreeIPsPerSubnet is the number of free IPv4 addresses a subnet needs
+// before a cluster is launched into it. A default /20 subnet has 4091 and a
+// three-node cluster takes about 150 at boot (one primary address plus three
+// /28 prefixes per node for the VPC CNI). A subnet far below that is shared
+// with something else and the VPC CNI finds no free aligned /28 in it
+// (InsufficientCidrBlocks), so pods never get an IP.
+const minFreeIPsPerSubnet = 1024
+
+func getSubnetIDs(svc *ec2v2.Client, vpcID string, requireIPv6 bool, exclude []string) ([]string, error) {
 	input := &ec2v2.DescribeSubnetsInput{
 		Filters: []ec2typesv2.Filter{
 			{
@@ -241,18 +262,29 @@ func getSubnetIDs(svc *ec2v2.Client, vpcID string, requireIPv6 bool) ([]string, 
 		return nil, err
 	}
 
-	var subnetIDs []string
+	var subnetIDs, lowOnIPs []string
 	for _, subnet := range result.Subnets {
+		id, az := *subnet.SubnetId, *subnet.AvailabilityZone
 		// skip known AZ where instance types we need are not available
-		if *subnet.AvailabilityZone == "us-east-1e" {
+		if az == "us-east-1e" || slices.Contains(exclude, id) {
 			continue
 		}
 		if requireIPv6 && !hasIPv6CIDR(subnet) {
 			continue
 		}
-		subnetIDs = append(subnetIDs, *subnet.SubnetId)
+		free := awsv2.ToInt32(subnet.AvailableIpAddressCount)
+		if free < minFreeIPsPerSubnet {
+			klog.Warningf("skipping subnet %s (%s): only %d free IPv4 addresses", id, az, free)
+			lowOnIPs = append(lowOnIPs, id)
+			continue
+		}
+		klog.Infof("subnet %s (%s): %d free IPv4 addresses", id, az, free)
+		subnetIDs = append(subnetIDs, id)
 	}
-
+	if len(subnetIDs) == 0 && len(lowOnIPs) > 0 {
+		klog.Warningf("every subnet in VPC %s has fewer than %d free IPv4 addresses, picking from %v anyway", vpcID, minFreeIPsPerSubnet, lowOnIPs)
+		return lowOnIPs, nil
+	}
 	return subnetIDs, nil
 }
 
