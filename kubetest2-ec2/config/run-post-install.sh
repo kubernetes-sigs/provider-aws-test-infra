@@ -6,7 +6,11 @@ if [[ "${KUBEADM_CONTROL_PLANE}" == true ]]; then
   if [[ "{{EXTERNAL_CLOUD_PROVIDER}}" == "external" ]]; then
     CNI_VERSION=v1.21.1
     kubectl $KC create -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/${CNI_VERSION}/config/master/aws-k8s-cni.yaml
-    kubectl $KC set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true MINIMUM_IP_TARGET=48 WARM_IP_TARGET=16 AWS_VPC_K8S_CNI_EXCLUDE_SNAT_CIDRS=10.0.0.0/8
+    # 8 /28 prefixes per node at boot. At --parallel=30 a worker keeps up to ~35 pod IPs assigned
+    # and ~50 more in the 30 s cooldown, and the warm targets treat cooldown IPs as free, so a
+    # 48-IP pool runs dry. 8 prefixes fit on one ENI of every instance type the ec2 jobs use
+    # (r5d.xlarge allows 14, m6a.large and m6g.large 9).
+    kubectl $KC set env daemonset aws-node -n kube-system ENABLE_PREFIX_DELEGATION=true MINIMUM_IP_TARGET=128 WARM_IP_TARGET=64 AWS_VPC_K8S_CNI_EXCLUDE_SNAT_CIDRS=10.0.0.0/8
   else
     CILIUM_CLI_VERSION=$(curl -sSf --retry 5 https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
     CLI_ARCH=amd64
