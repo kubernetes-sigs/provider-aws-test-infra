@@ -626,19 +626,23 @@ func (a *AWSRunner) createAWSInstance(img utils.InternalAWSImage) (*awsInstance,
 		}
 	}
 
-	var instance *ec2typesv2.Instance
-	newInstance, err := utils.LaunchNewInstance(
-		a.ec2Service,
-		a.iamService,
-		a.deployer.ClusterID,
-		a.controlPlaneIP,
-		img,
-		a.subnetID,
-		a.deployer.IPFamily)
+	instance, err := utils.LaunchNewInstance(a.ec2Service, a.iamService, a.deployer.ClusterID,
+		a.controlPlaneIP, img, a.subnetID, a.deployer.IPFamily)
+	if err != nil && utils.IsCapacityError(err) {
+		// Capacity is per availability zone, so retry once in another subnet.
+		// The nodes launched after this one follow it there.
+		failedSubnetID := a.subnetID
+		klog.Warningf("launch in subnet %s failed: %v", failedSubnetID, err)
+		a.subnetID, _, err = utils.PickSubnetID(a.ec2Service, a.deployer.IPFamily, failedSubnetID)
+		if err != nil {
+			return nil, fmt.Errorf("picking a subnet other than %s: %w", failedSubnetID, err)
+		}
+		instance, err = utils.LaunchNewInstance(a.ec2Service, a.iamService, a.deployer.ClusterID,
+			a.controlPlaneIP, img, a.subnetID, a.deployer.IPFamily)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to launch instance : %w", err)
 	}
-	instance = newInstance
 	klog.Infof("launched new instance %s with ami-id: %s on instance type: %s",
 		*instance.InstanceId, *instance.ImageId, instance.InstanceType)
 
