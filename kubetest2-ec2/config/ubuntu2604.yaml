@@ -11,6 +11,7 @@ packages:
     - net-tools
     - jq
     - python3
+    - unzip
 write_files:
   - path: /tmp/bootstrap/extra-fetches.yaml
     content: |
@@ -85,7 +86,7 @@ write_files:
     owner: root
     permissions: '0544'
 runcmd:
-  - snap install aws-cli --classic
+  - curl -sSLo /tmp/awscli.zip --fail --retry 5 "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" && unzip -qo /tmp/awscli.zip -d /tmp && /tmp/aws/install
   - ufw disable || echo "ufw not installed"
   - systemctl stop apparmor
   - systemctl disable apparmor
