@@ -266,7 +266,8 @@ func getSubnetIDs(svc *ec2v2.Client, vpcID string, requireIPv6 bool, exclude []s
 	for _, subnet := range result.Subnets {
 		id, az := *subnet.SubnetId, *subnet.AvailabilityZone
 		// skip known AZ where instance types we need are not available
-		if az == "us-east-1e" || slices.Contains(exclude, id) {
+		// us-east-1d: 3155 free addresses but no free /28 for the VPC CNI
+		if az == "us-east-1e" || az == "us-east-1d" || slices.Contains(exclude, id) {
 			continue
 		}
 		if requireIPv6 && !hasIPv6CIDR(subnet) {
