@@ -71,7 +71,6 @@ runcmd:
   - sudo systemctl restart systemd-resolved
   - sudo rm -f /usr/lib/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf
   - sudo systemctl restart systemd-logind
-  # The daily apt upgrade re-executes systemd and restarts containerd in the middle of a test run.
   - sudo systemctl disable --now apt-daily.timer apt-daily-upgrade.timer
   - sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0 || true
   - '[ "$(uname -m)" != "aarch64" ] || echo never > /sys/kernel/mm/transparent_hugepage/hugepages-2048kB/enabled || true'
